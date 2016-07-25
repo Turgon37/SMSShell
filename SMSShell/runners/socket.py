@@ -67,7 +67,7 @@ class SocketRunner(object):
       if not os.access(directory, os.X_OK|os.W_OK):
         g_logger.fatal('Unsufficients permissions into the directory to create the fifo')
         return False
-      os.mkfifo(self.__path)
+      os.mkfifo(self.__path, mode=0o620)
 
     for content in self.read_fifo():
       # parse received content
