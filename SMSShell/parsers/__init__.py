@@ -26,10 +26,7 @@
 """
 
 # Project imports
-from .version import version
-from .smsshell import SMSShell
+from .json import JsonParser
+from .json import JsonParser as Parser
 
-__all__ = ['version', 'SMSShell']
-
-class SMSException(Exception):
-  pass
+__all__ = ['JsonParser']

@@ -26,10 +26,7 @@
 """
 
 # Project imports
-from .version import version
-from .smsshell import SMSShell
+from ..exceptions import SMSException
 
-__all__ = ['version', 'SMSShell']
-
-class SMSException(Exception):
+class ParsingException(SMSException):
   pass

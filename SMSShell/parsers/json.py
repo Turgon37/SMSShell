@@ -25,11 +25,25 @@
 """
 """
 
+# System imports
+import logging
+import json
+
 # Project imports
-from .version import version
-from .smsshell import SMSShell
+from .exceptions import ParsingException
 
-__all__ = ['version', 'SMSShell']
+# Global project declarations
+g_logger = logging.getLogger('smsshell.parsers.json')
 
-class SMSException(Exception):
-  pass
+
+class JsonParser(object):
+  """
+  """
+
+  def parse(self, raw):
+    """
+    """
+    try:
+      return json.loads(raw)
+    except json.JSONDecodeError as d:
+      raise ParsingException()

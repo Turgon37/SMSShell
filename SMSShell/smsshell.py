@@ -39,7 +39,9 @@ import time
 # Projet Imports
 try:
   from .config import MyConfigParser
-  from .runners.socket import SocketRunner
+  from .receivers import Receiver
+  from .parsers import Parser
+  from .exceptions import SMSException
 except Exception as e:
   print(str(e), file=sys.stderr)
   print("A project's module failed to be import", file=sys.stderr)
@@ -142,12 +144,20 @@ class SMSShell(object):
   def run(self):
     """
     """
+    parser = Parser()
+
     if self.cp.getMode() == 'ONESHOT':
       raise NotImplemented('oneshot mode not yet implemented')
     else:
-      runner = SocketRunner(self.cp)
+      runner = Receiver(self.cp)
       runner.start()
-
+      for raw in runner.read():
+        # parse received content
+        try:
+          print(parser.parse(raw))
+        except SMSException as e:
+          g_logger.error("received a bad message, skipping")
+          continue
 
   def stop(self):
     """Stop properly the server after signal received
