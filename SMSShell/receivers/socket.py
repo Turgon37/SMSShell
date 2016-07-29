@@ -34,7 +34,7 @@ import stat
 g_logger = logging.getLogger('smsshell.socket')
 
 
-class SocketRunner(object):
+class SocketReceiver(object):
   """
   """
 
@@ -69,11 +69,7 @@ class SocketRunner(object):
         return False
       os.mkfifo(self.__path, mode=0o620)
 
-    for content in self.read_fifo():
-      # parse received content
-      print(content)
-
-  def read_fifo(self):
+  def read(self):
     """Return a read blocking iterable object for each content in the fifo
 
     @return Iterable

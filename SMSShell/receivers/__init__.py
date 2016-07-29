@@ -26,10 +26,7 @@
 """
 
 # Project imports
-from .version import version
-from .smsshell import SMSShell
+from .socket import SocketReceiver
+from .socket import SocketReceiver as Receiver
 
-__all__ = ['version', 'SMSShell']
-
-class SMSException(Exception):
-  pass
+__all__ = ['SocketReceiver']
