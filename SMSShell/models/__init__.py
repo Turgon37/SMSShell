@@ -22,37 +22,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""A JSON input parser
+"""This module contains all class models
 """
 
-# System imports
-import logging
-import json
-
 # Project imports
-from .exceptions import ParsingException
-from .exceptions import BadMessageException
-from ..models import Message
+from .message import Message
 
-# Global project declarations
-g_logger = logging.getLogger('smsshell.parsers.json')
-
-
-class JsonParser(object):
-  """An JSON format parser
-  """
-
-  def parse(self, raw):
-    """Parse the raw content
-    """
-    try:
-      obj = json.loads(raw)
-    except json.JSONDecodeError as d:
-      raise ParsingException()
-    sender = obj['smsnumber']
-    content = obj['smstext']
-    if sender is None or len(sender) < 1:
-      raise BadMessageException("The sender field is null or too small")
-    if content is None or len(content) < 1:
-      raise BadMessageException("The content field is null or too small")
-    return Message(sender, content)
+__all__ = ['Message']
