@@ -5,7 +5,7 @@ import subprocess
 import sys
 
 if len(sys.argv) > 1:
-  text = sys.argv[1]
+  text = ' '.join(sys.argv[1:])
 else:
   text = input()
 
