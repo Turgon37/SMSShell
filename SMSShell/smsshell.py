@@ -41,7 +41,8 @@ try:
   from .config import MyConfigParser
   from .receivers import Receiver
   from .parsers import Parser
-  from .exceptions import SMSException
+  from .shell import Shell
+  from .exceptions import SMSException,ShellException
 except Exception as e:
   print(str(e), file=sys.stderr)
   print("A project's module failed to be import", file=sys.stderr)
@@ -145,18 +146,25 @@ class SMSShell(object):
     """
     """
     parser = Parser()
+    shell = Shell(self.cp)
 
     if self.cp.getMode() == 'ONESHOT':
       raise NotImplemented('oneshot mode not yet implemented')
     else:
-      runner = Receiver(self.cp)
-      runner.start()
-      for raw in runner.read():
+      sock = Receiver(self.cp)
+      if not sock.start():
+        g_logger.fatal('Unable to open socket')
+        return False
+      for raw in sock.read():
         # parse received content
         try:
-          print(parser.parse(raw))
-        except SMSException as e:
+          msg = parser.parse(raw)
+          print(shell.run(msg.sender, msg.getArgv()))
+        except SMSException as em:
           g_logger.error("received a bad message, skipping")
+          continue
+        except ShellException as es:
+          g_logger.error("error during command execution : " + str(es))
           continue
 
   def stop(self):

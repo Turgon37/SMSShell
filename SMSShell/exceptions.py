@@ -27,3 +27,9 @@
 
 class SMSException(Exception):
   pass
+
+class ShellException(Exception):
+  pass
+
+class CommandNotFoundException(ShellException):
+  pass

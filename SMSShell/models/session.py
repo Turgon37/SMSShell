@@ -22,11 +22,23 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""This module contains all class models
+"""Models/Session This class represent an user session
+
 """
 
-# Project imports
-from .message import Message
-from .session import Session
 
-__all__ = ['Message', 'Session']
+class Session(object):
+  """An user session with all user's meta data
+  """
+
+  def __init__(self, subject):
+    """Constructor: Build a new session for the given subject
+
+    @param sender [str] : session subject
+    """
+    self.__created_at = None
+
+  def isValid(self):
+    """
+    """
+    return True

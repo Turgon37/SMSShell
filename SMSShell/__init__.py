@@ -30,6 +30,3 @@ from .version import version
 from .smsshell import SMSShell
 
 __all__ = ['version', 'SMSShell']
-
-class SMSException(Exception):
-  pass
