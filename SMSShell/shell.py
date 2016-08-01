@@ -35,6 +35,7 @@ from .models import Session
 # Global project declarations
 g_logger = logging.getLogger('smsshell.shell')
 
+
 class Shell(object):
   """
   """
@@ -50,7 +51,10 @@ class Shell(object):
     self.__commands = dict()
 
   def run(self, subject, argv):
-    """
+    """Run the given arguments for the given subject
+
+    @param subject [str]
+    @param argv [list]
     """
     if len(argv) < 1:
       raise ShellException('bad number of arguments')
@@ -65,6 +69,11 @@ class Shell(object):
   def __call(self, session, cmd, argv):
     """
     """
+    if cmd not in self.__commands:
+      self.__loadCommand(cmd)
+    return self.__commands[cmd].main(argv)
+
+  def __loadCommand(self):
     pass
 
   def __getSessionForSubject(self, key):
@@ -81,4 +90,5 @@ class Shell(object):
 
     g_logger.debug('creating a new session for subject : ' + key)
     self.__sessions[key] = Session(key)
+    self.__sessions[key].ttl = self.cp.get('standalone', 'session_ttl', fallback=600)
     return self.__sessions[key]
