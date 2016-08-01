@@ -26,19 +26,113 @@
 
 """
 
+# System imports
+import datetime
+import logging
+
+# Global project declarations
+g_logger = logging.getLogger('smsshell.models.session')
+
 
 class Session(object):
   """An user session with all user's meta data
   """
 
-  def __init__(self, subject):
+  def __init__(self, subject, timetolive=600):
     """Constructor: Build a new session for the given subject
 
     @param sender [str] : session subject
+    @param timetolive [int] OPTIONNAL : the number of second the session will be
+              alive
     """
-    self.__created_at = None
+    self.subject = subject
+    self.__created_at = datetime.datetime.today()
+    self.access()
+    self.ttl = timetolive
+
+  @property
+  def subject(self):
+    """Return the subject name
+
+    @return [str] the subject id
+    """
+    assert self.__subject is not None
+    return self.__subject
+
+  @subject.setter
+  def subject(self, s):
+    """Set the subject id
+
+    @param s [str] : the subject id
+    @return self
+    """
+    self.__subject = s
+    return self
+
+  @property
+  def created_at(self):
+    """Return the created at datetime
+
+    @return [Datetime] the datetime of the session creation
+    """
+    return self.__created_at
+
+  @property
+  def ttl(self):
+    """Return the subject name
+
+    @return [int] the subject id
+    """
+    assert self.__ttl is not None
+    return int(self.__ttl.seconds)
+
+  @ttl.setter
+  def ttl(self, m):
+    """Set the subject id
+
+    @param m [int] : the number of minutes the session will be alive
+    """
+    self.__ttl = datetime.timedelta(seconds=int(m))
+
+  @property
+  def access_at(self):
+    """Return the last access time
+
+    @return [Datetime] the last access time
+    """
+    assert self.__access_at is not None
+    return self.__access_at
+
+  def access(self):
+    """Refresh the access time of this session
+    """
+    self.__access_at = datetime.datetime.today()
 
   def isValid(self):
+    """Check if this session is valid
+
+    @return [bool] the validate status of this session
     """
-    """
+    if (datetime.datetime.today() - self.access_at).seconds > self.ttl:
+      g_logger.debug('session expired')
+      return False
     return True
+
+
+# DEBUG methods
+  def __str__(self):
+    """[DEBUG] Produce a description string for this session
+
+    @return [str] a formatted string
+    """
+    content = ("Session for(" + str(self.subject) + ")" +
+               "\n  Started At = " + str(self.created_at) +
+               "\n  Valid for = " + str(self.ttl) + " seconds")
+    return content
+
+  def __repr__(self):
+    """[DEBUG] Produce a list of attribute as string
+
+    @return [str] a formatted string that describe this object
+    """
+    return ("[S(" + str(self.subject) + ")]")
