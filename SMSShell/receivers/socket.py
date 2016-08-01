@@ -50,6 +50,7 @@ class SocketReceiver(object):
     """Start the socket (FIFO) runner
 
     Init the fifo pipe and wait for incoming contents
+    @return self
     """
     directory = os.path.dirname(self.__path)
     # check permissions
@@ -68,6 +69,7 @@ class SocketReceiver(object):
         g_logger.fatal('Unsufficients permissions into the directory to create the fifo')
         return False
       os.mkfifo(self.__path, mode=0o620)
+    return self
 
   def read(self):
     """Return a read blocking iterable object for each content in the fifo

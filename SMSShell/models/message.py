@@ -22,7 +22,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""This class represent a incoming message in shell
+"""Models/Message This class represent a incoming message in shell
 
 Each message have a sender reference used to keep session consistency and a
 content that will be analysed
@@ -78,6 +78,14 @@ class Message(object):
     @param c [str] : the content
     """
     self.__content = c
+
+  def getArgv(self):
+    """Return the command argument vector associated with this message
+
+    @return list of command argments
+    """
+    assert isinstance(self.content,str)
+    return self.content.split(' ')
 
 
 # DEBUG methods
