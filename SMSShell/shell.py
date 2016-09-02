@@ -34,7 +34,7 @@ __version__ = "1.0"
 import logging
 
 # Project imports
-from .exceptions import ShellException,CommandNotFoundException,CommandBadImplemented
+from .exceptions import ShellException,CommandNotFoundException,CommandBadImplemented,CommandForbidden,BadCommandCall
 from .models import Session
 from .commands import AbstractCommand
 
@@ -90,11 +90,28 @@ class Shell(object):
     """
     if cmd not in self.__commands:
       self.__loadCommand(cmd)
+    c = self.__commands[cmd]
     session._setPrefix(cmd)
     # check command aceptance conditions
+    if session.state not in c._inputStates():
+      raise CommandForbidden('You are not allowed to call this command from here')
+    self.__checkArgv(argv, c._argsProperties())
 
     session._access()
-    return self.__commands[cmd].main(argv)
+    return command.main(argv)
+
+  def __checkArgv(self, argv, properties):
+    """Check the given arguments according to the specifications
+
+    @param argv List<Str> the lsit of arguments
+    @param properties [dict]
+    @throw ShellException
+    """
+    if len(argv) < properties['min']:
+      raise BadCommandCall('This command require at least {0} arguments'.format(properties['min']))
+    if properties['max'] < len(argv):
+      raise BadCommandCall('This command require at most {0} arguments'.format(properties['max']))
+
 
   def __loadCommand(self, name):
     """Try to load the given command into the cache dir
