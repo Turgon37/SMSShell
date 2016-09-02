@@ -60,7 +60,7 @@ class Shell(object):
     """Run the given arguments for the given subject
 
     @param subject [str]
-    @param argv [list]
+    @param argv [list<str>]
     """
     if len(argv) < 1:
       raise ShellException('bad number of arguments')
@@ -81,7 +81,12 @@ class Shell(object):
     self.__commands = dict()
 
   def __call(self, session, cmd, argv):
-    """
+    """Execute the command with the given name
+
+    @param session models.Session
+    @param cmd [str]
+    @param argv [List<str>]
+    @return the command output
     """
     if cmd not in self.__commands:
       self.__loadCommand(cmd)
@@ -92,7 +97,9 @@ class Shell(object):
     return self.__commands[cmd].main(argv)
 
   def __loadCommand(self, name):
-    """
+    """Try to load the given command into the cache dir
+
+    @param name [str] the name of the command to load
     """
     g_logger.debug("loading command handler with name '%s'", name)
     try:
