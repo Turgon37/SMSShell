@@ -36,3 +36,9 @@ class CommandNotFoundException(ShellException):
 
 class CommandBadImplemented(ShellException):
   pass
+
+class CommandForbidden(ShellException):
+  pass
+
+class BadCommandCall(ShellException):
+  pass

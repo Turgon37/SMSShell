@@ -28,11 +28,62 @@
 # Project imports
 from ..exceptions import CommandBadImplemented
 
+
 class AbstractCommand(object):
   """This is a abstract command, all user defined comand must inherit this one"""
 
   def __init__(self, logger):
+    """Build a new instance of the command
+
+    @param [Logger] : the logger instance to use
+    """
     self.log = logger
 
   def main(self, argv):
+    """The main running entry point of this command
+
+    @param List<Str> the list of arguments
+    """
     raise CommandBadImplemented(str(self.__class__) + " must implement the main function")
+
+  def usage(self, argv):
+    """This function must return a short usage message
+
+    @param List<Str> the list of arguments
+    """
+    raise CommandBadImplemented(str(self.__class__) + " must implement the usage function")
+
+  def _inputStates(self):
+    """Private entry point for Shell
+    """
+    l = self.inputStates()
+    if not isinstance(l, list):
+      raise CommandBadImplemented(str(self.__class__) + " inputStates function must return a list of session's states")
+    return l
+
+  def inputStates(self):
+    """This function must return the list of session's state(s) from which
+     the command can be run
+
+    @return List<Session.SESS_*>
+    """
+    raise CommandBadImplemented(str(self.__class__) + " must implement the inputStates function")
+
+  def _argsProperties(self):
+    """Private entry point for Shell
+    """
+    props = {'min': 0, 'max': -1}
+    p = self.argsProperties()
+    if not isinstance(p, dict):
+      raise CommandBadImplemented(str(self.__class__) + " argsProperties function must return a dict of properties")
+    for k in p:
+      props[k] = p[k]
+    return props
+
+  def argsProperties(self):
+    """This function must return the list of session's state(s) from which
+     the command can be run
+
+    @return List<Session.SESS_*>
+    """
+    raise CommandBadImplemented(str(self.__class__) + " must implement the argsProperties function")
