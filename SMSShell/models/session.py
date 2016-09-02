@@ -38,6 +38,11 @@ class Session(object):
   """An user session with all user's meta data
   """
 
+  SESS_GUEST = 0
+  SESS_LOGIN = 1
+  SESS_AUTHENTICATED = 2
+  SESS_LOGOUT = 4
+
   def __init__(self, subject, timetolive=600):
     """Constructor: Build a new session for the given subject
 
@@ -47,9 +52,10 @@ class Session(object):
     """
     self.subject = subject
     self.__created_at = datetime.datetime.today()
-    self.access()
-    self.__prefix = None
+    self._access()
     self.ttl = timetolive
+    self.state = Session.SESS_GUEST
+    self.__prefix = None
     self.__storage = dict()
 
   @property
@@ -69,6 +75,25 @@ class Session(object):
     @return self
     """
     self.__subject = s
+    return self
+
+  @property
+  def state(self):
+    """Return the current state
+
+    @return [str] the subject id
+    """
+    assert self.__state is not None
+    return self.__state
+
+  @state.setter
+  def state(self, s):
+    """Set the session's state
+
+    @param s [str] : the state constant
+    @return self
+    """
+    self.__state = s
     return self
 
   @property
