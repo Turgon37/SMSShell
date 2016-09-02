@@ -86,6 +86,9 @@ class Shell(object):
     if cmd not in self.__commands:
       self.__loadCommand(cmd)
     session._setPrefix(cmd)
+    # check command aceptance conditions
+
+    session._access()
     return self.__commands[cmd].main(argv)
 
   def __loadCommand(self, name):

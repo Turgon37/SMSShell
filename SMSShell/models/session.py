@@ -105,7 +105,7 @@ class Session(object):
     assert self.__access_at is not None
     return self.__access_at
 
-  def access(self):
+  def _access(self):
     """Refresh the access time of this session
     """
     self.__access_at = datetime.datetime.today()
