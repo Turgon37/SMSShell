@@ -154,6 +154,11 @@ class Session(object):
     self.__prefix = p
 
   def get(self, key):
+    """Retrieve the selected value from storage
+
+    @param key [str] the name of the value to retrieve
+    @return
+    """
     fullkey = self.__prefix + key
     if fullkey in self.__storage:
       return self.__storage[fullkey]
@@ -162,7 +167,7 @@ class Session(object):
     """Set the given value in session storage
 
     @param key [str] the name of the key where to put the value
-    @param
+    @param value [str] the value to put into this place
     """
     fullkey = self.__prefix + key
     self.__storage[fullkey] = value
