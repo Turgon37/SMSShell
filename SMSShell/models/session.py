@@ -50,7 +50,7 @@ class Session(object):
     self.access()
     self.__prefix = None
     self.ttl = timetolive
-    self.storage = dict()
+    self.__storage = dict()
 
   @property
   def subject(self):
