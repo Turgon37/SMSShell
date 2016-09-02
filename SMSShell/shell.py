@@ -117,6 +117,8 @@ class Shell(object):
     """Try to load the given command into the cache dir
 
     @param name [str] the name of the command to load
+    @return Command instance
+    @throw ShellException
     """
     g_logger.debug("loading command handler with name '%s'", name)
     try:
