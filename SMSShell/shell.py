@@ -22,22 +22,28 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""
+__author__ = "Pierre GINDRAUD"
+__copyright__ = "Copyright (C) 2016 Pierre GINDRAUD"
+__license__ = "Public Domain"
+__version__ = "1.0"
+
+"""This module contains the main class of SMS Shell
 """
 
 # System imports
 import logging
 
 # Project imports
-from .exceptions import ShellException,CommandNotFoundException
+from .exceptions import ShellException,CommandNotFoundException,CommandBadImplemented
 from .models import Session
+from .commands import AbstractCommand
 
 # Global project declarations
 g_logger = logging.getLogger('smsshell.shell')
 
 
 class Shell(object):
-  """
+  """Build a new instance a Shell
   """
 
   def __init__(self, configparser):
@@ -66,15 +72,39 @@ class Shell(object):
     sess = self.__getSessionForSubject(subject)
     return self.__call(sess, cmd, argv[2:])
 
+  def flushCommandCache(self):
+    """Perform a flush of all command instance in local cache
+
+    This cause that all next call to each command will require the
+    re-instanciation of the command
+    """
+    self.__commands = dict()
+
   def __call(self, session, cmd, argv):
     """
     """
     if cmd not in self.__commands:
       self.__loadCommand(cmd)
+    session._setPrefix(cmd)
     return self.__commands[cmd].main(argv)
 
-  def __loadCommand(self):
-    pass
+  def __loadCommand(self, name):
+    """
+    """
+    g_logger.debug("loading command handler with name '%s'", name)
+    try:
+      mod = __import__('SMSShell.commands.' + name, fromlist=['Command'])
+    except ImportError as e:
+      raise CommandNotFoundException("Command handler '{name}' cannot be found in commands/ folder.".format(name))
+
+    cmd = mod.Command(g_logger.getChild('com.' + name))
+    # handler class checking
+    if not isinstance(cmd, AbstractCommand):
+      g_sys_log.error("Command '%s' must extend AbstractCommand class", name)
+      raise CommandBadImplemented()
+    # register command into cache
+    self.__commands[name] = cmd
+
 
   def __getSessionForSubject(self, key):
     """Retrieve the session associated with this user

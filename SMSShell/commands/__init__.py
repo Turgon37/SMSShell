@@ -22,17 +22,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""This module define all operations related Exceptions
+"""This package contains all available commands
 """
 
-class SMSException(Exception):
-  pass
+# Project imports
+from ..exceptions import CommandBadImplemented
 
-class ShellException(Exception):
-  pass
+class AbstractCommand(object):
+  """This is a abstract command, all user defined comand must inherit this one"""
 
-class CommandNotFoundException(ShellException):
-  pass
+  def __init__(self, logger):
+    self.log = logger
 
-class CommandBadImplemented(ShellException):
-  pass
+  def main(self, argv):
+    raise CommandBadImplemented(str(self.__class__) + " must implement the main function")
