@@ -109,7 +109,7 @@ class Shell(object):
     """
     if len(argv) < properties['min']:
       raise BadCommandCall('This command require at least {0} arguments'.format(properties['min']))
-    if properties['max'] < len(argv):
+    if properties['max'] != -1 and properties['max'] < len(argv):
       raise BadCommandCall('This command require at most {0} arguments'.format(properties['max']))
 
 
