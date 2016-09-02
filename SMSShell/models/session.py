@@ -48,7 +48,9 @@ class Session(object):
     self.subject = subject
     self.__created_at = datetime.datetime.today()
     self.access()
+    self.__prefix = None
     self.ttl = timetolive
+    self.storage = dict()
 
   @property
   def subject(self):
@@ -117,6 +119,28 @@ class Session(object):
       g_logger.debug('session expired')
       return False
     return True
+
+  def _setPrefix(self, p):
+    """Define the prefix to use for key-value store
+
+    This allow to separate each command storage by namespace in the session
+    @param p [str] : the prefix for key-value store
+    """
+    self.__prefix = p
+
+  def get(self, key):
+    fullkey = self.__prefix + key
+    if fullkey in self.__storage:
+      return self.__storage[fullkey]
+
+  def set(self, key, value):
+    """Set the given value in session storage
+
+    @param key [str] the name of the key where to put the value
+    @param
+    """
+    fullkey = self.__prefix + key
+    self.__storage[fullkey] = value
 
 
 # DEBUG methods
