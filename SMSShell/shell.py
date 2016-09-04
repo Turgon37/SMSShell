@@ -134,9 +134,13 @@ class Shell(object):
     try:
       mod = __import__('SMSShell.commands.' + name, fromlist=['Command'])
     except ImportError as e:
-      raise CommandNotFoundException("Command handler '{name}' cannot be found in commands/ folder.".format(name))
+      raise CommandNotFoundException("Command handler '{0}' cannot be found in commands/ folder.".format(name))
 
-    cmd = mod.Command(g_logger.getChild('com.' + name))
+    try: # instanciate
+      cmd = mod.Command(g_logger.getChild('com.' + name))
+    except AttributeError as e:
+      raise CommandBadImplemented("Error in command '{0}' : {1}.".format(name, str(e)))
+
     # handler class checking
     if not isinstance(cmd, AbstractCommand):
       g_sys_log.error("Command '%s' must extend AbstractCommand class", name)
