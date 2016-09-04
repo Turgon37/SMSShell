@@ -32,6 +32,7 @@ __version__ = "1.0"
 
 # System imports
 import logging
+import os
 
 # Project imports
 from .exceptions import ShellException,CommandNotFoundException,CommandBadImplemented,CommandForbidden,BadCommandCall
@@ -83,10 +84,31 @@ class Shell(object):
 
   def getCommand(self, name):
     """Return the command instance of the given command name
+
+    @param [Str] the name of the command to retrieve
+    @return Command instance
     """
     if name not in self.__commands:
       self.__loadCommand(name)
     return self.__commands[name]
+
+  def getAvailableCommands(self, session):
+    """Return the list of available command for the given session
+
+    @param models.Session the session to use as subject
+    @return List<Str> the list of command name
+    """
+    ls = []
+    for key in self.__commands:
+      if Shell.hasSessionAccessToCommand(session, self.__commands[key]):
+        ls.append(key)
+    return ls
+
+  def loadAllCommands(self):
+    for com in os.listdir("/mydir"):
+      if com.endswith(".txt"):
+        avai.append(com)
+
 
   def __call(self, session, cmd, argv):
     """Execute the command with the given name
@@ -99,7 +121,7 @@ class Shell(object):
     c = self.getCommand(cmd)
     session._setPrefix(cmd)
     # check command aceptance conditions
-    if len(c._inputStates()) > 0 and session.state not in c._inputStates():
+    if not Shell.hasSessionAccessToCommand(session, c):
       raise CommandForbidden('You are not allowed to call this command from here')
     self.__checkArgv(argv, c._argsProperties())
 
@@ -127,6 +149,17 @@ class Shell(object):
     if properties['max'] != -1 and properties['max'] < len(argv):
       raise BadCommandCall('This command require at most {0} arguments'.format(properties['max']))
 
+  @staticmethod
+  def hasSessionAccessToCommand(s, c):
+    """Check if the given session has access to the given command
+
+    @param models.Session the session to test
+    @param Command the command to test access for
+    @return [bool] the access status
+    """
+    if len(c._inputStates()) > 0 and s.state not in c._inputStates():
+      return False
+    return True
 
   def __loadCommand(self, name):
     """Try to load the given command into the cache dir
