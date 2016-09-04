@@ -31,13 +31,16 @@ class SMSException(Exception):
 class ShellException(Exception):
   pass
 
-class CommandNotFoundException(ShellException):
+class CommandException(ShellException):
   pass
 
-class CommandBadImplemented(ShellException):
+class CommandNotFoundException(CommandException):
   pass
 
-class CommandForbidden(ShellException):
+class CommandBadImplemented(CommandException):
+  pass
+
+class CommandForbidden(CommandException):
   pass
 
 class BadCommandCall(ShellException):
