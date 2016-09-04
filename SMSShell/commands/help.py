@@ -44,7 +44,10 @@ class Command(AbstractCommand):
     return []
 
   def usage(self, argv):
-    return 'help [command] [command args]'
+    return 'help [COMMAND] [COMMAND ARGS]'
+
+  def description(self, argv):
+    return 'Show commands usage'
 
   def main(self, argv):
     # call usage function of the given command
