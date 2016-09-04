@@ -81,6 +81,13 @@ class Shell(object):
     """
     self.__commands = dict()
 
+  def getCommand(self, name):
+    """Return the command instance of the given command name
+    """
+    if name not in self.__commands:
+      self.__loadCommand(name)
+    return self.__commands[name]
+
   def __call(self, session, cmd, argv):
     """Execute the command with the given name
 
@@ -89,9 +96,7 @@ class Shell(object):
     @param argv [List<str>]
     @return the command output
     """
-    if cmd not in self.__commands:
-      self.__loadCommand(cmd)
-    c = self.__commands[cmd]
+    c = self.getCommand(cmd)
     session._setPrefix(cmd)
     # check command aceptance conditions
     if len(c._inputStates()) > 0 and session.state not in c._inputStates():
