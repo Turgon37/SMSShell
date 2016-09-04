@@ -42,6 +42,9 @@ class Command(AbstractCommand):
   def usage(self, argv):
     return 'flush'
 
+  def description(self, argv):
+    return 'Flush command cache directory'
+
   def main(self, argv):
     self.shell.flushCommandCache()
     return 'ok'
