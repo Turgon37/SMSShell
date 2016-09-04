@@ -98,6 +98,7 @@ class Shell(object):
       raise CommandForbidden('You are not allowed to call this command from here')
     self.__checkArgv(argv, c._argsProperties())
 
+    # refresh session
     session._access()
     c.session = session
     result = c.main(argv)
