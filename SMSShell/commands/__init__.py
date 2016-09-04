@@ -32,12 +32,13 @@ from ..exceptions import CommandBadImplemented
 class AbstractCommand(object):
   """This is a abstract command, all user defined comand must inherit this one"""
 
-  def __init__(self, logger):
+  def __init__(self, logger, shell):
     """Build a new instance of the command
 
     @param [Logger] : the logger instance to use
     """
     self.log = logger
+    self.shell = shell
     self.session = None
 
   @property

@@ -137,7 +137,7 @@ class Shell(object):
       raise CommandNotFoundException("Command handler '{0}' cannot be found in commands/ folder.".format(name))
 
     try: # instanciate
-      cmd = mod.Command(g_logger.getChild('com.' + name))
+      cmd = mod.Command(g_logger.getChild('com.' + name), self)
     except AttributeError as e:
       raise CommandBadImplemented("Error in command '{0}' : {1}.".format(name, str(e)))
 
