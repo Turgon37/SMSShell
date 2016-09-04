@@ -57,7 +57,7 @@ class AbstractCommand(object):
     @param s [str] : the session
     @return self
     """
-    self.__state = s
+    self.__session = s
     return self
 
   def main(self, argv):
