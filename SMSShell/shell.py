@@ -31,6 +31,8 @@ __version__ = "1.0"
 """
 
 # System imports
+import importlib
+import importlib.util
 import logging
 import os
 
@@ -187,7 +189,10 @@ class Shell(object):
     """
     g_logger.debug("loading command handler with name '%s'", name)
     try:
-      mod = __import__('SMSShell.commands.' + name, fromlist=['Command'])
+      mod = importlib.import_module('.commands.' + name, package='SMSShell')
+      if importlib.util.find_spec('.commands.' + name, package='SMSShell') is not None:
+        importlib.reload(mod)
+      #mod = __import__('SMSShell.commands.' + name, fromlist=['Command'])
     except ImportError as e:
       raise CommandNotFoundException("Command handler '{0}' cannot be found in commands/ folder.".format(name))
 
