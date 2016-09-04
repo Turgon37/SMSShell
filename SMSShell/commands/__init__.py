@@ -74,6 +74,13 @@ class AbstractCommand(object):
     """
     raise CommandBadImplemented(str(self.__class__) + " must implement the usage function")
 
+  def description(self, argv):
+    """This function must return a short description message of what the command do
+
+    @param List<Str> the list of arguments
+    """
+    raise CommandBadImplemented(str(self.__class__) + " must implement the description function")
+
   def _inputStates(self):
     """Private entry point for Shell
     """
