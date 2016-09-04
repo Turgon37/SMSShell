@@ -98,7 +98,15 @@ class Shell(object):
     self.__checkArgv(argv, c._argsProperties())
 
     session._access()
-    return command.main(argv)
+    c.session = session
+    result = c.main(argv)
+    c.session = None
+
+    # handler class checking
+    if not isinstance(result, str):
+      raise CommandBadImplemented("Command '{0}' 's return object must be a str".format(name))
+    return result
+
 
   def __checkArgv(self, argv, properties):
     """Check the given arguments according to the specifications

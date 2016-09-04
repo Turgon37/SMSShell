@@ -38,6 +38,26 @@ class AbstractCommand(object):
     @param [Logger] : the logger instance to use
     """
     self.log = logger
+    self.session = None
+
+  @property
+  def session(self):
+    """Return the session associated with the request
+
+    @return [models.Session] the session id
+    """
+    assert self.__session is not None
+    return self.__session
+
+  @session.setter
+  def session(self, s):
+    """Set the session's associated with the request
+
+    @param s [str] : the session
+    @return self
+    """
+    self.__state = s
+    return self
 
   def main(self, argv):
     """The main running entry point of this command
