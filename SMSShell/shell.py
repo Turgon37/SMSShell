@@ -35,7 +35,7 @@ import logging
 import os
 
 # Project imports
-from .exceptions import ShellException,CommandNotFoundException,CommandBadImplemented,CommandForbidden,BadCommandCall
+from .exceptions import ShellException,CommandException,CommandNotFoundException,CommandBadImplemented,CommandForbidden,BadCommandCall
 from .models import Session
 from .commands import AbstractCommand
 
@@ -82,7 +82,18 @@ class Shell(object):
     """
     self.__commands = dict()
 
-  def getCommand(self, name):
+  def getCommand(self, session, name):
+    """Return the command instance of the given command name
+
+    @param [Str] the name of the command to retrieve
+    @return Command instance
+    """
+    c = self.__getCommand(name)
+    if not Shell.hasSessionAccessToCommand(session, c):
+      raise CommandForbidden('You are not allowed to call this command from here')
+    return c
+
+  def __getCommand(self, name):
     """Return the command instance of the given command name
 
     @param [Str] the name of the command to retrieve
@@ -99,16 +110,22 @@ class Shell(object):
     @return List<Str> the list of command name
     """
     ls = []
+    self.loadAllCommands()
     for key in self.__commands:
       if Shell.hasSessionAccessToCommand(session, self.__commands[key]):
         ls.append(key)
     return ls
 
   def loadAllCommands(self):
-    for com in os.listdir("/mydir"):
-      if com.endswith(".txt"):
-        avai.append(com)
-
+    """Load all availables command into the cache dir
+    """
+    for com in os.listdir(os.path.dirname(__file__) + "/commands"):
+      if not com.startswith('_') and com.endswith(".py"):
+        try:
+          self.__getCommand(os.path.splitext(com)[0])
+        # intercept exception to prevent command execution stop
+        except CommandException as e:
+          g_logger.error(str(e))
 
   def __call(self, session, cmd, argv):
     """Execute the command with the given name
@@ -118,7 +135,7 @@ class Shell(object):
     @param argv [List<str>]
     @return the command output
     """
-    c = self.getCommand(cmd)
+    c = self.__getCommand(cmd)
     session._setPrefix(cmd)
     # check command aceptance conditions
     if not Shell.hasSessionAccessToCommand(session, c):
