@@ -70,7 +70,8 @@ class Shell(object):
     if len(subject) == 0:
       raise ShellException('empty subject name')
     sess = self.__getSessionForSubject(subject)
-    return self.__call(sess, cmd, argv[2:])
+    g_logger.info("Subject {0} run command '{1}' with args : {2}".format(subject, cmd, str(argv[1:])))
+    return self.__call(sess, cmd, argv[1:])
 
   def flushCommandCache(self):
     """Perform a flush of all command instance in local cache
