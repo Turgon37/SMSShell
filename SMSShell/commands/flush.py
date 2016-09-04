@@ -22,39 +22,26 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""This module define all operations related Exceptions
+"""Flush command
+
+This command remove all cached commands
 """
 
-
-class SMSException(Exception):
-  pass
+from . import AbstractCommand
 
 
-class ShellException(Exception):
-  def __init__(self, message, short):
-    super(ShellException, self).__init__(message)
-    self.short_message = short
+class Command(AbstractCommand):
 
+  def argsProperties(self):
+    return dict()
 
-class CommandException(ShellException):
-  def __init__(self, message, short='internal command error'):
-    super(CommandException, self).__init__(message, short)
+  def inputStates(self):
+    return []
 
+  def usage(self, argv):
+    return 'flush'
 
-class CommandNotFoundException(CommandException):
-  def __init__(self, message, short='command not found'):
-    super(CommandNotFoundException, self).__init__(message, short)
-
-
-class CommandBadImplemented(CommandException):
-  pass
-
-
-class CommandForbidden(CommandException):
-  def __init__(self, message, short='command denied'):
-    super(CommandForbidden, self).__init__(message, short)
-
-
-class BadCommandCall(ShellException):
-  def __init__(self, message, short='bad call, use help'):
-    super(BadCommandCall, self).__init__(message, short)
+  def main(self, argv):
+    # call usage function of the given command
+    self.shell.flushCommandCache()
+    return 'ok'

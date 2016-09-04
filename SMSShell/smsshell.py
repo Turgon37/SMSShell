@@ -165,6 +165,7 @@ class SMSShell(object):
           continue
         except ShellException as es:
           g_logger.error("error during command execution : " + str(es))
+          print(es.short_message)
           continue
 
   def stop(self):
