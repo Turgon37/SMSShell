@@ -24,7 +24,8 @@
 
 """Flush command
 
-This command remove all cached commands
+This command remove all cached commands, force the shell to reload all command
+on next call
 """
 
 from . import AbstractCommand
@@ -42,6 +43,5 @@ class Command(AbstractCommand):
     return 'flush'
 
   def main(self, argv):
-    # call usage function of the given command
     self.shell.flushCommandCache()
     return 'ok'
