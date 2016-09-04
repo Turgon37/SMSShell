@@ -94,7 +94,7 @@ class Shell(object):
     c = self.__commands[cmd]
     session._setPrefix(cmd)
     # check command aceptance conditions
-    if session.state not in c._inputStates():
+    if len(c._inputStates()) > 0 and session.state not in c._inputStates():
       raise CommandForbidden('You are not allowed to call this command from here')
     self.__checkArgv(argv, c._argsProperties())
 
