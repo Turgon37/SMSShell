@@ -47,5 +47,6 @@ class Command(AbstractCommand):
   def main(self, argv):
     try:
       return self.shell.getCommand(self.session, argv[0]).description(argv[1:])
-    except CommandException:
+    except CommandException as e:
+      self.log.error("error during command execution : " + str(e))
       return 'command not available'
