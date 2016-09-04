@@ -143,8 +143,7 @@ class Shell(object):
 
     # handler class checking
     if not isinstance(cmd, AbstractCommand):
-      g_sys_log.error("Command '%s' must extend AbstractCommand class", name)
-      raise CommandBadImplemented()
+      raise CommandBadImplemented("Command '{0}' must extend AbstractCommand class".format(name))
     # register command into cache
     self.__commands[name] = cmd
 
