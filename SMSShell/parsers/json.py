@@ -33,26 +33,30 @@ import json
 from .exceptions import ParsingException
 from .exceptions import BadMessageException
 from ..models import Message
+from . import AbstractParser
 
 # Global project declarations
 g_logger = logging.getLogger('smsshell.parsers.json')
 
 
-class JsonParser(object):
-  """An JSON format parser
-  """
-
-  def parse(self, raw):
-    """Parse the raw content
+class Parser(AbstractParser):
+    """An JSON format parser
     """
-    try:
-      obj = json.loads(raw)
-    except json.JSONDecodeError as d:
-      raise ParsingException()
-    sender = obj['smsnumber']
-    content = obj['smstext']
-    if sender is None or len(sender) < 1:
-      raise BadMessageException("The sender field is null or too small")
-    if content is None or len(content) < 1:
-      raise BadMessageException("The content field is null or too small")
-    return Message(sender, content)
+
+    def parse(self, raw):
+        """Parse the raw content
+
+        @param raw the raw input content as string
+        @return a Message instance
+        """
+        try:
+            obj = json.loads(raw)
+        except json.JSONDecodeError as d:
+            raise ParsingException()
+        sender = obj['smsnumber']
+        content = obj['smstext']
+        if sender is None or len(sender) < 1:
+            raise BadMessageException("The sender field is null or too small")
+        if content is None or len(content) < 1:
+            raise BadMessageException("The content field is null or too small")
+        return Message(sender, content)

@@ -28,6 +28,7 @@
 # System imports
 import configparser
 import datetime
+import importlib
 import logging
 import logging.handlers
 import os
@@ -40,7 +41,6 @@ import time
 try:
     from .config import MyConfigParser
     from .receivers import Receiver
-    from .parsers import Parser
     from .shell import Shell
     from .exceptions import SMSException,ShellException
 except Exception as e:
@@ -141,17 +141,22 @@ class SMSShell(object):
         except OSError as e:
             g_logger.error("Unable to remove PID file: %s", e)
 
-        g_logger.info("Exiting OUAM")
+        g_logger.info("Exiting SMSShell")
         return True
 
     def run(self):
         """This function is responsible of applicative works
         """
-        parser = Parser()
+        parser_name = self.cp.get('standalone', 'msg_parser', fallback="json")
+        try:
+            mod = importlib.import_module('.parsers.' + parser_name, package='SMSShell')
+            parser = mod.Parser()
+        except ImportError as e:
+            g_logger.fatal("Unable to instanciate the message parser with name '{0}'.".format(parser_name))
         shell = Shell(self.cp)
 
         if self.cp.getMode() == 'ONESHOT':
-            raise NotImplemented('oneshot mode not yet implemented')
+            raise NotImplementedError('oneshot mode not yet implemented')
         else:
             sock = Receiver(self.cp)
         if not sock.start():
