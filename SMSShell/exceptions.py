@@ -27,34 +27,34 @@
 
 
 class SMSException(Exception):
-  pass
+    pass
 
 
 class ShellException(Exception):
-  def __init__(self, message, short):
-    super(ShellException, self).__init__(message)
-    self.short_message = short
+    def __init__(self, message, short):
+        super(ShellException, self).__init__(message)
+        self.short_message = short
 
 
 class CommandException(ShellException):
-  def __init__(self, message, short='internal command error'):
-    super(CommandException, self).__init__(message, short)
+    def __init__(self, message, short='internal command error'):
+        super(CommandException, self).__init__(message, short)
 
 
 class CommandNotFoundException(CommandException):
-  def __init__(self, message, short='command not found'):
-    super(CommandNotFoundException, self).__init__(message, short)
+    def __init__(self, message, short='command not found'):
+        super(CommandNotFoundException, self).__init__(message, short)
 
 
 class CommandBadImplemented(CommandException):
-  pass
+    pass
 
 
 class CommandForbidden(CommandException):
-  def __init__(self, message, short='command denied'):
-    super(CommandForbidden, self).__init__(message, short)
+    def __init__(self, message, short='command denied'):
+        super(CommandForbidden, self).__init__(message, short)
 
 
 class BadCommandCall(ShellException):
-  def __init__(self, message, short='bad call, use help'):
-    super(BadCommandCall, self).__init__(message, short)
+    def __init__(self, message, short='bad call, use help'):
+        super(BadCommandCall, self).__init__(message, short)
