@@ -110,11 +110,11 @@ class SMSShell(object):
         # Turn in daemon mode
         if self.__daemon:
             g_logger.debug('Starting in daemon mode')
-        if self.__daemonize():
-            g_logger.info('Daemon started')
-        else:
-            g_logger.fatal('Could not create daemon')
-            raise Exception('Could not create daemon')
+            if self.__daemonize():
+                g_logger.info('Daemon started')
+            else:
+                g_logger.fatal('Could not create daemon')
+                raise Exception('Could not create daemon')
 
         # Check pidfile
         if pid_path is None:
