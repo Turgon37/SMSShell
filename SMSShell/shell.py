@@ -67,7 +67,7 @@ class Shell(object):
         """
         if len(argv) < 1:
             raise ShellException('bad number of arguments')
-            cmd = argv[0]
+        cmd = argv[0]
         if len(cmd) == 0:
             raise ShellException('empty command name')
         if len(subject) == 0:
@@ -123,11 +123,11 @@ class Shell(object):
         """
         for com in os.listdir(os.path.dirname(__file__) + "/commands"):
             if not com.startswith('_') and com.endswith(".py"):
-            try:
-                self.__getCommand(os.path.splitext(com)[0])
-                # intercept exception to prevent command execution stop
-            except CommandException as e:
-                g_logger.error(str(e))
+                try:
+                    self.__getCommand(os.path.splitext(com)[0])
+                    # intercept exception to prevent command execution stop
+                except CommandException as e:
+                    g_logger.error(str(e))
 
     def __call(self, session, cmd, argv):
         """Execute the command with the given name
@@ -216,9 +216,9 @@ class Shell(object):
         """
         if key in self.__sessions:
             sess = self.__sessions[key]
-        if sess.isValid():
-            g_logger.debug('using existing session')
-        return sess
+            if sess.isValid():
+                g_logger.debug('using existing session')
+                return sess
 
         g_logger.debug('creating a new session for subject : ' + key)
         self.__sessions[key] = Session(key)
