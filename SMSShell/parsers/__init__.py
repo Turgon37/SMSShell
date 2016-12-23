@@ -25,8 +25,15 @@
 """This module contains all input parser classes
 """
 
-# Project imports
-from .json import JsonParser
-from .json import JsonParser as Parser
 
-__all__ = ['JsonParser']
+class AbstractParser(object):
+    """An abstract parser
+    """
+
+    def parse(self, raw):
+        """Parse the raw content
+
+        @param raw the raw input content as string
+        @return a Message instance
+        """
+        raise NotImplementedError("You must implement the parse method")
