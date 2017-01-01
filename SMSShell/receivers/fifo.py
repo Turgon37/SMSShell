@@ -34,11 +34,11 @@ import stat
 from . import AbstractReceiver
 
 # Global project declarations
-g_logger = logging.getLogger('smsshell.receivers.socket')
+g_logger = logging.getLogger('smsshell.receivers.fifo')
 
 
 class Receiver(AbstractReceiver):
-    """
+    """A fifo receiver class
     """
 
     def init(self):
