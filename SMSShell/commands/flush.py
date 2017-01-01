@@ -33,18 +33,18 @@ from . import AbstractCommand
 
 class Command(AbstractCommand):
 
-  def argsProperties(self):
-    return dict()
+    def argsProperties(self):
+        return dict()
 
-  def inputStates(self):
-    return []
+    def inputStates(self):
+        return []
 
-  def usage(self, argv):
-    return 'flush'
+    def usage(self, argv):
+        return 'flush'
 
-  def description(self, argv):
-    return 'Flush command cache directory'
+    def description(self, argv):
+        return 'Flush command cache directory'
 
-  def main(self, argv):
-    self.shell.flushCommandCache()
-    return 'ok'
+    def main(self, argv):
+        self.shell.flushCommandCache()
+        return 'ok'

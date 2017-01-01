@@ -144,25 +144,49 @@ class SMSShell(object):
         g_logger.info("Exiting SMSShell")
         return True
 
+
+    def importAndCheck(self, module_path, class_name, abstract):
+        """
+        """
+        try:
+            mod = importlib.import_module(module_path, package='SMSShell')
+        except ImportError as e:
+            raise ShellInitException("Unable to import the module {0}. Reason : {1}".format(module_path, str(e)))
+        try: # instanciate
+            cl = getattr(mod, class_name)
+            inst = cl(self.cp)
+        except AttributeError as e:
+            raise ShellInitException("Error in module '{0}' : {1}.".format(module_path, str(e)))
+
+        # handler class checking
+        if not isinstance(inst, abstract):
+            raise ShellInitException("Class '{0}' must extend AbstractCommand class".format(module_path))
+        return inst
+
     def run(self):
         """This function is responsible of applicative works
         """
-        parser_name = self.cp.get('standalone', 'msg_parser', fallback="json")
-        try:
-            mod = importlib.import_module('.parsers.' + parser_name, package='SMSShell')
-            parser = mod.Parser()
-        except ImportError as e:
-            g_logger.fatal("Unable to instanciate the message parser with name '{0}'.".format(parser_name))
         shell = Shell(self.cp)
 
         if self.cp.getMode() == 'ONESHOT':
             raise NotImplementedError('oneshot mode not yet implemented')
         else:
-            sock = Receiver(self.cp)
-        if not sock.start():
-            g_logger.fatal('Unable to open socket')
+            try:
+                parser = self.importAndCheck(
+                    '.parsers.' + self.cp.get('standalone', 'msg_parser', fallback="json"),
+                    'Parser', AbstractParser
+                )
+                recv = self.importAndCheck(
+                    '.receivers.' + self.cp.get('standalone', 'input_type', fallback="socket"),
+                    'Receiver', AbstractReceiver
+                )
+            except ShellInitException as e:
+                g_logger.fatal("Unable to load an internal module : %s", str(e))
+                return False
+        if not recv.start():
+            g_logger.fatal('Unable to open receiver')
             return False
-        for raw in sock.read():
+        for raw in recv.read():
             # parse received content
             try:
                 msg = parser.parse(raw)
