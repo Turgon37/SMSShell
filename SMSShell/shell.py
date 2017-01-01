@@ -33,7 +33,7 @@ import logging
 import os
 
 # Project imports
-from .exceptions import ShellException,CommandException,CommandNotFoundException,CommandBadImplemented,CommandForbidden,BadCommandCall
+from .exceptions import *
 from .models import Session
 from .commands import AbstractCommand
 
