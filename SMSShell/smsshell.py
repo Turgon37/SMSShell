@@ -181,7 +181,7 @@ class SMSShell(object):
                     'Parser', AbstractParser
                 )
                 recv = self.importAndCheck(
-                    '.receivers.' + self.cp.get('standalone', 'input_type', fallback="socket"),
+                    '.receivers.' + self.cp.get('standalone', 'input_type', fallback="fifo"),
                     'Receiver', AbstractReceiver
                 )
             except ShellInitException as e:
