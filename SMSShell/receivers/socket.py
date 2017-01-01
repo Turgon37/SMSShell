@@ -41,13 +41,10 @@ class Receiver(AbstractReceiver):
     """
     """
 
-    def __init__(self, config):
-        """Constructor :
-
-        @param config[ConfigParser] : the config parser
+    def init(self):
+        """Init
         """
-        self.cp = config
-        self.__path = config.get('standalone', 'input_path', fallback="/var/run/smsshell")
+        self.__path = self.cp.get('standalone', 'input_path', fallback="/var/run/smsshell")
 
     def start(self):
         """Start the socket (FIFO) runner
