@@ -30,23 +30,24 @@ This command return a short description of what a command do
 from . import AbstractCommand
 from ..exceptions import CommandException
 
+
 class Command(AbstractCommand):
 
-  def argsProperties(self):
-    return dict(min=1, max=1)
+    def argsProperties(self):
+        return dict(min=1, max=1)
 
-  def inputStates(self):
-    return []
+    def inputStates(self):
+        return []
 
-  def usage(self, argv):
-    return 'desc COMMAND'
+    def usage(self, argv):
+        return 'desc COMMAND'
 
-  def description(self, argv):
-    return 'Show commands short description'
+    def description(self, argv):
+        return 'Show commands short description'
 
-  def main(self, argv):
-    try:
-      return self.shell.getCommand(self.session, argv[0]).description(argv[1:])
-    except CommandException as e:
-      self.log.error("error during command execution : " + str(e))
-      return 'command not available'
+    def main(self, argv):
+        try:
+            return self.shell.getCommand(self.session, argv[0]).description(argv[1:])
+        except CommandException as e:
+            self.log.error("error during command execution : " + str(e))
+            return 'command not available'

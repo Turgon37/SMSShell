@@ -30,52 +30,55 @@ import logging
 import os
 import stat
 
+# Project import
+from . import AbstractReceiver
+
 # Global project declarations
-g_logger = logging.getLogger('smsshell.socket')
+g_logger = logging.getLogger('smsshell.receivers.socket')
 
 
-class SocketReceiver(object):
-  """
-  """
-
-  def __init__(self, config):
-    """Constructor :
-
-    @param config[ConfigParser] : the config parser
+class Receiver(AbstractReceiver):
     """
-    self.cp = config
-    self.__path = config.get('standalone', 'path', fallback="/var/run/smsshell")
-
-  def start(self):
-    """Start the socket (FIFO) runner
-
-    Init the fifo pipe and wait for incoming contents
-    @return self
     """
-    directory = os.path.dirname(self.__path)
-    # check permissions
-    if not (os.path.isdir(directory) and os.access(directory, os.X_OK)):
-      g_logger.fatal('Unsufficients permissions into socket directory')
-      return False
-    # check socket
-    if os.path.exists(self.__path):
-      if not stat.S_ISFIFO(os.stat(self.__path).st_mode):
-        g_logger.fatal('The path given is already a file but not a fifo')
-        return False
-      g_logger.debug('using existing fifo')
-    elif not os.path.exists(self.__path):
-      # check directory write rights
-      if not os.access(directory, os.X_OK|os.W_OK):
-        g_logger.fatal('Unsufficients permissions into the directory to create the fifo')
-        return False
-      os.mkfifo(self.__path, mode=0o620)
-    return self
 
-  def read(self):
-    """Return a read blocking iterable object for each content in the fifo
+    def __init__(self, config):
+        """Constructor :
 
-    @return Iterable
-    """
-    while True:
-      with open(self.__path) as fifo:
-        yield fifo.read()
+        @param config[ConfigParser] : the config parser
+        """
+        self.cp = config
+        self.__path = config.get('standalone', 'input_path', fallback="/var/run/smsshell")
+
+    def start(self):
+        """Start the socket (FIFO) runner
+
+        Init the fifo pipe and wait for incoming contents
+        @return self
+        """
+        directory = os.path.dirname(self.__path)
+        # check permissions
+        if not (os.path.isdir(directory) and os.access(directory, os.X_OK)):
+            g_logger.fatal('Unsufficients permissions into socket directory')
+            return False
+        # check socket
+        if os.path.exists(self.__path):
+            if not stat.S_ISFIFO(os.stat(self.__path).st_mode):
+                g_logger.fatal('The path given is already a file but not a fifo')
+                return False
+            g_logger.debug('using existing fifo')
+        elif not os.path.exists(self.__path):
+            # check directory write rights
+            if not os.access(directory, os.X_OK|os.W_OK):
+                g_logger.fatal('Unsufficients permissions into the directory to create the fifo')
+                return False
+            os.mkfifo(self.__path, mode=0o620)
+        return self
+
+    def read(self):
+        """Return a read blocking iterable object for each content in the fifo
+
+        @return Iterable
+        """
+        while True:
+            with open(self.__path) as fifo:
+                yield fifo.read()

@@ -35,28 +35,29 @@ This command return some help string in function of the given input parameters
 from . import AbstractCommand
 from ..exceptions import CommandException
 
+
 class Command(AbstractCommand):
 
-  def argsProperties(self):
-    return dict(max=1)
+    def argsProperties(self):
+        return dict(max=1)
 
-  def inputStates(self):
-    return []
+    def inputStates(self):
+        return []
 
-  def usage(self, argv):
-    return 'help [COMMAND] [COMMAND ARGS]'
+    def usage(self, argv):
+        return 'help [COMMAND] [COMMAND ARGS]'
 
-  def description(self, argv):
-    return 'Show commands usage'
+    def description(self, argv):
+        return 'Show commands usage'
 
-  def main(self, argv):
-    # call usage function of the given command
-    if len(argv) > 0:
-      try:
-        return self.shell.getCommand(self.session, argv[0]).usage(argv[1:])
-      except CommandException as e:
-        self.log.error("error during command execution : " + str(e))
-        return 'command not available'
-    # return the list of availables commands
-    else:
-      return ' '.join(self.shell.getAvailableCommands(self.session))
+    def main(self, argv):
+        # call usage function of the given command
+        if len(argv) > 0:
+            try:
+                return self.shell.getCommand(self.session, argv[0]).usage(argv[1:])
+            except CommandException as e:
+                self.log.error("error during command execution : " + str(e))
+                return 'command not available'
+        # return the list of availables commands
+        else:
+            return ' '.join(self.shell.getAvailableCommands(self.session))

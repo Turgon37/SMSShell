@@ -30,77 +30,77 @@ content that will be analysed
 
 
 class Message(object):
-  """A simple message with sender id
-  """
-
-  def __init__(self, sender, content):
-    """Constructor: Build a new message object
-
-    @param sender [str] : sender unique identifier
-    @param content [str] : message content
+    """A simple message with sender id
     """
-    self.__sender = None
-    self.__content = None
-    # database model
-    self.sender = sender
-    self.content = content
 
-  @property
-  def sender(self):
-    """Return the sender id
+    def __init__(self, sender, content):
+        """Constructor: Build a new message object
 
-    @return [str] the sender id
-    """
-    assert self.__sender is not None
-    return self.__sender
+        @param sender [str] : sender unique identifier
+        @param content [str] : message content
+        """
+        self.__sender = None
+        self.__content = None
+        # database model
+        self.sender = sender
+        self.content = content
 
-  @sender.setter
-  def sender(self, s):
-    """Set the sender id
+    @property
+    def sender(self):
+        """Return the sender id
 
-    @param s [str] : the sender id
-    """
-    self.__sender = s
+        @return [str] the sender id
+        """
+        assert self.__sender is not None
+        return self.__sender
 
-  @property
-  def content(self):
-    """Return the content payload
+    @sender.setter
+    def sender(self, s):
+        """Set the sender id
 
-    @return [str] the content
-    """
-    assert self.__content is not None
-    return self.__content
+        @param s [str] : the sender id
+        """
+        self.__sender = s
 
-  @content.setter
-  def content(self, c):
-    """Set the message content
+    @property
+    def content(self):
+        """Return the content payload
 
-    @param c [str] : the content
-    """
-    self.__content = c
+        @return [str] the content
+        """
+        assert self.__content is not None
+        return self.__content
 
-  def getArgv(self):
-    """Return the command argument vector associated with this message
+    @content.setter
+    def content(self, c):
+        """Set the message content
 
-    @return list of command argments
-    """
-    assert isinstance(self.content,str)
-    return self.content.split(' ')
+        @param c [str] : the content
+        """
+        self.__content = c
+
+    def getArgv(self):
+        """Return the command argument vector associated with this message
+
+        @return list of command argments
+        """
+        assert isinstance(self.content,str)
+        return self.content.split(' ')
 
 
-# DEBUG methods
-  def __str__(self):
-    """[DEBUG] Produce a description string for this message
+    # DEBUG methods
+    def __str__(self):
+        """[DEBUG] Produce a description string for this message
 
-    @return [str] a formatted string
-    """
-    content = ("Message from(" + str(self.sender) + ")" +
-               "\n  CONTENT = " + str(self.content))
-    return content
+        @return [str] a formatted string
+        """
+        content = ("Message from(" + str(self.sender) + ")" +
+                   "\n  CONTENT = " + str(self.content))
+        return content
 
-  def __repr__(self):
-    """[DEBUG] Produce a list of attribute as string
+    def __repr__(self):
+        """[DEBUG] Produce a list of attribute as string
 
-    @return [str] a formatted string that describe this object
-    """
-    return ("[M(" + str(self.sender) + ")]")
+        @return [str] a formatted string that describe this object
+        """
+        return ("[M(" + str(self.sender) + ")]")

@@ -22,11 +22,25 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""
+"""This module contains all input parser classes
 """
 
 # Project imports
-from .socket import SocketReceiver
-from .socket import SocketReceiver as Receiver
+from ..abstract import AbstractModule
 
-__all__ = ['SocketReceiver']
+
+class AbstractReceiver(AbstractModule):
+    """An abstract receiver
+    """
+
+    def start(self):
+        """Prepare the receiver
+
+        @return bool : True if init has success, otherwise False
+        """
+        raise NotImplementedError("You must implement the 'start' method")
+
+    def read(self):
+        """
+        """
+        raise NotImplementedError("You must implement the 'read' method")
