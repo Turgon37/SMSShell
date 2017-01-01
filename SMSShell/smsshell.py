@@ -365,7 +365,7 @@ class SMSShell(object):
 
         # set a format which is simpler for console use
         formatter = logging.Formatter(
-            "%(asctime)s %(name)-24s[%(process)d]: %(levelname)-7s %(message)s")
+            "%(asctime)s %(name)-30s[%(process)d]: %(levelname)-7s %(message)s")
         if target == "SYSLOG":
             # Syslog daemons already add date to the message.
             formatter = logging.Formatter(
