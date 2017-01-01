@@ -184,17 +184,24 @@ class SMSShell(object):
                     '.receivers.' + self.cp.get('standalone', 'input_type', fallback="fifo"),
                     'Receiver', AbstractReceiver
                 )
+                tran = self.importAndCheck(
+                    '.transmitters.' + self.cp.get('standalone', 'output_type', fallback="file"),
+                    'Transmitter', AbstractTransmitter
+                )
             except ShellInitException as e:
                 g_logger.fatal("Unable to load an internal module : %s", str(e))
                 return False
         if not recv.start():
             g_logger.fatal('Unable to open receiver')
             return False
+        if not tran.start():
+            g_logger.fatal('Unable to open transmitter')
+            return False
         for raw in recv.read():
             # parse received content
             try:
                 msg = parser.parse(raw)
-                print(shell.run(msg.sender, msg.getArgv()))
+                tran.transmit(shell.run(msg.sender, msg.getArgv()))
             except SMSException as em:
                 g_logger.error("received a bad message, skipping")
                 continue
