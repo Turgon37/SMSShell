@@ -38,9 +38,11 @@ class AbstractReceiver(AbstractModule):
 
         @return bool : True if init has success, otherwise False
         """
-        raise NotImplementedError("You must implement the 'start' method")
+        raise NotImplementedError("You must implement the 'start' method in receiver class")
 
     def read(self):
+        """Return a read blocking iterable object for each content in the fifo
+
+        @return Iterable
         """
-        """
-        raise NotImplementedError("You must implement the 'read' method")
+        raise NotImplementedError("You must implement the 'read' method in receiver class")
