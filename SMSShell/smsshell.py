@@ -175,6 +175,7 @@ class SMSShell(object):
         if self.cp.getMode() == 'ONESHOT':
             raise NotImplementedError('oneshot mode not yet implemented')
         else:
+            # Init standalone mode
             try:
                 parser = self.importAndCheck(
                     '.parsers.' + self.cp.get('standalone', 'msg_parser', fallback="json"),
