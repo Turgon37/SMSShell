@@ -148,7 +148,9 @@ class SMSShell(object):
 
 
     def importAndCheck(self, module_path, class_name, abstract):
-        """
+        """Import a sub module, instanciate a class and check object's instance
+
+        @param
         """
         try:
             mod = importlib.import_module(module_path, package='SMSShell')
