@@ -22,21 +22,23 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""This module contains all input parser classes
+"""This module contains some abstracts classes
 """
 
-# Project imports
-from ..abstract import AbstractModule
 
-
-class AbstractParser(AbstractModule):
-    """An abstract message parser
+class AbstractModule(object):
+    """This abstract class is used to defined common base feature for modules
     """
 
-    def parse(self, raw):
-        """Parse the raw content
+    def __init__(self, config):
+        """Constructor :
 
-        @param raw the raw input content as string
-        @return a Message instance
+        @param config[ConfigParser] : the config parser
         """
-        raise NotImplementedError("You must implement the parse method")
+        self.cp = config
+        self.init()
+
+    def init(self):
+        """Put here some specific initialisations features
+        """
+        pass

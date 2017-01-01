@@ -22,21 +22,23 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""This module contains all input parser classes
+"""This module contains all output handlers
 """
 
 # Project imports
 from ..abstract import AbstractModule
 
 
-class AbstractParser(AbstractModule):
-    """An abstract message parser
+class AbstractTransmitter(AbstractModule):
+    """An abstract transmistter
     """
 
-    def parse(self, raw):
-        """Parse the raw content
-
-        @param raw the raw input content as string
-        @return a Message instance
+    def start(self):
         """
-        raise NotImplementedError("You must implement the parse method")
+        """
+        raise NotImplementedError("You must implement the 'start' method")
+
+    def transmit(self):
+        """
+        """
+        raise NotImplementedError("You must implement the 'transmit' method")

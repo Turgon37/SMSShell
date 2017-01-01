@@ -40,7 +40,9 @@ import time
 # Projet Imports
 try:
     from .config import MyConfigParser
-    from .receivers import Receiver
+    from .receivers import AbstractReceiver
+    from .parsers import AbstractParser
+    from .transmitters import AbstractTransmitter
     from .shell import Shell
     from .exceptions import SMSException,ShellException
 except Exception as e:
