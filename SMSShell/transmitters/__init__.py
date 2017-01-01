@@ -36,9 +36,9 @@ class AbstractTransmitter(AbstractModule):
     def start(self):
         """
         """
-        raise NotImplementedError("You must implement the 'start' method")
+        raise NotImplementedError("You must implement the 'start' method in transmitter class")
 
     def transmit(self):
         """
         """
-        raise NotImplementedError("You must implement the 'transmit' method")
+        raise NotImplementedError("You must implement the 'transmit' method in transmitter class")

@@ -39,4 +39,4 @@ class AbstractParser(AbstractModule):
         @param raw the raw input content as string
         @return a Message instance
         """
-        raise NotImplementedError("You must implement the 'parse' method")
+        raise NotImplementedError("You must implement the 'parse' method in parser")
