@@ -44,7 +44,7 @@ try:
     from .parsers import AbstractParser
     from .transmitters import AbstractTransmitter
     from .shell import Shell
-    from .exceptions import SMSException,ShellException
+    from .exceptions import SMSException,ShellException,ShellInitException
 except Exception as e:
     import traceback
     traceback.print_exc(file=sys.stdout)

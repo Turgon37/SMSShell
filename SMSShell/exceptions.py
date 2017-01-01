@@ -29,6 +29,8 @@
 class SMSException(Exception):
     pass
 
+class ShellInitException(Exception):
+    pass
 
 class ShellException(Exception):
     def __init__(self, message, short):
