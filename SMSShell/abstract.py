@@ -25,13 +25,24 @@ class AbstractModule(object):
     """This abstract class is used to defined common base feature for modules
     """
 
-    def __init__(self, config):
+    def __init__(self, config = dict()):
         """Constructor :
 
-        @param config[ConfigParser] : the config parser
+        @param dict config all available configuration keys
         """
-        self.cp = config
+        self.config = config
         self.init()
+
+    def getConfig(self, key, fallback=None):
+        """Return a configuration value or a default value if not found
+
+        @param str key the name of the configuration value
+        @param mixed fallback the default value to return if the key don't
+                        exit in the configuration store
+        """
+        if key in self.config:
+            return self.config[key]
+        return fallback
 
     def init(self):
         """Put here some specific initialisations features

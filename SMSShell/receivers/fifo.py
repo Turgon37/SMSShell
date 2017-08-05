@@ -39,7 +39,7 @@ class Receiver(AbstractReceiver):
     def init(self):
         """Init
         """
-        self.__path = self.cp.get('standalone', 'input_path', fallback="/var/run/smsshell")
+        self.__path = self.getConfig('path', fallback="/var/run/smsshell")
 
     def start(self):
         """Start the socket (FIFO) runner
@@ -61,8 +61,10 @@ class Receiver(AbstractReceiver):
         elif not os.path.exists(self.__path):
             # check directory write rights
             if not os.access(directory, os.X_OK|os.W_OK):
-                g_logger.fatal('Unsufficients permissions into the directory to create the fifo')
+                g_logger.fatal('Unsufficients permissions into the directory %s to create the fifo',
+                                self.__path)
                 return False
+            g_logger.debug('creating new fifo')
             os.mkfifo(self.__path, mode=0o620)
         return self
 
