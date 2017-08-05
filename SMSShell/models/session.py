@@ -33,10 +33,10 @@ class Session(object):
     """An user session with all user's meta data
     """
 
-    SESS_GUEST = 0
-    SESS_LOGIN = 1
-    SESS_AUTHENTICATED = 2
-    SESS_LOGOUT = 4
+    ROLE_GUEST = 0
+    ROLE_LOGININPROGRESS = 1
+    ROLE_USER = 2
+    ROLE_LOGOUT = 4
 
     def __init__(self, subject, timetolive=600):
         """Constructor: Build a new session for the given subject
@@ -49,7 +49,7 @@ class Session(object):
         self.__created_at = datetime.datetime.today()
         self._access()
         self.ttl = timetolive
-        self.state = Session.SESS_GUEST
+        self.state = Session.ROLE_GUEST
         self.__prefix = None
         self.__storage = dict()
 
@@ -166,7 +166,7 @@ class Session(object):
         """
         fullkey = self.__prefix + key
         self.__storage[fullkey] = value
-
+        return self
 
     # DEBUG methods
     def __str__(self):
