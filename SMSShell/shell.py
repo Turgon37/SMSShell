@@ -136,13 +136,20 @@ class Shell(object):
         cls_name = Shell.toCamelCase(name)
         try: # instanciate
             class_obj = getattr(mod, cls_name)
-            cmd = class_obj(g_logger.getChild('com.' + name), self.getSecureShell())
+            cmd = class_obj(g_logger.getChild('com.' + name), self.getSecureShell(), self.cp.getSectionOrEmpty('command.' + name))
         except AttributeError as e:
             raise CommandBadImplemented("Error in command '{0}' : {1}.".format(name, str(e)))
 
         # handler class checking
         if not isinstance(cmd, AbstractCommand):
             raise CommandBadImplemented("Command '{0}' must extend AbstractCommand class".format(name))
+
+        # check configuration of the command
+        if not cmd.checkConfig():
+            raise CommandBadConfiguredException("Command '{0}' is misconfigured. Check the command doc to add missing 'command.{0}' section".format(name))
+        else:
+            g_logger.debug("command '%s' config ok", name)
+
         # register command into cache
         self.__commands[name] = cmd
 
