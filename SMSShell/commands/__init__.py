@@ -128,6 +128,20 @@ class AbstractCommand(object):
         """
         raise CommandBadImplemented(str(self.__class__) + " must implement the argsProperties function")
 
+    def newArgParser(self):
+        """
+        """
+        class ArgParser(argparse.ArgumentParser):
+            def __init__(self, *args, **kw):
+                kw['add_help'] = False
+                print(kw)
+                super().__init__(*args, **kw)
+
+            def error(self, message):
+                raise BadCommandCall(message)
+
+        return ArgParser(description=self.description([]), prog=self.name)
+
     def _argsParser(self):
         """Private entry point for Shell
 
@@ -137,9 +151,16 @@ class AbstractCommand(object):
             parser = self.argsParser()
         except BaseException as e:
             raise CommandBadImplemented(str(self.__class__) + " argsParser function encounter an error {}".format(e))
-        if parser and not isinstance(parser, argparse.ArgumentParser):
-            raise CommandBadImplemented(str(self.__class__) + " argsParser function must return a instance of ArgumentParser")
+        if parser:
+            if not isinstance(parser, argparse.ArgumentParser):
+                raise CommandBadImplemented(str(self.__class__) + " argsParser function must return a instance of ArgumentParser")
+            if parser.add_help == True:
+                raise CommandBadImplemented(str(self.__class__) + " your argparser must not contains predefined help option")
         return parser
 
     def argsParser(self):
+        """Return the argparser that the command will use
+
+        @return ArgumentParser
+        """
         return None
