@@ -88,7 +88,7 @@ class AbstractCommand(object):
         """This function must return the list of session's state(s) from which
          the command can be run
 
-        @return List<Session.SESS_*>
+        @return List<SessionRole>
         """
         raise CommandBadImplemented(str(self.__class__) + " must implement the inputStates function")
 
@@ -107,6 +107,6 @@ class AbstractCommand(object):
         """This function must return the list of session's state(s) from which
          the command can be run
 
-        @return List<Session.SESS_*>
+        @return dict{}
         """
         raise CommandBadImplemented(str(self.__class__) + " must implement the argsProperties function")
