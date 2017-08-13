@@ -84,7 +84,7 @@ class Shell(object):
             raise ShellException('empty subject name')
         sess = self.__getSessionForSubject(subject)
         g_logger.info("Subject {0} run command '{1}' with args : {2}".format(subject, cmd, str(argv[1:])))
-        return self.__call(sess, cmd, argv[1:], role)
+        return self.__call(sess, cmd, argv[1:], role).strip()
 
     @synchronizedMethod
     def flushCommandCache(self):
