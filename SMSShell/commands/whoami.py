@@ -25,7 +25,7 @@ This command return the current subject id
 from . import AbstractCommand
 
 
-class Command(AbstractCommand):
+class Whoami(AbstractCommand):
 
     def argsProperties(self):
         return dict()

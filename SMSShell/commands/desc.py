@@ -26,7 +26,7 @@ from . import AbstractCommand
 from ..exceptions import CommandException
 
 
-class Command(AbstractCommand):
+class Desc(AbstractCommand):
 
     def argsProperties(self):
         return dict(min=1, max=1)

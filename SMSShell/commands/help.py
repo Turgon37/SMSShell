@@ -31,7 +31,7 @@ from . import AbstractCommand
 from ..exceptions import CommandException
 
 
-class Command(AbstractCommand):
+class Help(AbstractCommand):
 
     def argsProperties(self):
         return dict(max=1)

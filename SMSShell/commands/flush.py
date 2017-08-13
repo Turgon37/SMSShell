@@ -26,7 +26,7 @@ on next call
 from . import AbstractCommand
 
 
-class Command(AbstractCommand):
+class Flush(AbstractCommand):
 
     def argsProperties(self):
         return dict()

@@ -25,7 +25,7 @@ This command return the current role name
 from . import AbstractCommand
 
 
-class Command(AbstractCommand):
+class Role(AbstractCommand):
 
     def argsProperties(self):
         return dict()
