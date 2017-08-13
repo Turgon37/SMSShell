@@ -58,8 +58,8 @@ class SMSShell(object):
     def __init__(self, daemon=False, log_level='INFO'):
         """Constructor : Build the program lead object
 
-        @param daemon [bool] : if the server must be daemonized (False)
-        @param log_level [str] : the system minimum logging level for put log
+        @param bool daemon if the server must be daemonized (False)
+        @param str log_level the system minimum logging level for put log
         message
         """
         # config parser
@@ -74,9 +74,8 @@ class SMSShell(object):
         """Load configuration function
 
         Use this function to load settings from given configuration file
-        @param[string] config : The path fo the configuration file
-        @return[boolean] : True if success
-        False otherwise
+        @param str config The path fo the configuration file
+        @return boolean True if success, False otherwise
         """
         if config is not None:
             if self.cp.load(config):
@@ -88,10 +87,9 @@ class SMSShell(object):
     def start(self, pid_path=None):
         """Run the service features
 
-        Daemonize if daemon is True in constructor
-        @param[string] pid_path : pid file's path
-        @return[boolean] : True is start success
-        False otherwise
+        Daemonize only if daemon is True in constructor
+        @param str pid_path : pid file's path
+        @return boolean True is start success, False otherwise
         """
         # Restreint access to only owner
         os.umask(0o0077)
