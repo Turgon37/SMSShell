@@ -62,10 +62,11 @@ class AbstractCommand(object):
         self.__session = s
         return self
 
-    def main(self, argv):
+    def main(self, argv, args=None):
         """The main running entry point of this command
 
         @param List<Str> the list of arguments
+        @param ArgumentParser OPTIONAL the argparser if command provide it
         """
         raise CommandBadImplemented(str(self.__class__) + " must implement the main function")
 
@@ -73,6 +74,7 @@ class AbstractCommand(object):
         """This function must return a short usage message
 
         @param List<Str> the list of arguments
+        @return str the string usage
         """
         raise CommandBadImplemented(str(self.__class__) + " must implement the usage function")
 
@@ -80,11 +82,14 @@ class AbstractCommand(object):
         """This function must return a short description message of what the command do
 
         @param List<Str> the list of arguments
+        @return str the string description
         """
         raise CommandBadImplemented(str(self.__class__) + " must implement the description function")
 
     def _inputStates(self):
         """Private entry point for Shell
+
+        @return the list of input states formatted and validated for shell usage
         """
         l = self.inputStates()
         if not isinstance(l, list):
