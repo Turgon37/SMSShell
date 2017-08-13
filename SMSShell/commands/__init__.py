@@ -40,6 +40,10 @@ class AbstractCommand(object):
         self.session = None
 
     @property
+    def name(self):
+        return self.__class__.__name__.lower()
+
+    @property
     def session(self):
         """Return the session associated with the request
 
