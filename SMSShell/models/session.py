@@ -23,20 +23,26 @@
 
 # System imports
 import datetime
+from enum import IntEnum, unique
 import logging
 
 # Global project declarations
 g_logger = logging.getLogger('smsshell.models.session')
 
 
-class Session(object):
-    """An user session with all user's meta data
+@unique
+class SessionRole(IntEnum):
+    """This enumeration reprensent the list of available roles
     """
-
     ROLE_GUEST = 0
     ROLE_LOGININPROGRESS = 1
     ROLE_USER = 2
     ROLE_LOGOUT = 4
+
+
+class Session(object):
+    """An user session with all user's meta data
+    """
 
     def __init__(self, subject, timetolive=600):
         """Constructor: Build a new session for the given subject
@@ -46,11 +52,11 @@ class Session(object):
                   alive
         """
         self.subject = subject
-        self.__created_at = datetime.datetime.today()
-        self._access()
         self.ttl = timetolive
-        self.state = Session.ROLE_GUEST
+        self.state = SessionRole.ROLE_GUEST
+        self.access()
         self.__prefix = None
+        self.__created_at = datetime.datetime.today()
         self.__storage = dict()
 
     @property
@@ -125,7 +131,7 @@ class Session(object):
         assert self.__access_at is not None
         return self.__access_at
 
-    def _access(self):
+    def access(self):
         """Refresh the access time of this session
         """
         self.__access_at = datetime.datetime.today()
@@ -136,11 +142,11 @@ class Session(object):
         @return [bool] the validate status of this session
         """
         if (datetime.datetime.today() - self.access_at).seconds > self.ttl:
-          g_logger.debug('session expired')
-          return False
+            g_logger.debug('session expired')
+            return False
         return True
 
-    def _setPrefix(self, p):
+    def setStoragePrefix(self, p):
         """Define the prefix to use for key-value store
 
         This allow to separate each command storage by namespace in the session
@@ -156,7 +162,7 @@ class Session(object):
         """
         fullkey = self.__prefix + key
         if fullkey in self.__storage:
-          return self.__storage[fullkey]
+            return self.__storage[fullkey]
 
     def set(self, key, value):
         """Set the given value in session storage
@@ -167,6 +173,23 @@ class Session(object):
         fullkey = self.__prefix + key
         self.__storage[fullkey] = value
         return self
+
+    def getSecureSession(self):
+        """Return a secure wrapper of the session
+        """
+        class SessionWrapper(object):
+            def __init__(self, session):
+                self.__session = session
+                self.subject = session.subject
+                self.state = session.state
+
+            def get(self, *args, **kw):
+                return self.__session.get(*args, **kw)
+
+            def set(self, *args, **kw):
+                return self.__session.set(*args, **kw)
+
+        return SessionWrapper(self)
 
     # DEBUG methods
     def __str__(self):
