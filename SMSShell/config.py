@@ -153,6 +153,16 @@ class MyConfigParser(ConfigParser):
         """
         return self.get(self.getMode().lower(), key, fallback=fallback)
 
+    def getSectionOrEmpty(self, name):
+        """Return all options in a section if exists or empty dict if not
+
+        @param str the name the section
+        @return dict the dict which contains all options of the section
+        """
+        if self.has_section(name):
+            return dict(self.items(name))
+        return dict()
+
     def __getValueInArray(self, section, key, array, default=None):
         """Test if a value is in an array
 

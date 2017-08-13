@@ -38,14 +38,16 @@ class AbstractCommand(object):
         def error(self, message):
             raise BadCommandCall(message)
 
-    def __init__(self, logger, shell):
+    def __init__(self, logger, shell, config):
         """Build a new instance of the command
 
         @param [logging.Logger] : the logger instance to use
         @param [Shell] : the logger instance to use
+        @param [dict] : the config dict
         """
         self.log = logger
         self.shell = shell
+        self.config = config
         self.session = None
 
     @property
@@ -71,11 +73,16 @@ class AbstractCommand(object):
         self.__session = s
         return self
 
+    def checkConfig(self):
+        """Validates the configuration required by the command
+        """
+        return True
+
     def main(self, argv, args=None):
         """The main running entry point of this command
 
         @param List<Str> the list of arguments
-        @param ArgumentParser OPTIONAL the argparser if command provide it
+        @param dict OPTIONAL the dict that contains arg parser results
         """
         raise CommandBadImplemented(str(self.__class__) + " must implement the main function")
 
@@ -85,6 +92,8 @@ class AbstractCommand(object):
         @param List<Str> the list of arguments
         @return str the string usage
         """
+        if self._argsParser():
+            return self._argsParser().format_usage()
         raise CommandBadImplemented(str(self.__class__) + " must implement the usage function")
 
     def description(self, argv):
@@ -137,7 +146,7 @@ class AbstractCommand(object):
         """
         raise CommandBadImplemented(str(self.__class__) + " must implement the argsProperties function")
 
-    def newArgParser(self):
+    def newArgsParser(self):
         """Build helper for new arguments parser
 
         @return AbstractCommand.ArgParser new instance
@@ -166,6 +175,6 @@ class AbstractCommand(object):
         The usage of an arg parser is optionnal. It allow the user's command
         to be more complicated in the manner it takes arguments
 
-        @return ArgumentParser
+        @return AbstractCommand.ArgParser
         """
         return None
