@@ -21,10 +21,12 @@
 """
 
 # System imports
+import argparse
 import importlib
 import importlib.util
 import inspect
 import logging
+import re
 import os
 import shlex
 from threading import RLock
@@ -41,6 +43,7 @@ g_logger = logging.getLogger('smsshell.shell')
 class Shell(object):
     """Build a new instance a Shell
     """
+    word_regex_pattern = re.compile("[^A-Za-z]+")
 
     def __init__(self, configparser):
         """Constructor: Build a new message object
@@ -130,8 +133,10 @@ class Shell(object):
         except ImportError as e:
             raise CommandNotFoundException("Command handler '{0}' cannot be found in commands/ folder.".format(name))
 
+        cls_name = Shell.toCamelCase(name)
         try: # instanciate
-            cmd = mod.Command(g_logger.getChild('com.' + name), self.getSecureShell())
+            class_obj = getattr(mod, cls_name)
+            cmd = class_obj(g_logger.getChild('com.' + name), self.getSecureShell())
         except AttributeError as e:
             raise CommandBadImplemented("Error in command '{0}' : {1}.".format(name, str(e)))
 
@@ -271,3 +276,8 @@ class Shell(object):
                 return self.__shell.flushCommandCache(*args, **kw)
 
         return ShellWrapper(self)
+
+    @classmethod
+    def toCamelCase(cls, string):
+        words = ' '.join(cls.word_regex_pattern.split(string))
+        return ''.join(x for x in words.title() if not x.isspace())
