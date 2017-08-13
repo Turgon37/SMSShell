@@ -37,7 +37,7 @@ class ShellException(Exception):
     """Base exception relating to command execution exceptions
     """
     def __init__(self, message, short):
-        super(ShellException, self).__init__(message)
+        super().__init__(message)
         self.short_message = short
 
 
@@ -45,14 +45,21 @@ class CommandException(ShellException):
     """Base class for all exceptions relating to command execution
     """
     def __init__(self, message, short='internal command error'):
-        super(CommandException, self).__init__(message, short)
+        super().__init__(message, short)
+
+
+class BadCommandCall(ShellException):
+    """Raised when you call a command with bad arguments
+    """
+    def __init__(self, message, short='bad call, use help'):
+        super().__init__(message, short)
 
 
 class CommandNotFoundException(CommandException):
     """Exception use when a command does not exist
     """
     def __init__(self, message, short='command not found'):
-        super(CommandNotFoundException, self).__init__(message, short)
+        super().__init__(message, short)
 
 
 class CommandBadImplemented(CommandException):
@@ -65,11 +72,12 @@ class CommandForbidden(CommandException):
     """Raised when you tried to run a command not available from the current state
     """
     def __init__(self, message, short='command denied'):
-        super(CommandForbidden, self).__init__(message, short)
+        super().__init__(message, short)
 
 
-class BadCommandCall(ShellException):
-    """Raised when you call a command with bad arguments
+class CommandBadConfiguredException(CommandException):
+    """Exception use when a command require configuration and it config values
+     are not valid
     """
-    def __init__(self, message, short='bad call, use help'):
-        super(BadCommandCall, self).__init__(message, short)
+    def __init__(self, message, short='command not configured'):
+        super().__init__(message, short)
