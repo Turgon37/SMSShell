@@ -96,7 +96,10 @@ class AbstractCommand(object):
         """Private entry point for Shell
         """
         props = {'min': 0, 'max': -1}
-        p = self.argsProperties()
+        try:
+            p = self.argsProperties()
+        except NameError as e:
+            raise CommandBadImplemented(str(self.__class__) + " argsProperties function encounter an error {}".format(e))
         if not isinstance(p, dict):
             raise CommandBadImplemented(str(self.__class__) + " argsProperties function must return a dict of properties")
         for k in p:
