@@ -74,13 +74,13 @@ class Message(object):
         """
         self.__content = c
 
-    def getArgv(self):
+    def getStr(self):
         """Return the command argument vector associated with this message
 
         @return list of command argments
         """
-        assert isinstance(self.content,str)
-        return self.content.split(' ')
+        assert isinstance(self.content, str)
+        return self.content
 
 
     # DEBUG methods

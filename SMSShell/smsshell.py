@@ -140,10 +140,14 @@ class SMSShell(object):
         return True
 
 
-    def importAndCheck(self, module_path, class_name, abstract):
+    def importAndCheckAbstract(self, module_path, class_name, abstract, config_section=None):
         """Import a sub module, instanciate a class and check object's instance
 
-        @param
+        @param str module_path the path to the module in the file system
+        @param str class_name the name of the class to instanciate
+        @param cls abstract the abstract class to check the instance for inheritance
+        @param str config_section the name of the configuration section to load into
+                    the instance
         """
         try:
             mod = importlib.import_module(module_path, package='SMSShell')
@@ -151,7 +155,10 @@ class SMSShell(object):
             raise ShellInitException("Unable to import the module {0}. Reason : {1}".format(module_path, str(e)))
         try: # instanciate
             cl = getattr(mod, class_name)
-            inst = cl(self.cp)
+            if config_section and config_section in self.cp:
+                inst = cl(self.cp[config_section])
+            else:
+                inst = cl()
         except AttributeError as e:
             raise ShellInitException("Error in module '{0}' : {1}.".format(module_path, str(e)))
 
@@ -164,23 +171,22 @@ class SMSShell(object):
         """This function is responsible of applicative works
         """
         shell = Shell(self.cp)
-
         if self.cp.getMode() == 'ONESHOT':
             raise NotImplementedError('oneshot mode not yet implemented')
         else:
             # Init standalone mode
             try:
-                parser = self.importAndCheck(
-                    '.parsers.' + self.cp.get('standalone', 'msg_parser', fallback="json"),
-                    'Parser', AbstractParser
+                parser = self.importAndCheckAbstract(
+                    '.parsers.' + self.cp.get('standalone', 'message_parser', fallback="json"),
+                    'Parser', AbstractParser, 'parser'
                 )
-                recv = self.importAndCheck(
-                    '.receivers.' + self.cp.get('standalone', 'input_type', fallback="fifo"),
-                    'Receiver', AbstractReceiver
+                recv = self.importAndCheckAbstract(
+                    '.receivers.' + self.cp.get('standalone', 'receiver_type', fallback="fifo"),
+                    'Receiver', AbstractReceiver, 'receiver'
                 )
-                tran = self.importAndCheck(
-                    '.transmitters.' + self.cp.get('standalone', 'output_type', fallback="file"),
-                    'Transmitter', AbstractTransmitter
+                transv = self.importAndCheckAbstract(
+                    '.transmitters.' + self.cp.get('standalone', 'transmitter_type', fallback="file"),
+                    'Transmitter', AbstractTransmitter, 'transmitter'
                 )
             except ShellInitException as e:
                 g_logger.fatal("Unable to load an internal module : %s", str(e))
@@ -188,14 +194,14 @@ class SMSShell(object):
         if not recv.start():
             g_logger.fatal('Unable to open receiver')
             return False
-        if not tran.start():
+        if not transv.start():
             g_logger.fatal('Unable to open transmitter')
             return False
         for raw in recv.read():
             # parse received content
             try:
                 msg = parser.parse(raw)
-                tran.transmit(shell.run(msg.sender, msg.getArgv()))
+                transv.transmit(shell.exec(msg.sender, msg.getStr()))
             except SMSException as em:
                 g_logger.error("received a bad message, skipping")
                 continue

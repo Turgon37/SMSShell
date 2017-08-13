@@ -20,6 +20,9 @@
 """This package contains all available commands
 """
 
+# system imports
+import argparse
+
 # Project imports
 from ..exceptions import CommandBadImplemented
 
@@ -113,3 +116,17 @@ class AbstractCommand(object):
         @return dict{}
         """
         raise CommandBadImplemented(str(self.__class__) + " must implement the argsProperties function")
+
+    def _argsParser(self):
+        """Private entry point for Shell
+        """
+        try:
+            parser = self.argsParser()
+        except NameError as e:
+            raise CommandBadImplemented(str(self.__class__) + " argsParser function encounter an error {}".format(e))
+        if parser and not isinstance(parser, argparse.ArgumentParser):
+            raise CommandBadImplemented(str(self.__class__) + " argsParser function must return a instance of ArgumentParser")
+        return parser
+
+    def argsParser(self):
+        return None

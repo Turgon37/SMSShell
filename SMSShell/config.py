@@ -139,14 +139,28 @@ class MyConfigParser(ConfigParser):
     def getMode(self):
         """Return the main mode of this application
 
-        @return [str] : the mode
+        @return str : the current mode if it belong to the availables values
+                        an empty string otherwise
         """
         return self.__getValueInArray(self.MAIN_SECTION, 'mode', self.MODE_MAP, '')
 
-    def __getValueInArray(self, section, key, array, default=None):
-        """Return the main mode of this application
+    def getModeConfig(self, key, fallback=None):
+        """Return a configuration option of the current mode
 
-        @return [str] : the mode
+        @param str key the name of the configuration
+        @param fallback the default value to return
+        @return mixed
+        """
+        return self.get(self.getMode().lower(), key, fallback=fallback)
+
+    def __getValueInArray(self, section, key, array, default=None):
+        """Test if a value is in an array
+
+        @param str section the name of the sections
+        @param str key the name of the configuration option
+        @param list array of the possible values
+        @param mixed default
+        @return mixed the value if it is in the range or the default value
         """
         val = self.get(section, key, fallback=default)
         if val not in array:

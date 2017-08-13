@@ -23,12 +23,15 @@
 # System imports
 import importlib
 import importlib.util
+import inspect
 import logging
 import os
+import shlex
+from threading import RLock
 
 # Project imports
 from .exceptions import *
-from .models import Session
+from .models import Session, SessionRole
 from .commands import AbstractCommand
 
 # Global project declarations
@@ -46,15 +49,29 @@ class Shell(object):
         @param content [str] : message content
         """
         self.cp = configparser
+        self.__lock = RLock()
         self.__sessions = dict()
         self.__commands = dict()
 
-    def run(self, subject, argv):
+    def synchronizedMethod(func):
+        """Synchronize a method execution
+
+        This decorator make a method synchronized
+        @param method the method to be synchronized
+        """
+        def _synchronized(self, *args, **kw):
+            with self.__lock:
+                return func(self, *args, **kw)
+        return _synchronized
+
+    @synchronizedMethod
+    def exec(self, subject, cmdline, role=None):
         """Run the given arguments for the given subject
 
         @param subject [str]
         @param argv [list<str>]
         """
+        argv = shlex.split(cmdline)
         if len(argv) < 1:
             raise ShellException('bad number of arguments')
         cmd = argv[0]
@@ -64,8 +81,9 @@ class Shell(object):
             raise ShellException('empty subject name')
         sess = self.__getSessionForSubject(subject)
         g_logger.info("Subject {0} run command '{1}' with args : {2}".format(subject, cmd, str(argv[1:])))
-        return self.__call(sess, cmd, argv[1:])
+        return self.__call(sess, cmd, argv[1:], role)
 
+    @synchronizedMethod
     def flushCommandCache(self):
         """Perform a flush of all command instance in local cache
 
@@ -74,6 +92,7 @@ class Shell(object):
         """
         self.__commands = dict()
 
+    @synchronizedMethod
     def getCommand(self, session, name):
         """Return the command instance of the given command name
 
@@ -95,6 +114,34 @@ class Shell(object):
             self.__loadCommand(name)
         return self.__commands[name]
 
+    def __loadCommand(self, name):
+        """Try to load the given command into the cache dir
+
+        @param str name  the name of the command to load
+        @return Command instance
+        @throw ShellException
+        """
+        g_logger.debug("loading command handler with name '%s'", name)
+        try:
+            mod = importlib.import_module('.commands.' + name, package='SMSShell')
+            if importlib.util.find_spec('.commands.' + name, package='SMSShell') is not None:
+                importlib.reload(mod)
+            #mod = __import__('SMSShell.commands.' + name, fromlist=['Command'])
+        except ImportError as e:
+            raise CommandNotFoundException("Command handler '{0}' cannot be found in commands/ folder.".format(name))
+
+        try: # instanciate
+            cmd = mod.Command(g_logger.getChild('com.' + name), self.getSecureShell())
+        except AttributeError as e:
+            raise CommandBadImplemented("Error in command '{0}' : {1}.".format(name, str(e)))
+
+        # handler class checking
+        if not isinstance(cmd, AbstractCommand):
+            raise CommandBadImplemented("Command '{0}' must extend AbstractCommand class".format(name))
+        # register command into cache
+        self.__commands[name] = cmd
+
+    @synchronizedMethod
     def getAvailableCommands(self, session):
         """Return the list of available command for the given session
 
@@ -108,6 +155,7 @@ class Shell(object):
                 ls.append(key)
         return ls
 
+    @synchronizedMethod
     def loadAllCommands(self):
         """Load all availables command into the cache dir
         """
@@ -119,40 +167,58 @@ class Shell(object):
                 except CommandException as e:
                     g_logger.error(str(e))
 
-    def __call(self, session, cmd, argv):
+    @synchronizedMethod
+    def __call(self, session, cmd, argv, role=None):
         """Execute the command with the given name
 
-        @param session models.Session
-        @param cmd [str]
-        @param argv [List<str>]
+        @param models.Session session
+        @param str the name of the command
+        @param list<str> argv the command's arguments
         @return the command output
         """
         c = self.__getCommand(cmd)
-        session._setPrefix(cmd)
+        # set the prefix to separate session's namespaces
+        session.setStoragePrefix(cmd)
         # check command aceptance conditions
         if not Shell.hasSessionAccessToCommand(session, c):
             raise CommandForbidden('You are not allowed to call this command from here')
-        self.__checkArgv(argv, c._argsProperties())
+        args = self.__checkArgv(argv, c)
 
         # refresh session
-        session._access()
-        c.session = session
-        result = c.main(argv)
+        session.access()
+        c.session = session.getSecureSession()
+        if role and isinstance(role, SessionRole):
+            g_logger.info('override session role with %s', role.name)
+
+        sig = inspect.signature(c.main)
+        if c._argsParser() and args:
+            if len(sig.parameters) != 2:
+                raise CommandBadImplemented("Command '{0}' 's main() function must take two arguments".format(cmd))
+            result = c.main(argv, args)
+        else:
+            if len(sig.parameters) != 1:
+                raise CommandBadImplemented("Command '{0}' 's main() function must take two arguments".format(cmd))
+            result = c.main(argv)
         c.session = None
 
         # handler class checking
         if not isinstance(result, str):
-            raise CommandBadImplemented("Command '{0}' 's return object must be a str".format(name))
+            raise CommandBadImplemented("Command '{0}' 's return object must be a str".format(cmd))
         return result
 
-
-    def __checkArgv(self, argv, properties):
+    def __checkArgv(self, argv, command):
         """Check the given arguments according to the specifications
 
         @param argv List<Str> the lsit of arguments
         @param properties [dict]
         @throw ShellException
         """
+        if hasattr(command, 'argsParser') and command._argsParser():
+            parser = command._argsParser()
+            args = parser.parse_args(argv)
+            return args
+
+        properties = command._argsProperties()
         if len(argv) < properties['min']:
             raise BadCommandCall('This command require at least {0} arguments'.format(properties['min']))
         if properties['max'] != -1 and properties['max'] < len(argv):
@@ -170,34 +236,6 @@ class Shell(object):
             return False
         return True
 
-    def __loadCommand(self, name):
-        """Try to load the given command into the cache dir
-
-        @param name [str] the name of the command to load
-        @return Command instance
-        @throw ShellException
-        """
-        g_logger.debug("loading command handler with name '%s'", name)
-        try:
-            mod = importlib.import_module('.commands.' + name, package='SMSShell')
-            if importlib.util.find_spec('.commands.' + name, package='SMSShell') is not None:
-                importlib.reload(mod)
-            #mod = __import__('SMSShell.commands.' + name, fromlist=['Command'])
-        except ImportError as e:
-            raise CommandNotFoundException("Command handler '{0}' cannot be found in commands/ folder.".format(name))
-
-        try: # instanciate
-            cmd = mod.Command(g_logger.getChild('com.' + name), self)
-        except AttributeError as e:
-            raise CommandBadImplemented("Error in command '{0}' : {1}.".format(name, str(e)))
-
-        # handler class checking
-        if not isinstance(cmd, AbstractCommand):
-            raise CommandBadImplemented("Command '{0}' must extend AbstractCommand class".format(name))
-        # register command into cache
-        self.__commands[name] = cmd
-
-
     def __getSessionForSubject(self, key):
         """Retrieve the session associated with this user
 
@@ -210,7 +248,26 @@ class Shell(object):
                 g_logger.debug('using existing session')
                 return sess
 
-        g_logger.debug('creating a new session for subject : ' + key)
         self.__sessions[key] = Session(key)
-        self.__sessions[key].ttl = self.cp.get('standalone', 'session_ttl', fallback=600)
+        self.__sessions[key].ttl = self.cp.getModeConfig('session_ttl', fallback=600)
+        g_logger.debug('creating a new session for subject : %s with ttl %d', key, self.__sessions[key].ttl)
         return self.__sessions[key]
+
+
+    def getSecureShell(self):
+        """Return a secure wrapper of the shell
+        """
+        class ShellWrapper(object):
+            def __init__(self, shell):
+                self.__shell = shell
+
+            def getAvailableCommands(self, *args, **kw):
+                return self.__shell.getAvailableCommands(*args, **kw)
+
+            def getCommand(self, *args, **kw):
+                return self.__shell.getCommand(*args, **kw)
+
+            def flushCommandCache(self, *args, **kw):
+                return self.__shell.flushCommandCache(*args, **kw)
+
+        return ShellWrapper(self)
