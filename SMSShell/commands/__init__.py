@@ -30,10 +30,19 @@ from ..exceptions import CommandBadImplemented, BadCommandCall
 class AbstractCommand(object):
     """This is a abstract command, all user defined comand must inherit this one"""
 
+    class ArgParser(argparse.ArgumentParser):
+        def __init__(self, *args, **kw):
+            kw['add_help'] = False
+            super().__init__(*args, **kw)
+
+        def error(self, message):
+            raise BadCommandCall(message)
+
     def __init__(self, logger, shell):
         """Build a new instance of the command
 
-        @param [Logger] : the logger instance to use
+        @param [logging.Logger] : the logger instance to use
+        @param [Shell] : the logger instance to use
         """
         self.log = logger
         self.shell = shell
@@ -129,18 +138,11 @@ class AbstractCommand(object):
         raise CommandBadImplemented(str(self.__class__) + " must implement the argsProperties function")
 
     def newArgParser(self):
-        """
-        """
-        class ArgParser(argparse.ArgumentParser):
-            def __init__(self, *args, **kw):
-                kw['add_help'] = False
-                print(kw)
-                super().__init__(*args, **kw)
+        """Build helper for new arguments parser
 
-            def error(self, message):
-                raise BadCommandCall(message)
-
-        return ArgParser(description=self.description([]), prog=self.name)
+        @return AbstractCommand.ArgParser new instance
+        """
+        return AbstractCommand.ArgParser(description=self.description([]), prog=self.name)
 
     def _argsParser(self):
         """Private entry point for Shell
@@ -152,7 +154,7 @@ class AbstractCommand(object):
         except BaseException as e:
             raise CommandBadImplemented(str(self.__class__) + " argsParser function encounter an error {}".format(e))
         if parser:
-            if not isinstance(parser, argparse.ArgumentParser):
+            if not isinstance(parser, AbstractCommand.ArgParser):
                 raise CommandBadImplemented(str(self.__class__) + " argsParser function must return a instance of ArgumentParser")
             if parser.add_help == True:
                 raise CommandBadImplemented(str(self.__class__) + " your argparser must not contains predefined help option")
@@ -160,6 +162,9 @@ class AbstractCommand(object):
 
     def argsParser(self):
         """Return the argparser that the command will use
+
+        The usage of an arg parser is optionnal. It allow the user's command
+        to be more complicated in the manner it takes arguments
 
         @return ArgumentParser
         """
