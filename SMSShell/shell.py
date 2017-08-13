@@ -220,7 +220,10 @@ class Shell(object):
         """
         if hasattr(command, 'argsParser') and command._argsParser():
             parser = command._argsParser()
-            args = parser.parse_args(argv)
+            try:
+                args = parser.parse_args(argv)
+            except argparse.ArgumentError as e:
+                raise BadCommandCall('This command require at least {0} arguments'.format('min'))
             return args
 
         properties = command._argsProperties()
