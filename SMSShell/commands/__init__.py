@@ -24,7 +24,7 @@
 import argparse
 
 # Project imports
-from ..exceptions import CommandBadImplemented
+from ..exceptions import CommandBadImplemented, BadCommandCall
 
 
 class AbstractCommand(object):
@@ -106,11 +106,13 @@ class AbstractCommand(object):
 
     def _argsProperties(self):
         """Private entry point for Shell
+
+        @return the properties array formatted and validated for Shell usage
         """
         props = {'min': 0, 'max': -1}
         try:
             p = self.argsProperties()
-        except NameError as e:
+        except BaseException as e:
             raise CommandBadImplemented(str(self.__class__) + " argsProperties function encounter an error {}".format(e))
         if not isinstance(p, dict):
             raise CommandBadImplemented(str(self.__class__) + " argsProperties function must return a dict of properties")
@@ -128,10 +130,12 @@ class AbstractCommand(object):
 
     def _argsParser(self):
         """Private entry point for Shell
+
+        @return the argparser formatted and validated for Shell usage
         """
         try:
             parser = self.argsParser()
-        except NameError as e:
+        except BaseException as e:
             raise CommandBadImplemented(str(self.__class__) + " argsParser function encounter an error {}".format(e))
         if parser and not isinstance(parser, argparse.ArgumentParser):
             raise CommandBadImplemented(str(self.__class__) + " argsParser function must return a instance of ArgumentParser")
