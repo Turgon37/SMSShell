@@ -70,6 +70,9 @@ class SMSShell(object):
         self.__log_level = None
         self.__log_target = None
 
+        # List of callable to call on smsshell stop
+        self.__stop_callbacks = []
+
     def load(self, config):
         """Load configuration function
 
@@ -114,14 +117,15 @@ class SMSShell(object):
         # Check pidfile
         if pid_path is None:
             pid_path = self.cp.getPidPath()
+        self.__pid_path = pid_path
         # Create the pid file
         try:
-            g_logger.debug("Creating PID file '%s'", pid_path)
-            pid_file = open(pid_path, 'w')
+            g_logger.debug("Creating PID file '%s'", self.__pid_path)
+            pid_file = open(self.__pid_path, 'w')
             pid_file.write(str(os.getpid()) + '\n')
             pid_file.close()
         except IOError as e:
-            g_logger.error("Unable to create PID file: %s", pid_path)
+            g_logger.error("Unable to create PID file: %s", self.__pid_path)
 
         self.__downgrade()
         self.run()
@@ -129,14 +133,6 @@ class SMSShell(object):
         # Stop properly
         self.stop()
 
-        # Remove the pid file
-        try:
-            g_logger.debug("Remove PID file %s", pid_path)
-            os.remove(pid_path)
-        except OSError as e:
-            g_logger.error("Unable to remove PID file: %s", e)
-
-        g_logger.info("Exiting SMSShell")
         return True
 
 
@@ -168,7 +164,7 @@ class SMSShell(object):
         return inst
 
     def run(self):
-        """This function is responsible of applicative works
+        """This function do main applicatives stuffs
         """
         shell = Shell(self.cp)
         if self.cp.getMode() == 'ONESHOT':
@@ -194,6 +190,7 @@ class SMSShell(object):
         if not recv.start():
             g_logger.fatal('Unable to open receiver')
             return False
+        self.__stop_callbacks.append(recv.stop)
         if not transv.start():
             g_logger.fatal('Unable to open transmitter')
             return False
@@ -217,6 +214,21 @@ class SMSShell(object):
         It says to all thread to exit themself properly and run
         some system routine to terminate the entire program
         """
+        # Properly close some objects
+        for c in self.__stop_callbacks:
+            try:
+                c()
+            except NotImplementedError as e:
+                g_logger.warning("Unable to close object of %s because of : %s", c.__self__.__class__, str(e))
+        # Remove the pid file
+        try:
+            g_logger.debug("Remove PID file %s", self.__pid_path)
+            os.remove(self.__pid_path)
+        except OSError as e:
+            g_logger.error("Unable to remove PID file: %s", str(e))
+
+        g_logger.info("Exiting SMSShell")
+
         # Close log
         logging.shutdown()
 
@@ -228,6 +240,7 @@ class SMSShell(object):
         """Make the program terminate after receving system signal
         """
         g_logger.debug("Caught system signal %d", signum)
+        self.stop()
         sys.exit(1)
 
     def __downgrade(self):

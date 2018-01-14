@@ -29,11 +29,18 @@ class AbstractReceiver(AbstractModule):
     """
 
     def start(self):
-        """Prepare the receiver
+        """Prepare the receiver/init connections
 
         @return bool : True if init has success, otherwise False
         """
         raise NotImplementedError("You must implement the 'start' method in receiver class")
+
+    def stop(self):
+        """Unprepare the receiver, flush, close connections
+
+        @return bool : True if init has success, otherwise False
+        """
+        raise NotImplementedError("You must implement the 'stop' method in receiver class")
 
     def read(self):
         """Return a read blocking iterable object for each content in the fifo
