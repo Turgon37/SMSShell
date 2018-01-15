@@ -21,7 +21,7 @@
 """
 
 # Project imports
-from .version import version
 from .smsshell import SMSShell
+from .smsshell import __version__ as version
 
 __all__ = ['version', 'SMSShell']
