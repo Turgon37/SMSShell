@@ -363,9 +363,6 @@ class SMSShell(object):
             DEBUG
         @return [bool] : True if set success
         """
-        # if g_logger.getEffectiveLevel() == value:
-        #     return True
-
         try:
             g_logger.setLevel(value)
             g_logger.info("Changed logging level to %s", value)
