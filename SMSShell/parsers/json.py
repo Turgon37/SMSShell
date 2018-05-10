@@ -46,7 +46,7 @@ class Parser(AbstractParser):
         """
         try:
             obj = json.loads(raw)
-        except json.JSONDecodeError as d:
+        except (json.JSONDecodeError,TypeError):
             raise ParsingException()
         sender = obj['smsnumber']
         content = obj['smstext']

@@ -67,9 +67,11 @@ class Receiver(AbstractReceiver):
         try:
             data = client_socket.recv(1000)
             if data:
-                g_logger.info('got data from {}: {!r}'.format(client_socket.fileno(), data))
-                # Assume for simplicity that send won't block
+                g_logger.info('get data length {} from {}'.format(len(data), client_socket.fileno()))
+                g_logger.debug('get data from {}: {!r}'.format(client_socket.fileno(), data))
+                # Assume for simplicity that send() won't block
                 client_socket.send(data)
+                return data
             else:
                 self.__close_connection(client_socket)
         except ConnectionError:
@@ -130,7 +132,7 @@ class Receiver(AbstractReceiver):
         # Listen for incoming connections
         g_logger.debug('set socket to listening mode with listen queue size %d', self.__listen_queue)
         self.__server_socket.listen(self.__listen_queue)
-        g_logger.info('Unix receiver ready to listen')
+        g_logger.info('Unix receiver ready to listen on FD {}'.format(self.__server_socket.fileno()))
 
         ## Init sockets selector
         self.__socket_selector = selectors.DefaultSelector()
@@ -163,9 +165,7 @@ class Receiver(AbstractReceiver):
             # For each new event, dispatch to its handler
             for key, mask in events:
                 callback = key.data
-                callback(key.fileobj, mask)
-
-        #
-        # while True:
-        #     with open(self.__path) as fifo:
-        #         yield fifo.read()
+                socket_data = callback(key.fileobj, mask)
+                # yield only data read from client sockets
+                if key.data == self.__on_read:
+                    yield socket_data

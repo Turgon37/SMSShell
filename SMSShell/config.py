@@ -79,7 +79,7 @@ class MyConfigParser(ConfigParser):
         """
         return self.__is_config_loaded
 
-    def getPidPath(self, default='/var/run/openvpn-uam.pid'):
+    def getPidPath(self, default='/var/run/smsshell.pid'):
         """Return path to pid file option
 
         @param default [str] : the default value to return if nothing is found

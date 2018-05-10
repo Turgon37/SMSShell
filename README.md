@@ -1,6 +1,8 @@
 # SMSShell
 
 [![Build Status](https://travis-ci.org/Turgon37/SMSShell.svg?branch=master)](https://travis-ci.org/Turgon37/SMSShell)
+[![codecov](https://codecov.io/gh/Turgon37/SMSShell/branch/master/graph/badge.svg)](https://codecov.io/gh/Turgon37/SMSShell)
+
 
 A scalable automated SMS Shell like
 
