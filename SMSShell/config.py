@@ -32,7 +32,7 @@ from configparser import Error
 # Project imports
 
 # Global project declarations
-g_logger = logging.getLogger('openvpn-uam.config')
+g_logger = logging.getLogger('smsshell.config')
 
 
 class MyConfigParser(ConfigParser):
@@ -45,7 +45,7 @@ class MyConfigParser(ConfigParser):
 # CLASS CONSTANTS
 # list of logging level available by configuration file
     LOGLEVEL_MAP = ['ERROR', 'WARN', 'INFO', 'DEBUG']
-    MODE_MAP = ['STANDALONE', 'ONESHOT']
+    MODE_MAP = ['DAEMON', 'STANDALONE']
     MAIN_SECTION = 'main'
 
     def __init__(self):
@@ -142,7 +142,7 @@ class MyConfigParser(ConfigParser):
         @return str : the current mode if it belong to the availables values
                         an empty string otherwise
         """
-        return self.__getValueInArray(self.MAIN_SECTION, 'mode', self.MODE_MAP, '')
+        return self.__getValueInArray(self.MAIN_SECTION, 'mode', self.MODE_MAP, 'DAEMON')
 
     def getModeConfig(self, key, fallback=None):
         """Return a configuration option of the current mode
