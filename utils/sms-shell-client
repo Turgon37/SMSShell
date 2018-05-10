@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+# -*- coding: utf8 -*-
+
+# This file is a part of SMSShell
+#
+# Copyright (c) 2018 Pierre GINDRAUD
+#
+# SMSShell is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# SMSShell is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with SMSShell. If not, see <http://www.gnu.org/licenses/>.
+
+"""This is a simple client class for SMS Shell program
+"""
+
+__author__ = 'Pierre GINDRAUD'
+__license__ = 'GPL-3.0'
+__version__ = '1.0.0'
+__maintainer__ = 'Pierre GINDRAUD'
+__email__ = 'pgindraud@gmail.com'
+
+# System imports
+import argparse
+import logging
+import os
+import sys
+
+# Check python version
+assert sys.version_info >= (3,4)
+
+# Projet Import
+
+# Global project declarations
+logger = logging.getLogger('smsshell-launcher')
+
+formatter = logging.Formatter("%(asctime)s %(name)-30s[%(process)d]: %(levelname)-7s %(message)s")
+hdlr = logging.StreamHandler(sys.stdout)
+hdlr.setFormatter(formatter)
+logger.addHandler(hdlr)
+
+
+##
+# Run launcher as the main program
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="SMSShell client version v" + __version__,
+                                        argument_default=argparse.SUPPRESS,
+                                        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    # parser.add_argument('-c', '--config-file', action='store', dest='config_file', default='/etc/smsshell.conf',
+    #                         help='Path of the configuration file')
+    parser.add_argument('-d', '--debug', action='store_const', const='DEBUG', dest='log_level', default='INFO',
+                            help='Enable DEBUG logging')
+    parser.add_argument('-v', '--version', action='store_true', dest='show_version',
+                            help='Print the version and exit')
+    args = parser.parse_args()
+
+    if hasattr(args, 'show_version') and args.show_version:
+        print("SMSShell client version v" + __version__)
+        sys.exit(0)
+
+    logger.setLevel(args.log_level)
+    logger.debug('launch with args %s', vars(args))
+
+
+    sys.exit(0)

@@ -126,12 +126,12 @@ class SMSShell(object):
         # Create the pid file
         try:
             g_logger.debug("Creating PID file '%s'", self.__pid_path)
-            pid_file = open(self.__pid_path, 'w')
-            pid_file.write(str(os.getpid()) + '\n')
-            pid_file.close()
+            with open(self.__pid_path, 'w') as pid_file:
+                pid_file.write(str(os.getpid()))
         except IOError as e:
             g_logger.error("Unable to create PID file: %s", self.__pid_path)
 
+        # loose users privileges if needed
         self.__downgrade()
         self.run()
 
@@ -185,25 +185,29 @@ class SMSShell(object):
                     '.receivers.' + self.cp.get('daemon', 'receiver_type', fallback="fifo"),
                     'Receiver', AbstractReceiver, 'receiver'
                 )
-                transv = self.importAndCheckAbstract(
+                transm = self.importAndCheckAbstract(
                     '.transmitters.' + self.cp.get('daemon', 'transmitter_type', fallback="file"),
                     'Transmitter', AbstractTransmitter, 'transmitter'
                 )
             except ShellInitException as e:
                 g_logger.fatal("Unable to load an internal module : %s", str(e))
                 return False
+
         if not recv.start():
             g_logger.fatal('Unable to open receiver')
             return False
+        # register the receiver close callback to properly close opened file descriptors
         self.__stop_callbacks.append(recv.stop)
-        if not transv.start():
+
+        if not transm.start():
             g_logger.fatal('Unable to open transmitter')
             return False
+
         for raw in recv.read():
             # parse received content
             try:
                 msg = parser.parse(raw)
-                transv.transmit(shell.exec(msg.sender, msg.getStr()))
+                transm.transmit(shell.exec(msg.sender, msg.getStr()))
             except SMSException as em:
                 g_logger.error("received a bad message, skipping")
                 continue
@@ -220,11 +224,11 @@ class SMSShell(object):
         some system routine to terminate the entire program
         """
         # Properly close some objects
-        for c in self.__stop_callbacks:
+        for callback in self.__stop_callbacks:
             try:
-                c()
+                callback()
             except NotImplementedError as e:
-                g_logger.warning("Unable to close object of %s because of : %s", c.__self__.__class__, str(e))
+                g_logger.warning("Unable to close object of %s because of : %s", callback.__self__.__class__, str(e))
         # Remove the pid file
         try:
             g_logger.debug("Remove PID file %s", self.__pid_path)
