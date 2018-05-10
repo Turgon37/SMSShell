@@ -20,6 +20,12 @@
 """
 """
 
+__author__ = 'Pierre GINDRAUD'
+__license__ = 'GPL-3.0'
+__version__ = '1.0.0'
+__maintainer__ = 'Pierre GINDRAUD'
+__email__ = 'pgindraud@gmail.com'
+
 # System imports
 import configparser
 import datetime
@@ -55,7 +61,7 @@ class SMSShell(object):
     """SMSShell main class
     """
 
-    def __init__(self, daemon=False, log_level='INFO'):
+    def __init__(self, daemon=False, log_level=None):
         """Constructor : Build the program lead object
 
         @param bool daemon if the server must be daemonized (False)
@@ -67,8 +73,7 @@ class SMSShell(object):
         self.__daemon = daemon
 
         # log parameters
-        self.__log_level = None
-        self.__log_target = None
+        self.__log_level = log_level
 
         # List of callable to call on smsshell stop
         self.__stop_callbacks = []
@@ -82,7 +87,7 @@ class SMSShell(object):
         """
         if config is not None:
             if self.cp.load(config):
-                self.setLogLevel(self.cp.getLogLevel())
+                self.setLogLevel(self.__log_level if self.__log_level is not None else self.cp.getLogLevel())
                 self.setLogTarget(self.cp.getLogTarget())
                 return True
         return False
@@ -167,21 +172,21 @@ class SMSShell(object):
         """This function do main applicatives stuffs
         """
         shell = Shell(self.cp)
-        if self.cp.getMode() == 'ONESHOT':
-            raise NotImplementedError('oneshot mode not yet implemented')
+        if self.cp.getMode() == 'STANDALONE':
+            raise NotImplementedError('STANDALONE mode not yet implemented')
         else:
-            # Init standalone mode
+            # Init daemon mode
             try:
                 parser = self.importAndCheckAbstract(
-                    '.parsers.' + self.cp.get('standalone', 'message_parser', fallback="json"),
+                    '.parsers.' + self.cp.get('daemon', 'message_parser', fallback="json"),
                     'Parser', AbstractParser, 'parser'
                 )
                 recv = self.importAndCheckAbstract(
-                    '.receivers.' + self.cp.get('standalone', 'receiver_type', fallback="fifo"),
+                    '.receivers.' + self.cp.get('daemon', 'receiver_type', fallback="fifo"),
                     'Receiver', AbstractReceiver, 'receiver'
                 )
                 transv = self.importAndCheckAbstract(
-                    '.transmitters.' + self.cp.get('standalone', 'transmitter_type', fallback="file"),
+                    '.transmitters.' + self.cp.get('daemon', 'transmitter_type', fallback="file"),
                     'Transmitter', AbstractTransmitter, 'transmitter'
                 )
             except ShellInitException as e:
@@ -357,14 +362,12 @@ class SMSShell(object):
             INFO
             DEBUG
         @return [bool] : True if set success
-        False otherwise
         """
-        if self.__log_level == value:
-            return True
+        # if g_logger.getEffectiveLevel() == value:
+        #     return True
 
         try:
             g_logger.setLevel(value)
-            self.__log_level = value
             g_logger.info("Changed logging level to %s", value)
             return True
         except AttributeError:
@@ -382,9 +385,6 @@ class SMSShell(object):
         @return [bool] : True if set success
         False otherwise Set the log target of the logging system
         """
-        if self.__log_target == target:
-            return True
-
         # set a format which is simpler for console use
         formatter = logging.Formatter(
             "%(asctime)s %(name)-30s[%(process)d]: %(levelname)-7s %(message)s")
@@ -412,11 +412,10 @@ class SMSShell(object):
             try:
                 g_logger.removeHandler(handler)
             except (ValueError, KeyError):
-                g_logger.warn("Unable to remove handler %s", str(type(handler)))
+                g_logger.error("Unable to remove handler %s", str(type(handler)))
 
         hdlr.setFormatter(formatter)
         g_logger.addHandler(hdlr)
         # Sets the logging target.
-        self.__log_target = target
         g_logger.info("Changed logging target to %s", target)
         return True

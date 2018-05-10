@@ -53,10 +53,13 @@ This file is able to parse an sms received by gammu-smsd tool and format it into
 #    DECODED_1_MMS_SIZE      Size of MMS as specified in MMS indication message.
 
 # System imports
-import getopt
+import argparse
 import json
 import os
 import sys
+
+# Check python version
+assert sys.version_info >= (3,4)
 
 version = "1.0.0"
 
