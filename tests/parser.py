@@ -31,4 +31,4 @@ env = env2
 for key in env:
   os.environ[key] = env[key]
 
-subprocess.check_output(['../utils/sms-shell-parser.py', '--output=../fifo'])
+print(subprocess.check_output(['../utils/sms-shell-parser']))

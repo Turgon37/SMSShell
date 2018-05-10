@@ -48,13 +48,17 @@ logger.addHandler(hdlr)
 
 
 ##
-# Run launcher as the main program
+# Run client as the main program
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="SMSShell client version v" + __version__,
                                         argument_default=argparse.SUPPRESS,
                                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     # parser.add_argument('-c', '--config-file', action='store', dest='config_file', default='/etc/smsshell.conf',
     #                         help='Path of the configuration file')
+    parser.add_argument('-o', '--output', action='store', dest='output', choices=['fifo', 'unix'],
+                            help='Type of output (must agree with the receiver type of the running smsshell)')
+    parser.add_argument('-a', '--output-arg', action='store', dest='output_arg', type=str,
+                            help='Optional argument related to the receiver, ex : path to the socket/fifo, hostname...')
     parser.add_argument('-d', '--debug', action='store_const', const='DEBUG', dest='log_level', default='INFO',
                             help='Enable DEBUG logging')
     parser.add_argument('-v', '--version', action='store_true', dest='show_version',
@@ -62,7 +66,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if hasattr(args, 'show_version') and args.show_version:
-        print("SMSShell client version v" + __version__)
+        print('SMSShell client version v{}'.format(__version__))
         sys.exit(0)
 
     logger.setLevel(args.log_level)
