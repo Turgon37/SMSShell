@@ -35,7 +35,12 @@ assert sys.version_info >= (3,4)
 try:
     import SMSShell
 except ImportError:
-    sys.path.insert(1, os.getcwd())
+    sys.path.insert(1, os.path.join(
+        os.path.dirname(
+            os.path.realpath(__file__)
+        ),
+        os.pardir)
+    )
     try:
         import SMSShell
     except ImportError as e:
@@ -64,7 +69,7 @@ if __name__ == '__main__':
                             help='Cause the SMSShell to fork as a background process on start')
     parser.add_argument('-c', '--config-file', action='store', dest='config_file', default='/etc/smsshell.conf',
                             help='Path of the configuration file')
-    parser.add_argument('-p', '--pid-file', action='store', dest='pid_file',
+    parser.add_argument('-p', '--pid-file', action='store', dest='pid_file', default=None,
                             help='Path of the pidfile')
     parser.add_argument('-d', '--debug', action='store_const', const='DEBUG', dest='log_level', default='INFO',
                             help='Enable DEBUG logging')
