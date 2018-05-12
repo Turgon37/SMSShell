@@ -32,6 +32,8 @@ def test_cmdline_with_env_input():
 
     result = subprocess.Popen(shlex.split('./bin/sms-shell-parser --input env'), stdout=subprocess.PIPE)
     stdout, stderr = result.communicate()
+    if isinstance(stdout, bytes):
+        stdout = stdout.decode()
     obj = json.loads(stdout)
     assert result.returncode == 0
     assert 'sms_number' in obj and obj['sms_number'] == '0124'
