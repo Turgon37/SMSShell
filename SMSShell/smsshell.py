@@ -87,7 +87,7 @@ class SMSShell(object):
         """
         if config is not None:
             if self.cp.load(config):
-                self.setLogLevel(self.__log_level if self.__log_level is not None else self.cp.getLogLevel())
+                self.setLogLevel(self.__log_level or self.cp.getLogLevel())
                 self.setLogTarget(self.cp.getLogTarget())
                 return True
         return False

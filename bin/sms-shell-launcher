@@ -71,7 +71,7 @@ if __name__ == '__main__':
                             help='Path of the configuration file')
     parser.add_argument('-p', '--pid-file', action='store', dest='pid_file', default=None,
                             help='Path of the pidfile')
-    parser.add_argument('-d', '--debug', action='store_const', const='DEBUG', dest='log_level', default='INFO',
+    parser.add_argument('-d', '--debug', action='store_const', const='DEBUG', dest='log_level', default=None,
                             help='Enable DEBUG logging')
     parser.add_argument('-v', '--version', action='store_true', dest='show_version',
                             help='Print the version and exit')
@@ -81,7 +81,8 @@ if __name__ == '__main__':
         print('SMSShell version v' + SMSShell.version)
         sys.exit(0)
 
-    logger.setLevel(args.log_level)
+    if args.log_level:
+        logger.setLevel(args.log_level)
     logger.debug('launch with args %s', vars(args))
 
     program = SMSShell.SMSShell(args.daemon, args.log_level)

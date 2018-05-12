@@ -147,9 +147,11 @@ class Receiver(AbstractReceiver):
 
         @return self
         """
+        g_logger.info('Closing unix receiver')
         g_logger.debug('closing all unix sockets')
         for fd in self.__current_peers:
             fd.close()
+        g_logger.debug('closing server socket')
         self.__server_socket.close()
         self.__socket_selector.close()
 
