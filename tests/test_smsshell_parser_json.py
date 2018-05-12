@@ -28,36 +28,32 @@ def test_parse_good_json_and_good_message():
 def test_parse_good_json_and_bad_message():
     """"""
     parser = SMSShell.parsers.json.Parser()
-    with pytest.raises(SMSShell.parsers.BadMessageException) as exc:
+    with pytest.raises(SMSShell.parsers.BadMessageFormatException) as exc:
         parser.parse('{"sms_number": null, "sms_text": "hello"}')
-    assert exc.type == SMSShell.parsers.BadMessageException
 
-    with pytest.raises(SMSShell.parsers.BadMessageException) as exc:
+    with pytest.raises(SMSShell.parsers.BadMessageFormatException) as exc:
         parser.parse('{"sms_number": "", "sms_text": "hello"}')
-    assert exc.type == SMSShell.parsers.BadMessageException
 
-    with pytest.raises(SMSShell.parsers.BadMessageException) as exc:
+    with pytest.raises(SMSShell.parsers.BadMessageFormatException) as exc:
         parser.parse('{"sms_number": "01234", "sms_text": null}')
-    assert exc.type == SMSShell.parsers.BadMessageException
 
-    with pytest.raises(SMSShell.parsers.BadMessageException) as exc:
+    with pytest.raises(SMSShell.parsers.BadMessageFormatException) as exc:
         parser.parse('{"sms_number": "01234", "sms_text": ""}')
-    assert exc.type == SMSShell.parsers.BadMessageException
 
 def test_parse_good_json_and_partial_message():
     """"""
     parser = SMSShell.parsers.json.Parser()
-    with pytest.raises(SMSShell.parsers.BadMessageException) as exc:
+    with pytest.raises(SMSShell.parsers.BadMessageFormatException) as exc:
         parser.parse('{"sms_number": null}')
-    assert exc.type == SMSShell.parsers.BadMessageException
 
-    with pytest.raises(SMSShell.parsers.BadMessageException) as exc:
+    with pytest.raises(SMSShell.parsers.BadMessageFormatException) as exc:
         parser.parse('{"sms_text": ""}')
-    assert exc.type == SMSShell.parsers.BadMessageException
 
 def test_parse_bad_json():
     """"""
     parser = SMSShell.parsers.json.Parser()
-    with pytest.raises(SMSShell.parsers.ParsingException) as exc:
+    with pytest.raises(SMSShell.parsers.DecodeException) as exc:
         parser.parse('{')
-    assert exc.type == SMSShell.parsers.ParsingException
+
+    with pytest.raises(SMSShell.parsers.DecodeException) as exc:
+        parser.parse(None)

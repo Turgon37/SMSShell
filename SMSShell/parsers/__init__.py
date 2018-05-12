@@ -25,7 +25,7 @@ from ..abstract import AbstractModule
 from ..exceptions import SMSException
 
 
-class ParsingException(SMSException):
+class ParserException(SMSException):
     """Main class for parsing error
 
     All sub exception types must inherit this type
@@ -33,7 +33,16 @@ class ParsingException(SMSException):
     pass
 
 
-class BadMessageException(ParsingException):
+class DecodeException(ParserException):
+    """Raise when a message is not valid
+
+    A message is considered as not valid when at least one of his field does not
+    not follow the requirement
+    """
+    pass
+
+
+class BadMessageFormatException(ParserException):
     """Raise when a message is not valid
 
     A message is considered as not valid when at least one of his field does not
