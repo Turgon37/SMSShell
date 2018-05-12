@@ -22,6 +22,24 @@
 
 # Project imports
 from ..abstract import AbstractModule
+from ..exceptions import SMSException
+
+
+class ParsingException(SMSException):
+    """Main class for parsing error
+
+    All sub exception types must inherit this type
+    """
+    pass
+
+
+class BadMessageException(ParsingException):
+    """Raise when a message is not valid
+
+    A message is considered as not valid when at least one of his field does not
+    not follow the requirement
+    """
+    pass
 
 
 class AbstractParser(AbstractModule):
