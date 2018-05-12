@@ -173,6 +173,7 @@ class SMSShell(object):
         """
         shell = Shell(self.cp)
         if self.cp.getMode() == 'STANDALONE':
+            # Init standalone mode
             raise NotImplementedError('STANDALONE mode not yet implemented')
         else:
             # Init daemon mode
@@ -193,28 +194,35 @@ class SMSShell(object):
                 g_logger.fatal("Unable to load an internal module : %s", str(e))
                 return False
 
-        if not recv.start():
-            g_logger.fatal('Unable to open receiver')
-            return False
-        # register the receiver close callback to properly close opened file descriptors
-        self.__stop_callbacks.append(recv.stop)
+            if not recv.start():
+                g_logger.fatal('Unable to open receiver')
+                return False
+            # register the receiver close callback to properly close opened file descriptors
+            self.__stop_callbacks.append(recv.stop)
 
-        if not transm.start():
-            g_logger.fatal('Unable to open transmitter')
-            return False
+            if not transm.start():
+                g_logger.fatal('Unable to open transmitter')
+                return False
+            self.__stop_callbacks.append(transm.stop)
 
-        for raw in recv.read():
-            # parse received content
-            try:
-                msg = parser.parse(raw)
-                transm.transmit(shell.exec(msg.sender, msg.getStr()))
-            except SMSException as em:
-                g_logger.error("received a bad message, skipping")
-                continue
-            except ShellException as es:
-                g_logger.error("error during command execution : " + str(es))
-                print(es.short_message)
-                continue
+        if self.cp.getMode() == 'STANDALONE':
+            # Run standalone mode
+            raise NotImplementedError('STANDALONE mode not yet implemented')
+        else:
+            # Run daemon mode
+            # read and parse each message from receiver
+            for raw in recv.read():
+                # parse received content
+                try:
+                    msg = parser.parse(raw)
+                    transm.transmit(shell.exec(msg.sender, msg.getStr()))
+                except SMSException as em:
+                    g_logger.error("received a bad message, skipping")
+                    continue
+                except ShellException as es:
+                    g_logger.error("error during command execution : " + str(es))
+                    print(es.short_message)
+                    continue
 
     def stop(self):
         """Stop properly the server after signal received
