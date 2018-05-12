@@ -73,19 +73,22 @@ class Receiver(AbstractReceiver):
         @param socket client_socket the source socket
         """
         try:
-            data = client_socket.recv(1000)
+            request_data = client_socket.recv(1000)
             # if these is data, that mean client has send some bytes to read
-            if data:
-                g_logger.info('get %d bytes of data from FD %d', len(data), client_socket.fileno())
-                g_logger.debug('get data from FD %d: %s', client_socket.fileno(), data)
+            if request_data:
+                g_logger.info('get %d bytes of data from FD %d', len(request_data), client_socket.fileno())
+                g_logger.debug('get data from FD %d: %s', client_socket.fileno(), request_data)
                 # return a simple ACK to client with received size to confirm all is OK
                 g_logger.debug('send ACK to FD %d', client_socket.fileno())
-                response = dict(status=0, length=len(data))
+                response = dict(status=0, length=len(request_data))
                 response_data = json.dumps(response)
                 if not isinstance(response_data, bytes):
                     response_data = response_data.encode()
                 client_socket.send(response_data)
-                return data
+
+                if not isinstance(request_data, str):
+                    request_data = request_data.decode()
+                return request_data
             # If there is no data, the socket must have been closed from client side
             else:
                 self.__close_connection(client_socket)
