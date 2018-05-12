@@ -138,11 +138,11 @@ class Receiver(AbstractReceiver):
             g_logger.fatal('Unsufficients permissions into the directory %s to create the socket',
                             self.__path)
             return False
-        g_logger.debug('creating new socket')
+        g_logger.debug('creating new server socket')
 
         # Create a TCP unix socket
         self.__server_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        g_logger.debug('configure new socket to unblocking')
+        g_logger.debug('configure new server socket to unblocking')
         self.__server_socket.setblocking(0)
 
         # Bind the socket to the port
