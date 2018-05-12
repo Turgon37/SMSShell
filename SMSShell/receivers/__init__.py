@@ -36,9 +36,9 @@ class AbstractReceiver(AbstractModule):
         raise NotImplementedError("You must implement the 'start' method in receiver class")
 
     def stop(self):
-        """Unprepare the receiver, flush, close connections
+        """Close properly the receiver, flush, close connections
 
-        @return bool : True if init has success, otherwise False
+        @return bool : True if stop has success, otherwise False
         """
         raise NotImplementedError("You must implement the 'stop' method in receiver class")
 
