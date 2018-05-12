@@ -241,6 +241,8 @@ class SMSShell(object):
         # Close log
         logging.shutdown()
 
+        return 0
+
     #
     # System running functions
     #
@@ -249,8 +251,7 @@ class SMSShell(object):
         """Make the program terminate after receving system signal
         """
         g_logger.debug("Caught system signal %d", signum)
-        self.stop()
-        sys.exit(1)
+        sys.exit(self.stop())
 
     def __downgrade(self):
         """Downgrade daemon privilege to another uid/gid

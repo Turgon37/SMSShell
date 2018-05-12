@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with SMSShell. If not, see <http://www.gnu.org/licenses/>.
 
-"""
+"""Message receiver from a local unix socket
 """
 
 # System imports
@@ -132,7 +132,7 @@ class Receiver(AbstractReceiver):
         # Listen for incoming connections
         g_logger.debug('set socket to listening mode with listen queue size %d', self.__listen_queue)
         self.__server_socket.listen(self.__listen_queue)
-        g_logger.info('Unix receiver ready to listen on FD {}'.format(self.__server_socket.fileno()))
+        g_logger.info('Unix receiver ready to listen on {} FD {}'.format(self.__path, self.__server_socket.fileno()))
 
         ## Init sockets selector
         self.__socket_selector = selectors.DefaultSelector()
