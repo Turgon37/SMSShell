@@ -88,7 +88,7 @@ class SMSShell(object):
         if config is not None:
             if self.cp.load(config):
                 self.setLogLevel(self.__log_level or self.cp.getLogLevel())
-                self.setLogTarget(self.cp.getLogTarget())
+                self.setLogTarget(self.cp.get(self.cp.MAIN_SECTION, 'log_target', fallback='STDOUT'))
                 return True
         return False
 
@@ -395,29 +395,32 @@ class SMSShell(object):
         @return [bool] : True if set success
         False otherwise Set the log target of the logging system
         """
+        # Syslog daemons already add date to the message.
+        if target == 'SYSLOG':
+            default_format = '%(name)s[%(process)d]: %(levelname)s %(message)s'
         # set a format which is simpler for console use
-        formatter = logging.Formatter(
-            "%(asctime)s %(name)-30s[%(process)d]: %(levelname)-7s %(message)s")
-        if target == "SYSLOG":
-            # Syslog daemons already add date to the message.
-            formatter = logging.Formatter(
-                "%(name)s[%(process)d]: %(levelname)s %(message)s")
+        else:
+            default_format = '%(asctime)s %(name)-30s[%(process)d]: %(levelname)-7s %(message)s'
+        formatter = logging.Formatter(self.cp.get(self.cp.MAIN_SECTION, 'log_format', fallback=default_format))
+
+        if target == 'SYSLOG':
             facility = logging.handlers.SysLogHandler.LOG_DAEMON
-            hdlr = logging.handlers.SysLogHandler("/dev/log", facility=facility)
-        elif target == "STDOUT":
+            hdlr = logging.handlers.SysLogHandler('/dev/log', facility=facility)
+        elif target == 'STDOUT':
             hdlr = logging.StreamHandler(sys.stdout)
-        elif target == "STDERR":
+        elif target == 'STDERR':
             hdlr = logging.StreamHandler(sys.stderr)
         else:
             # Target should be a file
             try:
-                open(target, "a").close()
+                with open(target, 'a'):
+                    pass
                 hdlr = logging.handlers.RotatingFileHandler(target)
             except IOError:
-                g_logger.error("Unable to log to " + target)
+                g_logger.error("Unable to log to %s", target)
                 return False
 
-        # Remove all handler
+        # Remove all previous handlers
         for handler in g_logger.handlers:
             try:
                 g_logger.removeHandler(handler)
