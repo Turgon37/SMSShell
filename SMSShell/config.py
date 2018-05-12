@@ -21,13 +21,12 @@
 """
 
 # System imports
+import configparser
 import grp
 import logging
 import pwd
 import re
 import sys
-from configparser import ConfigParser
-from configparser import Error
 
 # Project imports
 
@@ -35,7 +34,7 @@ from configparser import Error
 g_logger = logging.getLogger('smsshell.config')
 
 
-class MyConfigParser(ConfigParser):
+class MyConfigParser(configparser.ConfigParser):
     """(extend ConfigParser) Set specific function for configuration file parsing
 
     Refer to the config file provide some function to parse directly the config
@@ -51,7 +50,7 @@ class MyConfigParser(ConfigParser):
     def __init__(self):
         """Constructor : init a new config parser
         """
-        ConfigParser.__init__(self)
+        configparser.ConfigParser.__init__(self)
 
         # boolean that indicates if the configparser is available
         self.__is_config_loaded = False
@@ -67,8 +66,11 @@ class MyConfigParser(ConfigParser):
         if path is None:
             return False
 
-        if path in self.read(path):
-            self.__is_config_loaded = True
+        try:
+            if path in self.read(path):
+                self.__is_config_loaded = True
+        except configparser.Error as e:
+            print('Unable to load the configuration file because of error : {}'.format(str(e)))
         return self.__is_config_loaded
 
     def isLoaded(self):
@@ -96,15 +98,6 @@ class MyConfigParser(ConfigParser):
         @return [str] : the loglevel
         """
         return self.__getValueInArray(self.MAIN_SECTION, 'log_level', self.LOGLEVEL_MAP, default)
-
-    def getLogTarget(self, default='STDOUT'):
-        """Return logtarget option
-
-        @param default [str] : the default value to return if nothing is found
-        in the config file
-        @return [str] : the logtarget
-        """
-        return self.get(self.MAIN_SECTION, 'log_target', fallback=default)
 
     def getUid(self):
         """Return the uid (int) option from configfile
