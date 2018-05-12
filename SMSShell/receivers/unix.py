@@ -42,8 +42,6 @@ class Receiver(AbstractReceiver):
     def init(self):
         """Init
         """
-        self.__path = self.getConfig('path', fallback="/var/run/smsshell.sock")
-        self.__listen_queue = int(self.getConfig('listen_queue', fallback=10))
         # Keeps track of the peers currently connected. Maps socket fd to
         # peer name.
         self.__current_peers = dict()
@@ -51,6 +49,11 @@ class Receiver(AbstractReceiver):
         # Internal items that will be inits later
         self.__socket_selector = None
         self.__server_socket = None
+        self.__default_umask = 0o117
+        # config
+        self.__path = self.getConfig('path', fallback="/var/run/smsshell.sock")
+        self.__umask = self.getConfig('umask', fallback=self.__default_umask)
+        self.__listen_queue = int(self.getConfig('listen_queue', fallback=10))
 
     def __on_accept(self, server_socket, mask):
         client_socket, addr = server_socket.accept()
@@ -120,7 +123,7 @@ class Receiver(AbstractReceiver):
                 try:
                     os.unlink(self.__path)
                 except OSError:
-                    if os.path.exists(server_address):
+                    if os.path.exists(self.__path):
                         g_logger.fatal('The unix socket path already exists and cannot be removed')
                         return False
             else:
@@ -140,8 +143,16 @@ class Receiver(AbstractReceiver):
         self.__server_socket.setblocking(0)
 
         # Bind the socket to the port
-        g_logger.debug('bind socket to path %s', self.__path)
+        try:
+            umask = int(self.__umask, 8)
+        except ValueError as e:
+            g_logger.error('Invalid UMASK format, fallback to default umask %s', self.__default_umask)
+            umask = self.__default_umask
+        g_logger.debug('bind socket to path %s with umask %s', self.__path, oct(umask))
+
+        old_umask = os.umask(umask)
         self.__server_socket.bind(self.__path)
+        os.umask(old_umask)
 
         # Listen for incoming connections
         g_logger.debug('set socket to listening mode with listen queue size %d', self.__listen_queue)

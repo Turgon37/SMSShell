@@ -79,7 +79,7 @@ def getMessageFromInput(method, *args, **kwargs):
         logger.debug('read message from environment variables')
         return SMSShell.utils.GammuSMSParser.decodeFromEnv()
 
-    print('You must choose a valid input method')
+    logger.fatal('You must choose a valid input method')
     sys.exit(1)
 
 def encodeMessage(method, message, *args, **kwargs):
@@ -92,7 +92,7 @@ def encodeMessage(method, message, *args, **kwargs):
         logger.debug('encode message in JSON')
         return json.dumps(message)
 
-    print('You must choose a valid encoding method')
+    logger.fatal('You must choose a valid encoding method')
     sys.exit(1)
 
 def sendMessageToOutput(method, message, *args, **kwargs):
@@ -108,13 +108,13 @@ def sendMessageToOutput(method, message, *args, **kwargs):
         logger.debug('send message using the fifo')
         func = sendMessageToOutputFifo
     else:
-        print('You must choose a valid output method')
+        logger.fatal('You must choose a valid output method')
         sys.exit(1)
 
     try:
         return func(message, *args, **kwargs)
     except TypeError as e:
-        logger.fatal('the output function failed maybe because it missing an output argument, see details below and refer to (-a)')
+        logger.fatal('The output function failed maybe because it missing an output argument, see details below and refer to (-a)')
         logger.fatal('error : %s', str(e))
 
 def sendMessageToOutputUnix(message, socket_path, **kwargs):
@@ -143,13 +143,13 @@ def sendMessageToOutputUnix(message, socket_path, **kwargs):
     try:
         ack = json.loads(ack_data)
     except json.JSONDecodeError as e:
-        logger.error('received bad JSON in ACK, the smsshell server may have not received correctly the message')
+        logger.error('Received bad JSON in ACK, the smsshell server may have not received correctly the message')
         return False
     if ack['length'] != message_data_size:
-        logger.error('size of sent data differ from size of received data given in acknowledgment')
+        logger.error('Size of sent data differ from size of received data given in acknowledgment')
         return False
 
-    logger.info('successfully written message to SMSShell using unix socket')
+    logger.info('Successfully written message to SMSShell using unix socket')
     return True
 
 def sendMessageToOutputFifo(message, fifo_path, **kwargs):
@@ -161,7 +161,7 @@ def sendMessageToOutputFifo(message, fifo_path, **kwargs):
     except IOError as e:
         logger.fatal("Unable to write to fifo file '%s' because : %s", fifo_path, str(e))
         return False
-    logger.info('successfully written message to SMSShell using fifo')
+    logger.info('Successfully written message to SMSShell using fifo')
     return True
 
 
@@ -191,7 +191,7 @@ if __name__ == '__main__':
         print('SMSShell client version v{}'.format(__version__))
         sys.exit(0)
     if not hasattr(args, 'output'):
-        print('output type is required, use --help')
+        logger.fatal('output type is required, use --help')
         sys.exit(1)
 
     logger.setLevel(args.log_level)
