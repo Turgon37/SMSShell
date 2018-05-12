@@ -2,6 +2,7 @@
 
 import os
 import subprocess
+import sys
 
 env1 = dict(
 SMS_MESSAGES="1",
@@ -31,4 +32,4 @@ env = env2
 for key in env:
   os.environ[key] = env[key]
 
-print(subprocess.check_output(['../utils/sms-shell-parser']))
+subprocess.call(['../bin/sms-shell-parser'], stdout=sys.stdout)

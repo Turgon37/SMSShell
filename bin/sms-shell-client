@@ -39,7 +39,7 @@ assert sys.version_info >= (3,4)
 # Projet Import
 
 # Global project declarations
-logger = logging.getLogger('smsshell-launcher')
+logger = logging.getLogger('smsshell-client')
 
 formatter = logging.Formatter("%(asctime)s %(name)-30s[%(process)d]: %(levelname)-7s %(message)s")
 hdlr = logging.StreamHandler(sys.stdout)
