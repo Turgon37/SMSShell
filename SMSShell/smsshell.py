@@ -215,12 +215,12 @@ class SMSShell(object):
                 # parse received content
                 try:
                     msg = parser.parse(raw)
-                    transm.transmit(shell.exec(msg.sender, msg.getStr()))
+                    transm.transmit(shell.exec(msg.sender, msg.asString()))
                 except SMSException as em:
-                    g_logger.error("received a bad message, skipping")
+                    g_logger.error('received a bad message, skipping because of %s', str(em))
                     continue
                 except ShellException as es:
-                    g_logger.error("error during command execution : " + str(es))
+                    g_logger.error('error during command execution : %s', str(es))
                     print(es.short_message)
                     continue
 

@@ -21,6 +21,7 @@
 """
 
 # System imports
+import json
 import logging
 import os
 import selectors
@@ -64,21 +65,34 @@ class Receiver(AbstractReceiver):
         g_logger.info('accepted new client with FD %d on unix socket', client_socket.fileno())
 
     def __on_read(self, client_socket, mask):
+        """Call each time a socket received an event
+
+        @param socket client_socket the source socket
+        """
         try:
             data = client_socket.recv(1000)
+            # if these is data, that mean client has send some bytes to read
             if data:
-                g_logger.info('get data length {} from {}'.format(len(data), client_socket.fileno()))
-                g_logger.debug('get data from {}: {!r}'.format(client_socket.fileno(), data))
-                # Assume for simplicity that send() won't block
-                client_socket.send(data)
+                g_logger.info('get %d bytes of data from FD %d', len(data), client_socket.fileno())
+                g_logger.debug('get data from FD %d: %s', client_socket.fileno(), data)
+                # return a simple ACK to client with received size to confirm all is OK
+                g_logger.debug('send ACK to FD %d', client_socket.fileno())
+                response = dict(status=0, length=len(data))
+                response_data = json.dumps(response)
+                if not isinstance(response_data, bytes):
+                    response_data = response_data.encode()
+                client_socket.send(response_data)
                 return data
+            # If there is no data, the socket must have been closed from client side
             else:
                 self.__close_connection(client_socket)
-        except ConnectionError:
-            g_logger.warning('client connection with FD %s raise an connection error', client_socket.fileno())
+        except ConnectionError as e:
+            g_logger.warning('client connection with FD %s raise connection error : %s', client_socket.fileno(), str(e))
             self.__close_connection(client_socket)
 
     def __close_connection(self, client_socket):
+        """
+        """
         # We can't ask conn for getpeername() here, because the peer may no
         # longer exist (hung up); instead we use our own mapping of socket
         # fds to peer names - our socket fd is still open.
@@ -132,7 +146,7 @@ class Receiver(AbstractReceiver):
         # Listen for incoming connections
         g_logger.debug('set socket to listening mode with listen queue size %d', self.__listen_queue)
         self.__server_socket.listen(self.__listen_queue)
-        g_logger.info('Unix receiver ready to listen on {} FD {}'.format(self.__path, self.__server_socket.fileno()))
+        g_logger.info('Unix receiver ready to listen on %s FD %d', self.__path, self.__server_socket.fileno())
 
         ## Init sockets selector
         self.__socket_selector = selectors.DefaultSelector()
