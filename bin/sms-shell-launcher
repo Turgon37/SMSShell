@@ -78,7 +78,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if hasattr(args, 'show_version') and args.show_version:
-        print("SMSShell version v" + SMSShell.version)
+        print('SMSShell version v' + SMSShell.version)
         sys.exit(0)
 
     logger.setLevel(args.log_level)
