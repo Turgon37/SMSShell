@@ -16,7 +16,7 @@ def test_cmdline_version():
     stdout, stderr = result.communicate()
     assert 'SMSShell client version' in stdout.decode()
 
-def test_cmdline_without_config_file():
+def test_cmdline_without_arguments():
     result = subprocess.Popen(shlex.split('./bin/sms-shell-client'), stdout=subprocess.PIPE)
     stdout, stderr = result.communicate()
-    assert result.returncode == 0
+    assert result.returncode == 1
