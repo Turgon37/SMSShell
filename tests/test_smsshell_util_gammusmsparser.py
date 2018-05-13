@@ -12,9 +12,12 @@ def environSetup():
     """Purge environment variables from resulting tests
     """
     regex = re.compile('^(SMS|DECODED)_')
+    keys_to_remove = []
     for key in os.environ:
         if regex.match(key):
-            del os.environ[key]
+            keys_to_remove.append(key)
+    for key in keys_to_remove:
+        del os.environ[key]
     yield True
 
 
