@@ -53,9 +53,13 @@ class GammuSMSParser(object):
     def createEmptyMessage():
         # template of output string
         return dict(
+            type=None,
             sms_text='',
             sms_class=None,
             sms_number=None,
+            mms_address='',
+            mms_title='',
+            mms_number=None,
             errors=[],
         )
 
@@ -74,38 +78,49 @@ class GammuSMSParser(object):
     def decodeFromEnv():
         """Extract SMS content from the current environment
         """
-        sms = GammuSMSParser.createEmptyMessage()
+        message = GammuSMSParser.createEmptyMessage()
         # Decode SMS messages
         sms_parts = int(os.getenv('SMS_MESSAGES', 0))
         sms_text = ''
         if sms_parts > 0:
+            message['type'] = 'SMS'
             for i in range(1, sms_parts + 1):
                 sms_text += os.getenv('SMS_{}_TEXT'.format(i), '')
 
                 # fill sms class
                 sms_class = os.getenv('SMS_{}_CLASS'.format(i), None)
                 if sms_class:
-                    GammuSMSParser.setUniqueValueInSMS(sms, 'sms_class', sms_class)
+                    GammuSMSParser.setUniqueValueInSMS(message, 'sms_class', sms_class)
 
                 # fill SMS NUMBER
                 sms_number = os.getenv('SMS_{}_NUMBER'.format(i), None)
                 if sms_number:
-                    GammuSMSParser.setUniqueValueInSMS(sms, 'sms_number', sms_number)
+                    GammuSMSParser.setUniqueValueInSMS(message, 'sms_number', sms_number)
 
-        # Decode SMS parts
+        # Decoded SMS parts
         decoded_parts = int(os.getenv('DECODED_PARTS', 0))
         decoded_text = ''
         if decoded_parts > 0:
             for i in range(0, decoded_parts):
                 decoded_text += os.getenv("DECODED_{0}_TEXT".format(i), '')
 
+                # MMS
+                sender = os.getenv("DECODED_{0}_MMS_SENDER".format(i+1), None)
+                if sender:
+                    message['type'] = 'MMS'
+                    sender_parts = sender.split('/')
+                    if len(sender_parts) > 1:
+                        GammuSMSParser.setUniqueValueInSMS(message, 'mms_number', sender_parts[0])
+                    message['mms_title'] = os.getenv("DECODED_{0}_MMS_TITLE".format(i+1), '')
+                    message['mms_address'] = os.getenv("DECODED_{0}_MMS_ADDRESS".format(i+1), '')
+
         if sms_parts == 0 and decoded_parts == 0:
-            sms['errors'].append('no message content')
+            message['errors'].append('no message content')
 
         if decoded_parts > 0:
-            sms['sms_text'] = decoded_text
+            message['sms_text'] = decoded_text
             if decoded_text != sms_text:
-                sms['errors'].append('SMS text differ from decoded part, keeping decoded part')
+                message['errors'].append('SMS text differ from decoded part, keeping decoded part')
         else:
-            sms['sms_text'] = sms_text
-        return sms
+            message['sms_text'] = sms_text
+        return message
