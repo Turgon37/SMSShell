@@ -56,7 +56,6 @@ class GammuSMSParser(object):
             sms_text='',
             sms_class=None,
             sms_number=None,
-            mms_text='',
             errors=[],
         )
 
@@ -77,24 +76,36 @@ class GammuSMSParser(object):
         """
         sms = GammuSMSParser.createEmptyMessage()
         # Decode SMS messages
-        smsparts = int(os.getenv('SMS_MESSAGES', 0))
-        if smsparts > 0:
-            for i in range(1, smsparts + 1):
-                sms['sms_text'] += os.getenv('SMS_{}_TEXT'.format(i), '')
+        sms_parts = int(os.getenv('SMS_MESSAGES', 0))
+        sms_text = ''
+        if sms_parts > 0:
+            for i in range(1, sms_parts + 1):
+                sms_text += os.getenv('SMS_{}_TEXT'.format(i), '')
+
                 # fill sms class
-                smsclass = os.getenv('SMS_{}_CLASS'.format(i), None)
-                GammuSMSParser.setUniqueValueInSMS(sms, 'sms_class', smsclass)
+                sms_class = os.getenv('SMS_{}_CLASS'.format(i), None)
+                if sms_class:
+                    GammuSMSParser.setUniqueValueInSMS(sms, 'sms_class', sms_class)
 
                 # fill SMS NUMBER
-                smsnumber = os.getenv('SMS_{}_NUMBER'.format(i), None)
-                GammuSMSParser.setUniqueValueInSMS(sms, 'sms_number', smsnumber)
+                sms_number = os.getenv('SMS_{}_NUMBER'.format(i), None)
+                if sms_number:
+                    GammuSMSParser.setUniqueValueInSMS(sms, 'sms_number', sms_number)
 
         # Decode SMS parts
-        decodedparts = int(os.getenv('DECODED_PARTS', 0))
-        if decodedparts > 0:
-            for i in range(1, decodedparts + 1):
-                sms['mms_text'] += os.getenv("DECODED_{0}_TEXT".format(i-1), '')
+        decoded_parts = int(os.getenv('DECODED_PARTS', 0))
+        decoded_text = ''
+        if decoded_parts > 0:
+            for i in range(0, decoded_parts):
+                decoded_text += os.getenv("DECODED_{0}_TEXT".format(i), '')
 
-        if smsparts == 0 and decodedparts == 0:
+        if sms_parts == 0 and decoded_parts == 0:
             sms['errors'].append('no message content')
+
+        if decoded_parts > 0:
+            sms['sms_text'] = decoded_text
+            if decoded_text != sms_text:
+                sms['errors'].append('SMS text differ from decoded part, keeping decoded part')
+        else:
+            sms['sms_text'] = sms_text
         return sms

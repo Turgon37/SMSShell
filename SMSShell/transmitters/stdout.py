@@ -43,4 +43,4 @@ class Transmitter(AbstractTransmitter):
     def transmit(self, raw):
         """Print message to stdout
         """
-        print(raw)
+        print('OUTPUT : {}'.format(raw))
