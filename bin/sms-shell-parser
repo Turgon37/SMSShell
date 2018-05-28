@@ -65,8 +65,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="SMSShell parser version v" + __version__,
                                         argument_default=argparse.SUPPRESS,
                                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-i', '--input', action='store', dest='input', choices=['env'],
+    parser.add_argument('-i', '--input', action='store', dest='input', choices=['env', 'file'],
                             default='env', help='Where to pick up raw messages')
+    parser.add_argument('-ia', '--input-arg', action='append', dest='input_arg', type=str, default=[],
+                            help='Optional arguments related to the input, ex : path to the inbox file...')
     parser.add_argument('-o', '--output', action='store', dest='output', default=None,
                             help='File where to put the output (default to STDOUT)')
     parser.add_argument('-v', '--version', action='store_true', dest='show_version',
@@ -79,6 +81,8 @@ if __name__ == '__main__':
 
     if args.input == 'env':
         content = SMSShell.utils.GammuSMSParser.decodeFromEnv()
+    elif args.input == 'file':
+        content = SMSShell.utils.GammuSMSParser.decodeFromBackupFilePath(args.input_arg[0])
     else:
         print('You must choose a valid input method')
         sys.exit(1)
