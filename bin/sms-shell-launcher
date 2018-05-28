@@ -50,6 +50,8 @@ except ImportError:
         print(str(e))
         sys.exit(1)
 
+import SMSShell.exceptions
+
 # Global project declarations
 logger = logging.getLogger('smsshell-launcher')
 
@@ -91,4 +93,8 @@ if __name__ == '__main__':
         logger.fatal('Unable to load configuration file')
         logger.fatal(msg)
         sys.exit(3)
-    sys.exit(program.start(args.pid_file))
+    try:
+        sys.exit(program.start(args.pid_file))
+    except SMSShell.exceptions.SMSShellException as e:
+        logger.fatal(msg)
+        sys.exit(1)
