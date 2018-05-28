@@ -78,19 +78,26 @@ class SMSShell(object):
         # List of callable to call on smsshell stop
         self.__stop_callbacks = []
 
-    def load(self, config):
+    def load(self, config_file):
         """Load configuration function
 
         Use this function to load settings from given configuration file
         @param str config The path fo the configuration file
-        @return boolean True if success, False otherwise
+        @return tuple (boolean, str) True if success, False otherwise
+                                                and the status message
         """
-        if config is not None:
-            if self.cp.load(config):
-                self.setLogLevel(self.__log_level or self.cp.getLogLevel())
-                self.setLogTarget(self.cp.get(self.cp.MAIN_SECTION, 'log_target', fallback='STDOUT'))
-                return True
-        return False
+        if config_file is None:
+            return False, 'no file given'
+        if not os.path.isfile(config_file):
+            return False, 'the configuration file {} do not exists'.format(config_file)
+        if not os.access(config_file, os.R_OK):
+            return False, 'the configuration file {} is not readable by the service'.format(config_file)
+
+        status, msg = self.cp.load(config_file)
+        if status:
+            self.setLogLevel(self.__log_level or self.cp.getLogLevel())
+            self.setLogTarget(self.cp.get(self.cp.MAIN_SECTION, 'log_target', fallback='STDOUT'))
+        return status, msg
 
     def start(self, pid_path=None):
         """Run the service features
