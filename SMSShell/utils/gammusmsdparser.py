@@ -57,6 +57,7 @@ class GammuSMSParser(object):
             sms_text='',
             sms_class=None,
             sms_number=None,
+            sms_type=None, # in 'message', 'delivery_report'
             mms_address='',
             mms_title='',
             mms_number=None,
@@ -64,21 +65,21 @@ class GammuSMSParser(object):
         )
 
     @staticmethod
-    def setUniqueValueInSMS(sms, key, value):
+    def setUniqueValueInMessage(message, key, value):
         """Set a value with unique constraint into SMS object
         """
-        if (sms[key] is None):
-            sms[key] = value
+        if (message[key] is None):
+            message[key] = value
         else:
             # if the class if already set, compare it with the previous value
-            if (sms[key] != value):
-                sms['errors'].append('Two or more differents values for {0}'.format(key))
+            if (message[key] != value):
+                message['errors'].append('Two or more differents values for {0}'.format(key))
 
-    @staticmethod
-    def decodeFromEnv():
+    @classmethod
+    def decodeFromEnv(cls):
         """Extract SMS content from the current environment
         """
-        message = GammuSMSParser.createEmptyMessage()
+        message = cls.createEmptyMessage()
         # Decode SMS messages
         sms_parts = int(os.getenv('SMS_MESSAGES', 0))
         sms_text = ''
@@ -90,12 +91,12 @@ class GammuSMSParser(object):
                 # fill sms class
                 sms_class = os.getenv('SMS_{}_CLASS'.format(i), None)
                 if sms_class:
-                    GammuSMSParser.setUniqueValueInSMS(message, 'sms_class', sms_class)
+                    cls.setUniqueValueInMessage(message, 'sms_class', sms_class)
 
                 # fill SMS NUMBER
                 sms_number = os.getenv('SMS_{}_NUMBER'.format(i), None)
                 if sms_number:
-                    GammuSMSParser.setUniqueValueInSMS(message, 'sms_number', sms_number)
+                    cls.setUniqueValueInMessage(message, 'sms_number', sms_number)
 
         # Decoded SMS parts
         decoded_parts = int(os.getenv('DECODED_PARTS', 0))
@@ -110,7 +111,7 @@ class GammuSMSParser(object):
                     message['type'] = 'MMS'
                     sender_parts = sender.split('/')
                     if len(sender_parts) > 1:
-                        GammuSMSParser.setUniqueValueInSMS(message, 'mms_number', sender_parts[0])
+                        GammuSMSParser.setUniqueValueInMessage(message, 'mms_number', sender_parts[0])
                     message['mms_title'] = os.getenv("DECODED_{0}_MMS_TITLE".format(i+1), '')
                     message['mms_address'] = os.getenv("DECODED_{0}_MMS_ADDRESS".format(i+1), '')
 
@@ -123,4 +124,28 @@ class GammuSMSParser(object):
                 message['errors'].append('SMS text differ from decoded part, keeping decoded part')
         else:
             message['sms_text'] = sms_text
+        return message
+
+    @classmethod
+    def decodeFromBackupFilePath(cls, path):
+        """
+        """
+        # checks
+        if not os.path.exists(path) or not os.path.isfile(path):
+            msg = cls.createEmptyMessage()
+            msg['errors'].append("the file '{}' do not exists".format(path))
+            return msg
+        if not os.access(path, os.R_OK):
+            msg = cls.createEmptyMessage()
+            msg['errors'].append("the file '{}' is not readable".format(path))
+            return msg
+
+        with open(path, 'rb') as fd:
+            return cls.decodeFromBackupFileContent(fd.read().decode(errors='ignore'))
+
+    @classmethod
+    def decodeFromBackupFileContent(cls, content):
+        """
+        """
+        message = cls.createEmptyMessage()
         return message
