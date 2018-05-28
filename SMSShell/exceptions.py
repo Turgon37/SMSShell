@@ -20,6 +20,10 @@
 """This module define all operations related Exceptions
 """
 
+class SMSShellException(Exception):
+    """Exception related to the global service
+    """
+    pass
 
 class SMSException(Exception):
     """Base exception relating to SMS messages error

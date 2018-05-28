@@ -45,7 +45,7 @@ try:
     from .parsers import AbstractParser
     from .transmitters import AbstractTransmitter
     from .shell import Shell
-    from .exceptions import SMSException,ShellException,ShellInitException
+    from .exceptions import SMSShellException,SMSException,ShellException,ShellInitException
 except Exception as e:
     import traceback
     traceback.print_exc(file=sys.stdout)
@@ -271,18 +271,30 @@ class SMSShell(object):
     def __downgrade(self):
         """Downgrade daemon privilege to another uid/gid
         """
-        uid = self.cp.getUid()
         gid = self.cp.getGid()
+        if gid is not None:
+            if os.getgid() == gid:
+                g_logger.debug("ignore setgid option because current group is already to expected one %d", gid)
+            else:
+                g_logger.debug("setting processus group to gid %d", gid)
+                try:
+                    os.setgid(gid)
+                except PermissionError:
+                    g_logger.fatal('Insufficient permissions to set process GID to %d', uid)
+                    raise SMSShellException('Insufficient permissions to downgrade processus privileges')
 
-        try:
-            if gid is not None:
-                g_logger.debug("Setting processus group to gid %d", gid)
-                os.setgid(gid)
-            if uid is not None:
-                g_logger.debug("Setting processus user to uid %d", uid)
-                os.setuid(uid)
-        except PermissionError:
-            g_logger.error('Insufficient privileges to set process id')
+        uid = self.cp.getUid()
+        if uid is not None:
+            if os.getuid() == uid:
+                g_logger.debug("ignore setuid option because current user is already to expected one %d", uid)
+            else:
+                g_logger.debug("setting processus user to uid %d", uid)
+                try:
+                    os.setuid(uid)
+                except PermissionError:
+                    g_logger.fatal('Insufficient permissions to set process UID to %d')
+                    raise SMSShellException('Insufficient permissions to downgrade processus privileges')
+
 
     def __daemonize(self):
         """Turn the service as a deamon
