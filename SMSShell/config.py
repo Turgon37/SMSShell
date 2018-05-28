@@ -62,16 +62,14 @@ class MyConfigParser(configparser.ConfigParser):
         @return [boolean] : True if loading is sucess
         False if loading fail
         """
-        # if file is defined
-        if path is None:
-            return False
-
+        assert path is not None
+        msg = 'ok'
         try:
             if path in self.read(path):
                 self.__is_config_loaded = True
         except configparser.Error as e:
-            print('Unable to load the configuration file because of error : {}'.format(str(e)))
-        return self.__is_config_loaded
+            msg = 'Unable to load the configuration file because of error : {}'.format(str(e))
+        return self.__is_config_loaded, msg
 
     def isLoaded(self):
         """Return the load state of this config parser

@@ -86,7 +86,9 @@ if __name__ == '__main__':
     logger.debug('launch with args %s', vars(args))
 
     program = SMSShell.SMSShell(args.daemon, args.log_level)
-    if not program.load(args.config_file):
+    status, msg = program.load(args.config_file)
+    if not status:
         logger.fatal('Unable to load configuration file')
+        logger.fatal(msg)
         sys.exit(3)
     sys.exit(program.start(args.pid_file))
