@@ -20,6 +20,7 @@
 """Some parsing utilities to decode GammuSMSD messages
 """
 
+import gammu
 import os
 
 # These environnement variables are available
