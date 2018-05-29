@@ -20,8 +20,14 @@
 """Some parsing utilities to decode GammuSMSD messages
 """
 
-import gammu
+import datetime
 import os
+import time
+
+try:
+    import gammu
+except ImportError:
+    gammu = None
 
 # These environnement variables are available
 #  Global variables
@@ -49,12 +55,26 @@ import os
 
 
 class GammuSMSParser(object):
+    """This class contains some utility to decode SMS from gammusmsd
+    """
+
+    # Mapping between SMSBackup format value and final values
+    BACKUPFILE_SMS_TYPE_MAPPING = dict({
+        'Deliver': 'message',
+        'Submit': 'message',
+        'Status_Report': 'delivery_report',
+    })
+    BACKUPFILE_SMS_FIELD_MAPPING = dict({
+        'Class': 'sms_class',
+        'Number': 'sms_number',
+    })
 
     @staticmethod
     def createEmptyMessage():
         # template of output string
         return dict(
             type=None,
+            timestamp=None,
             sms_text='',
             sms_class=None,
             sms_number=None,
@@ -131,22 +151,36 @@ class GammuSMSParser(object):
     def decodeFromBackupFilePath(cls, path):
         """
         """
+        message = cls.createEmptyMessage()
+
         # checks
         if not os.path.exists(path) or not os.path.isfile(path):
-            msg = cls.createEmptyMessage()
-            msg['errors'].append("the file '{}' do not exists".format(path))
-            return msg
+            message['errors'].append("the file '{}' do not exists".format(path))
+            return message
         if not os.access(path, os.R_OK):
-            msg = cls.createEmptyMessage()
-            msg['errors'].append("the file '{}' is not readable".format(path))
-            return msg
+            message['errors'].append("the file '{}' is not readable".format(path))
+            return message
+        if not gammu:
+            message['errors'].append('the gammu package is not available to decode backup format')
+            return message
 
-        with open(path, 'rb') as fd:
-            return cls.decodeFromBackupFileContent(fd.read().decode(errors='ignore'))
+        raw_message = gammu.ReadSMSBackup(path)
+        text = ''
+        for raw_part in raw_message:
+            # simple mapped fields
+            for backup_key, message_key in cls.BACKUPFILE_SMS_FIELD_MAPPING.items():
+                if backup_key in raw_part and raw_part[backup_key]:
+                    cls.setUniqueValueInMessage(message, message_key, raw_part[backup_key])
 
-    @classmethod
-    def decodeFromBackupFileContent(cls, content):
-        """
-        """
-        message = cls.createEmptyMessage()
+            if 'Type' in raw_part and raw_part['Type'] in cls.BACKUPFILE_SMS_TYPE_MAPPING:
+                   cls.setUniqueValueInMessage(message, 'sms_type', cls.BACKUPFILE_SMS_TYPE_MAPPING[raw_part['Type']])
+
+            if 'Text' in raw_part and raw_part['Text']:
+                text += raw_part['Text']
+
+            if 'DateTime' in raw_part and isinstance(raw_part['DateTime'], datetime.datetime):
+                message['timestamp'] = time.mktime(raw_part['DateTime'].timetuple())
+
+        message['sms_text'] = text
+        message['type'] = 'SMS'
         return message
