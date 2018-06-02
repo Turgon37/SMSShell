@@ -147,6 +147,7 @@ def test_backupfile_simple_sms_decoding(environSetup):
     """
     content = SMSShell.utils.GammuSMSParser.decodeFromBackupFilePath(getBackupSample('simple_sms.txt'))
     assert isinstance(content, dict)
+    assert len(content['errors']) == 0
     assert content['type'] == 'SMS'
     assert content['sms_number'] == '+3301234'
     assert content['sms_type'] == 'message'
@@ -156,6 +157,7 @@ def test_backupfile_unicode_sms_decoding(environSetup):
     """
     content = SMSShell.utils.GammuSMSParser.decodeFromBackupFilePath(getBackupSample('unicode_sms.txt'))
     assert isinstance(content, dict)
+    assert len(content['errors']) == 0
     assert content['type'] == 'SMS'
     assert content['sms_number'] == '+3301234'
     assert content['sms_type'] == 'message'
@@ -166,6 +168,7 @@ def test_backupfile_smiley_sms_decoding(environSetup):
     """
     content = SMSShell.utils.GammuSMSParser.decodeFromBackupFilePath(getBackupSample('smileys_sms.txt'))
     assert isinstance(content, dict)
+    assert len(content['errors']) == 0
     assert content['type'] == 'SMS'
     assert content['sms_number'] == '+3301234'
     assert content['sms_type'] == 'message'
@@ -176,6 +179,7 @@ def test_backupfile_mms_decoding(environSetup):
     """
     content = SMSShell.utils.GammuSMSParser.decodeFromBackupFilePath(getBackupSample('mms.bin'))
     assert isinstance(content, dict)
+    assert len(content['errors']) == 0
     assert content['type'] == 'MMS'
     assert content['sms_number'] == '+33012340000'
     assert content['sms_type'] == 'message'
