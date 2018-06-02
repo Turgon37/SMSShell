@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with SMSShell. If not, see <http://www.gnu.org/licenses/>.
 
-"""
+"""This module contains the parent class of SMSShell programm
 """
 
 __author__ = 'Pierre GINDRAUD'
@@ -27,31 +27,20 @@ __maintainer__ = 'Pierre GINDRAUD'
 __email__ = 'pgindraud@gmail.com'
 
 # System imports
-import configparser
-import datetime
 import importlib
 import logging
 import logging.handlers
 import os
 import signal
-import socket
 import sys
-import time
 
 # Projet Imports
-try:
-    from .config import MyConfigParser
-    from .receivers import AbstractReceiver
-    from .parsers import AbstractParser
-    from .transmitters import AbstractTransmitter
-    from .shell import Shell
-    from .exceptions import SMSShellException,SMSException,ShellException,ShellInitException
-except Exception as e:
-    import traceback
-    traceback.print_exc(file=sys.stdout)
-    print(str(e), file=sys.stderr)
-    print("A project's module failed to be import", file=sys.stderr)
-    sys.exit(1)
+from .config import MyConfigParser
+from .receivers import AbstractReceiver
+from .parsers import AbstractParser
+from .transmitters import AbstractTransmitter
+from .shell import Shell
+from .exceptions import SMSShellException, SMSException, ShellException, ShellInitException
 
 # Global project declarations
 g_logger = logging.getLogger('smsshell')
@@ -71,6 +60,8 @@ class SMSShell(object):
         # config parser
         self.cp = MyConfigParser()
         self.__daemon = daemon
+
+        self.__pid_path = None
 
         # log parameters
         self.__log_level = log_level
@@ -135,7 +126,7 @@ class SMSShell(object):
             g_logger.debug("Creating PID file '%s'", self.__pid_path)
             with open(self.__pid_path, 'w') as pid_file:
                 pid_file.write(str(os.getpid()))
-        except IOError as e:
+        except IOError:
             g_logger.error("Unable to create PID file: %s", self.__pid_path)
 
         # loose users privileges if needed
@@ -162,13 +153,13 @@ class SMSShell(object):
         except ImportError as e:
             raise ShellInitException("Unable to import the module {0}. Reason : {1}".format(module_path, str(e)))
         try: # instanciate
-            cl = getattr(mod, class_name)
+            _class = getattr(mod, class_name)
             if config_section and config_section in self.cp:
-                inst = cl(self.cp[config_section])
+                inst = _class(self.cp[config_section])
             else:
-                inst = cl()
-        except AttributeError as e:
-            raise ShellInitException("Error in module '{0}' : {1}.".format(module_path, str(e)))
+                inst = _class()
+        except AttributeError as ex:
+            raise ShellInitException("Error in module '{0}' : {1}.".format(module_path, str(ex)))
 
         # handler class checking
         if not isinstance(inst, abstract):
@@ -197,8 +188,8 @@ class SMSShell(object):
                     '.transmitters.' + self.cp.get('daemon', 'transmitter_type', fallback="file"),
                     'Transmitter', AbstractTransmitter, 'transmitter'
                 )
-            except ShellInitException as e:
-                g_logger.fatal("Unable to load an internal module : %s", str(e))
+            except ShellInitException as ex:
+                g_logger.fatal("Unable to load an internal module : %s", str(ex))
                 return False
 
             if not recv.start():
@@ -264,6 +255,8 @@ class SMSShell(object):
 
     def __sigTERM_handler(self, signum, frame):
         """Make the program terminate after receving system signal
+
+        TODO : improve signal handling
         """
         g_logger.debug("Caught system signal %d", signum)
         sys.exit(self.stop())
@@ -280,7 +273,7 @@ class SMSShell(object):
                 try:
                     os.setgid(gid)
                 except PermissionError:
-                    g_logger.fatal('Insufficient permissions to set process GID to %d', uid)
+                    g_logger.fatal('Insufficient permissions to set process GID to %d', gid)
                     raise SMSShellException('Insufficient permissions to downgrade processus privileges')
 
         uid = self.cp.getUid()
@@ -295,8 +288,8 @@ class SMSShell(object):
                     g_logger.fatal('Insufficient permissions to set process UID to %d')
                     raise SMSShellException('Insufficient permissions to downgrade processus privileges')
 
-
-    def __daemonize(self):
+    @staticmethod
+    def __daemonize():
         """Turn the service as a deamon
 
         Detach a process from the controlling terminal
@@ -311,9 +304,9 @@ class SMSShell(object):
             # to insure that the next call to os.setsid is successful.
             pid = os.fork()
         except OSError as e:
-            return ((e.errno, e.strerror))
+            return (e.errno, e.strerror)
 
-        if (pid == 0):  # The first child.
+        if pid == 0:  # The first child.
             # To become the session leader of this new session and the process group
             # leader of the new process group, we call os.setsid().  The process is
             # also guaranteed not to have a controlling terminal.
@@ -359,9 +352,9 @@ class SMSShell(object):
                 # a controlling terminal.
                 pid = os.fork()  # Fork a second child.
             except OSError as e:
-                return ((e.errno, e.strerror))
+                return (e.errno, e.strerror)
 
-            if (pid == 0):  # The second child.
+            if pid == 0:  # The second child.
                 # Since the current working directory may be a mounted filesystem, we
                 # avoid the issue of not being able to unmount the filesystem at
                 # shutdown time by changing it to the root directory.
@@ -383,7 +376,8 @@ class SMSShell(object):
     #
     # Logging functions
     #
-    def setLogLevel(self, value):
+    @staticmethod
+    def setLogLevel(value):
         """Set the logging level.
 
         @param value CONSTANT : the log level according to syslog

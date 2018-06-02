@@ -40,7 +40,7 @@ class ShellInitException(Exception):
 class ShellException(Exception):
     """Base exception relating to command execution exceptions
     """
-    def __init__(self, message, short):
+    def __init__(self, message, short='general exeception'):
         super().__init__(message)
         self.short_message = short
 

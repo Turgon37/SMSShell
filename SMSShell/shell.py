@@ -32,7 +32,13 @@ import shlex
 from threading import RLock
 
 # Project imports
-from .exceptions import *
+from .exceptions import (ShellException,
+                         CommandForbidden,
+                         CommandNotFoundException,
+                         CommandBadImplemented,
+                         CommandBadConfiguredException,
+                         CommandException,
+                         BadCommandCall)
 from .models import Session, SessionRole
 from .commands import AbstractCommand
 
@@ -78,12 +84,12 @@ class Shell(object):
         if len(argv) < 1:
             raise ShellException('bad number of arguments')
         cmd = argv[0]
-        if len(cmd) == 0:
+        if not cmd:
             raise ShellException('empty command name')
-        if len(subject) == 0:
+        if not subject:
             raise ShellException('empty subject name')
         sess = self.__getSessionForSubject(subject)
-        g_logger.info("Subject {0} run command '{1}' with args : {2}".format(subject, cmd, str(argv[1:])))
+        g_logger.info("Subject %s run command '%s' with args : %s", subject, cmd, str(argv[1:]))
         return self.__call(sess, cmd, argv[1:], role).strip()
 
     @synchronizedMethod
@@ -102,10 +108,10 @@ class Shell(object):
         @param [Str] the name of the command to retrieve
         @return Command instance
         """
-        c = self.__getCommand(name)
-        if not Shell.hasSessionAccessToCommand(session, c):
+        com = self.__getCommand(name)
+        if not Shell.hasSessionAccessToCommand(session, com):
             raise CommandForbidden('You are not allowed to call this command from here')
-        return c
+        return com
 
     def __getCommand(self, name):
         """Return the command instance of the given command name
@@ -130,15 +136,15 @@ class Shell(object):
             if importlib.util.find_spec('.commands.' + name, package='SMSShell') is not None:
                 importlib.reload(mod)
             #mod = __import__('SMSShell.commands.' + name, fromlist=['Command'])
-        except ImportError as e:
+        except ImportError:
             raise CommandNotFoundException("Command handler '{0}' cannot be found in commands/ folder.".format(name))
 
         cls_name = Shell.toCamelCase(name)
         try: # instanciate
             class_obj = getattr(mod, cls_name)
-            cmd = class_obj(g_logger.getChild('com.' + name), self.getSecureShell(), self.cp.getSectionOrEmpty('command.' + name))
-        except AttributeError as e:
-            raise CommandBadImplemented("Error in command '{0}' : {1}.".format(name, str(e)))
+            cmd = class_obj(g_logger.getChild('command.' + name), self.getSecureShell(), self.cp.getSectionOrEmpty('command.' + name))
+        except AttributeError as ex:
+            raise CommandBadImplemented("Error in command '{0}' : {1}.".format(name, str(ex)))
 
         # handler class checking
         if not isinstance(cmd, AbstractCommand):
@@ -176,11 +182,11 @@ class Shell(object):
                 try:
                     self.__getCommand(os.path.splitext(com)[0])
                     # intercept exception to prevent command execution stop
-                except CommandException as e:
-                    g_logger.error(str(e))
+                except CommandException as ex:
+                    g_logger.error(str(ex))
 
     @synchronizedMethod
-    def __call(self, session, cmd, argv, role=None):
+    def __call(self, session, cmd_name, argv, role=None):
         """Execute the command with the given name
 
         @param models.Session session
@@ -188,37 +194,38 @@ class Shell(object):
         @param list<str> argv the command's arguments
         @return the command output
         """
-        c = self.__getCommand(cmd)
+        com = self.__getCommand(cmd_name)
         # set the prefix to separate session's namespaces
-        session.setStoragePrefix(cmd)
+        session.setStoragePrefix(cmd_name)
         # check command aceptance conditions
-        if not Shell.hasSessionAccessToCommand(session, c):
+        if not Shell.hasSessionAccessToCommand(session, com):
             raise CommandForbidden('You are not allowed to call this command from here')
-        args = self.__checkArgv(argv, c)
+        args = self.__checkArgv(argv, com)
 
         # refresh session
         session.access()
-        c.session = session.getSecureSession()
+        com.session = session.getSecureSession()
         if role and isinstance(role, SessionRole):
             g_logger.info('override session role with %s', role.name)
 
-        sig = inspect.signature(c.main)
-        if c._argsParser() and args:
+        sig = inspect.signature(com.main)
+        if com._argsParser() and args:
             if len(sig.parameters) != 2:
-                raise CommandBadImplemented("Command '{0}' 's main() function must take two arguments".format(cmd))
-            result = c.main(argv, args)
+                raise CommandBadImplemented("Command '{0}' 's main() function must take two arguments".format(cmd_name))
+            result = com.main(argv, args)
         else:
             if len(sig.parameters) != 1:
-                raise CommandBadImplemented("Command '{0}' 's main() function must take two arguments".format(cmd))
-            result = c.main(argv)
-        c.session = None
+                raise CommandBadImplemented("Command '{0}' 's main() function must take two arguments".format(cmd_name))
+            result = com.main(argv)
+        com.session = None
 
         # handler class checking
         if not isinstance(result, str):
-            raise CommandBadImplemented("Command '{0}' 's return object must be a str".format(cmd))
+            raise CommandBadImplemented("Command '{0}' 's return object must be a str".format(cmd_name))
         return result
 
-    def __checkArgv(self, argv, command):
+    @staticmethod
+    def __checkArgv(argv, command):
         """Check the given arguments according to the specifications
 
         @param argv List<Str> the lsit of arguments
@@ -229,7 +236,7 @@ class Shell(object):
             parser = command._argsParser()
             try:
                 args = parser.parse_args(argv)
-            except argparse.ArgumentError as e:
+            except argparse.ArgumentError:
                 raise BadCommandCall('This command require at least {0} arguments'.format('min'))
             return args
 
@@ -240,14 +247,14 @@ class Shell(object):
             raise BadCommandCall('This command require at most {0} arguments'.format(properties['max']))
 
     @staticmethod
-    def hasSessionAccessToCommand(s, c):
+    def hasSessionAccessToCommand(sess, com):
         """Check if the given session has access to the given command
 
         @param models.Session the session to test
         @param Command the command to test access for
         @return [bool] the access status
         """
-        if len(c._inputStates()) > 0 and s.state not in c._inputStates():
+        if com._inputStates() and sess.state not in com._inputStates():
             return False
         return True
 

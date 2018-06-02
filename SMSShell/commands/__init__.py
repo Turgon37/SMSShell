@@ -122,7 +122,7 @@ class AbstractCommand(object):
 
         @return List<SessionRole>
         """
-        raise CommandBadImplemented(str(self.__class__) + " must implement the inputStates function")
+        return []
 
     def _argsProperties(self):
         """Private entry point for Shell
@@ -146,7 +146,7 @@ class AbstractCommand(object):
 
         @return dict{}
         """
-        raise CommandBadImplemented(str(self.__class__) + " must implement the argsProperties function")
+        return dict()
 
     def newArgsParser(self):
         """Build helper for new arguments parser

@@ -26,6 +26,9 @@ import datetime
 from enum import IntEnum, unique
 import logging
 
+# Project imports
+from ..exceptions import CommandBadImplemented
+
 # Global project declarations
 g_logger = logging.getLogger('smsshell.models.session')
 
@@ -49,20 +52,27 @@ class Session(object):
         'ROLE_USER': ['ROLE_GUEST']
     }
 
-    def __init__(self, subject, timetolive=600):
+    def __init__(self, subject, time_to_live=600):
         """Constructor: Build a new session for the given subject
 
         @param sender [str] : session subject
         @param timetolive [int] OPTIONNAL : the number of second the session will be
                   alive
         """
-        self.subject = subject
-        self.ttl = timetolive
-        self.state = SessionRole.ROLE_GUEST
-        self.access()
+        # internal attributes
+        self.__subject = None
+        self.__ttl = None
         self.__prefix = None
+        self.__state = None
         self.__created_at = datetime.datetime.today()
         self.__storage = dict()
+
+        # init attributes with values
+        self.subject = subject
+        self.ttl = time_to_live
+        self.state = SessionRole.ROLE_GUEST
+        self.access()
+
 
     @property
     def subject(self):
@@ -226,4 +236,4 @@ class Session(object):
 
         @return [str] a formatted string that describe this object
         """
-        return ("[S(" + str(self.subject) + ")]")
+        return "[S(" + str(self.subject) + ")]"

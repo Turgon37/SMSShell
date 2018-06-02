@@ -77,9 +77,24 @@ def getMessageFromInput(method, *args, **kwargs):
     """
     if method == 'env':
         logger.debug('read message from environment variables')
-        return SMSShell.utils.GammuSMSParser.decodeFromEnv()
+        func = SMSShell.utils.GammuSMSParser.decodeFromEnv
+    elif method == 'file':
+        logger.debug('read message from backup file')
+        func = SMSShell.utils.GammuSMSParser.decodeFromBackupFilePath
+    elif method == 'stdin':
+        logger.debug('read message from stdin')
+        func = input
+    else:
+        logger.fatal('You must choose a valid input method')
+        sys.exit(1)
 
-    logger.fatal('You must choose a valid input method')
+    try:
+        return func(*args, **kwargs)
+    except TypeError as e:
+        logger.fatal('The input function failed maybe because it missing an input argument, see details below and refer to (-ia)')
+        logger.fatal('error : %s', str(e))
+
+
     sys.exit(1)
 
 def encodeMessage(method, message, *args, **kwargs):
@@ -114,7 +129,7 @@ def sendMessageToOutput(method, message, *args, **kwargs):
     try:
         return func(message, *args, **kwargs)
     except TypeError as e:
-        logger.fatal('The output function failed maybe because it missing an output argument, see details below and refer to (-a)')
+        logger.fatal('The output function failed maybe because it missing an output argument, see details below and refer to (-oa)')
         logger.fatal('error : %s', str(e))
 
 def sendMessageToOutputUnix(message, socket_path, **kwargs):
@@ -173,13 +188,15 @@ if __name__ == '__main__':
                                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     # parser.add_argument('-c', '--config-file', action='store', dest='config_file', default='/etc/smsshell.conf',
     #                         help='Path of the configuration file')
-    parser.add_argument('-i', '--input', action='store', dest='input', choices=['env'], default='env',
-                            help='Where to pick up raw messages')
+    parser.add_argument('-i', '--input', action='store', dest='input', choices=['env', 'file', 'stdin'],
+                            default='stdin', help='Where to pick up raw messages')
+    parser.add_argument('-ia', '--input-arg', action='append', dest='input_arg', type=str, default=[],
+                            help='Optional arguments related to the input, ex : path to the backup, message content...')
     parser.add_argument('-e', '--encoding', action='store', dest='encoding', choices=['json'], default='json',
                             help='Type of encoding to apply on message before to send it to output')
     parser.add_argument('-o', '--output', action='store', dest='output', choices=['fifo', 'unix'],
                             help='Type of output (must agree with the receiver type of the running smsshell)')
-    parser.add_argument('-a', '--output-arg', action='append', dest='output_arg', type=str, default=[],
+    parser.add_argument('-oa', '--output-arg', action='append', dest='output_arg', type=str, default=[],
                             help='Optional arguments related to the receiver, ex : path to the socket/fifo, hostname...')
     parser.add_argument('-d', '--debug', action='store_const', const='DEBUG', dest='log_level', default='INFO',
                             help='Enable DEBUG logging')
@@ -197,7 +214,7 @@ if __name__ == '__main__':
     logger.setLevel(args.log_level)
     logger.debug('launch with args %s', vars(args))
 
-    message = getMessageFromInput(args.input)
+    message = getMessageFromInput(args.input, *args.input_arg)
     logger.debug('get message %s', str(message))
 
     message = encodeMessage(args.encoding, message)

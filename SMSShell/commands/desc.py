@@ -31,9 +31,6 @@ class Desc(AbstractCommand):
     def argsProperties(self):
         return dict(min=1, max=1)
 
-    def inputStates(self):
-        return []
-
     def usage(self, argv):
         return 'desc COMMAND'
 

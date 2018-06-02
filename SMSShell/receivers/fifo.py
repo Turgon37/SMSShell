@@ -62,11 +62,16 @@ class Receiver(AbstractReceiver):
             # check directory write rights
             if not os.access(directory, os.X_OK|os.W_OK):
                 g_logger.fatal('Unsufficients permissions into the directory %s to create the fifo',
-                                self.__path)
+                               self.__path)
                 return False
             g_logger.debug('creating new fifo')
             os.mkfifo(self.__path, mode=0o620)
         return self
+
+    def stop(self):
+        """We don't need to stop a fifo
+        """
+        return True
 
     def read(self):
         """Return a read blocking iterable object for each content in the fifo

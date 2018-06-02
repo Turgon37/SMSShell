@@ -27,12 +27,6 @@ from . import AbstractCommand
 
 class Role(AbstractCommand):
 
-    def argsProperties(self):
-        return dict()
-
-    def inputStates(self):
-        return []
-
     def usage(self, argv):
         return 'role'
 

@@ -33,12 +33,6 @@ from ..exceptions import CommandException
 
 class Help(AbstractCommand):
 
-    def argsProperties(self):
-        return dict()
-
-    def inputStates(self):
-        return []
-
     def usage(self, argv):
         return 'help [COMMAND] [COMMAND ARGS]'
 

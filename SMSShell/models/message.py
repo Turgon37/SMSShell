@@ -23,6 +23,9 @@ Each message have a sender reference used to keep session consistency and a
 content that will be analysed
 """
 
+# Project imports
+from ..exceptions import CommandBadImplemented
+
 
 class Message(object):
     """A simple message with sender id
@@ -98,4 +101,4 @@ class Message(object):
 
         @return [str] a formatted string that describe this object
         """
-        return ("[M(" + str(self.sender) + ")]")
+        return "[M(" + str(self.sender) + ")]"
