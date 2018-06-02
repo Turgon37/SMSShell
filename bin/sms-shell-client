@@ -48,7 +48,7 @@ except ImportError:
             os.path.realpath(__file__)
         ),
         os.pardir)
-        )
+                    )
     try:
         import SMSShell
     except ImportError as e:
@@ -85,15 +85,15 @@ def getMessageFromInput(method, *args, **kwargs):
         logger.debug('read message from stdin')
         func = input
     else:
-        logger.fatal('You must choose a valid input method')
+        logger.critical('You must choose a valid input method')
         sys.exit(1)
 
     try:
         return func(*args, **kwargs)
     except TypeError as e:
-        logger.fatal('The input function failed maybe because it missing an input argument'
-                     ', see details below and refer to (-ia)')
-        logger.fatal('error : %s', str(e))
+        logger.critical('The input function failed maybe because it missing an input argument,'
+                     ' see details below and refer to (-ia)')
+        logger.critical('error : %s', str(e))
 
 
     sys.exit(1)
@@ -108,7 +108,7 @@ def encodeMessage(method, message, *args, **kwargs):
         logger.debug('encode message in JSON')
         return json.dumps(message)
 
-    logger.fatal('You must choose a valid encoding method')
+    logger.critical('You must choose a valid encoding method')
     sys.exit(1)
 
 def sendMessageToOutput(method, message, *args, **kwargs):
@@ -124,14 +124,15 @@ def sendMessageToOutput(method, message, *args, **kwargs):
         logger.debug('send message using the fifo')
         func = sendMessageToOutputFifo
     else:
-        logger.fatal('You must choose a valid output method')
+        logger.critical('You must choose a valid output method')
         sys.exit(1)
 
     try:
         return func(message, *args, **kwargs)
-    except TypeError as e:
-        logger.fatal('The output function failed maybe because it missing an output argument, see details below and refer to (-oa)')
-        logger.fatal('error : %s', str(e))
+    except TypeError as ex:
+        logger.critical('The output function failed maybe because it missing an output argument,'
+                     'see details below and refer to (-oa)')
+        logger.critical('error : %s', str(ex))
 
 def sendMessageToOutputUnix(message, socket_path, **kwargs):
     """
@@ -150,16 +151,19 @@ def sendMessageToOutputUnix(message, socket_path, **kwargs):
         client_socket.sendall(message_data)
         ack_data = client_socket.recv(100)
         client_socket.close()
-    except socket.error as e:
-        logger.fatal("Unable to connect to unix server socket '%s' because : %s", socket_path, str(e))
+    except socket.error as ex:
+        logger.critical("Unable to connect to unix server socket '%s' because : %s",
+                     socket_path,
+                     str(ex))
         sys.exit(1)
 
     if not isinstance(ack_data, str):
         ack_data = ack_data.decode()
     try:
         ack = json.loads(ack_data)
-    except json.JSONDecodeError as e:
-        logger.error('Received bad JSON in ACK, the smsshell server may have not received correctly the message')
+    except json.JSONDecodeError:
+        logger.error('Received bad JSON in ACK,'
+                     ' the smsshell server may have not received correctly the message')
         return False
     if ack['length'] != message_data_size:
         logger.error('Size of sent data differ from size of received data given in acknowledgment')
@@ -169,13 +173,35 @@ def sendMessageToOutputUnix(message, socket_path, **kwargs):
     return True
 
 def sendMessageToOutputFifo(message, fifo_path, **kwargs):
-    """
+    """Write the message to a given fifo
+
+    Args:
+        message: An open Bigtable Table instance.
+        keys: A sequence of strings representing the key of each table row
+            to fetch.
+        other_silly_variable: Another optional variable, that has a much
+            longer name than the other args, and which does nothing.
+
+    Returns:
+        A dict mapping keys to the corresponding table row data
+        fetched. Each row is represented as a tuple of strings. For
+        example:
+
+        {'Serak': ('Rigel VII', 'Preparer'),
+         'Zim': ('Irk', 'Invader'),
+         'Lrrr': ('Omicron Persei 8', 'Emperor')}
+
+        If a key from the keys argument is missing from the dictionary,
+        then that row was not found in the table.
+
+    Raises:
+        IOError: An error occurred accessing the bigtable.Table object.
     """
     try:
         with open(fifo_path, 'w') as fifo:
             fifo.write(message)
-    except IOError as e:
-        logger.fatal("Unable to write to fifo file '%s' because : %s", fifo_path, str(e))
+    except IOError as ex:
+        logger.critical("Unable to write to fifo file '%s' because : %s", fifo_path, str(ex))
         return False
     logger.info('Successfully written message to SMSShell using fifo')
     return True
@@ -185,31 +211,38 @@ def sendMessageToOutputFifo(message, fifo_path, **kwargs):
 # Run client as the main program
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='SMSShell client version v' + __version__,
-                                        argument_default=argparse.SUPPRESS,
-                                        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    # parser.add_argument('-c', '--config-file', action='store', dest='config_file', default='/etc/smsshell.conf',
-    #                         help='Path of the configuration file')
-    parser.add_argument('-i', '--input', action='store', dest='input', choices=['env', 'file', 'stdin'],
-                            default='stdin', help='Where to pick up raw messages')
-    parser.add_argument('-ia', '--input-arg', action='append', dest='input_arg', type=str, default=[],
-                            help='Optional arguments related to the input, ex : path to the backup, message content...')
-    parser.add_argument('-e', '--encoding', action='store', dest='encoding', choices=['json'], default='json',
-                            help='Type of encoding to apply on message before to send it to output')
-    parser.add_argument('-o', '--output', action='store', dest='output', choices=['fifo', 'unix'],
-                            help='Type of output (must agree with the receiver type of the running smsshell)')
-    parser.add_argument('-oa', '--output-arg', action='append', dest='output_arg', type=str, default=[],
-                            help='Optional arguments related to the receiver, ex : path to the socket/fifo, hostname...')
-    parser.add_argument('-d', '--debug', action='store_const', const='DEBUG', dest='log_level', default='INFO',
-                            help='Enable DEBUG logging')
+                                     argument_default=argparse.SUPPRESS,
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-i', '--input', action='store', dest='input',
+                        choices=['env', 'file', 'stdin'], default='stdin',
+                        help='Where to pick up raw messages')
+    parser.add_argument('-ia', '--input-arg', action='append', dest='input_arg', type=str,
+                        default=[],
+                        help=('Optional arguments related to the input'
+                              ', ex : path to the backup, message content...'))
+    parser.add_argument('-e', '--encoding', action='store', dest='encoding', default='json',
+                        choices=['json'],
+                        help='Type of encoding to apply on message before to send it to output')
+    parser.add_argument('-o', '--output', action='store', dest='output',
+                        choices=['fifo', 'unix'],
+                        help=('Type of output (must agree with the receiver type'
+                              ' of the running smsshell)'))
+    parser.add_argument('-oa', '--output-arg', action='append', dest='output_arg', type=str,
+                        default=[],
+                        help=('Optional arguments related to the receiver,'
+                              ' ex : path to the socket/fifo, hostname...'))
+    parser.add_argument('-d', '--debug', action='store_const', const='DEBUG', dest='log_level',
+                        default='INFO',
+                        help='Enable DEBUG logging')
     parser.add_argument('-v', '--version', action='store_true', dest='show_version',
-                            help='Print the version and exit')
+                        help='Print the version and exit')
     args = parser.parse_args()
 
     if hasattr(args, 'show_version') and args.show_version:
         print('SMSShell client version v{}'.format(__version__))
         sys.exit(0)
     if not hasattr(args, 'output'):
-        logger.fatal('output type is required, use --help')
+        logger.critical('output type is required, use --help')
         sys.exit(1)
 
     logger.setLevel(args.log_level)

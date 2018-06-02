@@ -15,7 +15,8 @@ install:
 
 script:
   - pylint SMSShell bin || true
-  - mypy --ignore-missing-imports SMSShell bin
+  - mypy --ignore-missing-imports SMSShell
+  - find bin/ -type f | xargs -n 1 mypy --ignore-missing-imports
   - python -m pytest --verbose --cov=./ --capture=sys tests/
 
 after_success:

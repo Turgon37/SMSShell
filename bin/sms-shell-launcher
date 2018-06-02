@@ -90,11 +90,11 @@ if __name__ == '__main__':
     program = SMSShell.SMSShell(args.daemon, args.log_level)
     status, msg = program.load(args.config_file)
     if not status:
-        logger.fatal('Unable to load configuration file')
-        logger.fatal(msg)
+        logger.critical('Unable to load configuration file')
+        logger.critical(msg)
         sys.exit(3)
     try:
         sys.exit(program.start(args.pid_file))
     except SMSShell.exceptions.SMSShellException as e:
-        logger.fatal(msg)
+        logger.critical(msg)
         sys.exit(1)
