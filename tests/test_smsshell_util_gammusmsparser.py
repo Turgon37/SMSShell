@@ -7,6 +7,9 @@ import re
 import SMSShell
 import SMSShell.utils
 
+def getBackupSample(file):
+    return os.path.join('tests/sms_backup_samples' ,file)
+
 @pytest.yield_fixture
 def environSetup():
     """Purge environment variables from resulting tests
@@ -138,3 +141,43 @@ def test_env_mms_decoding(environSetup):
     assert content['type'] == 'MMS'
     assert content['sms_number'] == '01234'
     assert content['mms_number'] == '01234'
+
+def test_backupfile_simple_sms_decoding(environSetup):
+    """
+    """
+    content = SMSShell.utils.GammuSMSParser.decodeFromBackupFilePath(getBackupSample('simple_sms.txt'))
+    assert isinstance(content, dict)
+    assert content['type'] == 'SMS'
+    assert content['sms_number'] == '+3301234'
+    assert content['sms_type'] == 'message'
+
+def test_backupfile_unicode_sms_decoding(environSetup):
+    """
+    """
+    content = SMSShell.utils.GammuSMSParser.decodeFromBackupFilePath(getBackupSample('unicode_sms.txt'))
+    assert isinstance(content, dict)
+    assert content['type'] == 'SMS'
+    assert content['sms_number'] == '+3301234'
+    assert content['sms_type'] == 'message'
+    assert content['sms_text'] == '\u00c9'
+
+def test_backupfile_smiley_sms_decoding(environSetup):
+    """
+    """
+    content = SMSShell.utils.GammuSMSParser.decodeFromBackupFilePath(getBackupSample('smileys_sms.txt'))
+    assert isinstance(content, dict)
+    assert content['type'] == 'SMS'
+    assert content['sms_number'] == '+3301234'
+    assert content['sms_type'] == 'message'
+    assert len(content['sms_text']) == 8
+
+def test_backupfile_mms_decoding(environSetup):
+    """
+    """
+    content = SMSShell.utils.GammuSMSParser.decodeFromBackupFilePath(getBackupSample('mms.bin'))
+    assert isinstance(content, dict)
+    assert content['type'] == 'MMS'
+    assert content['sms_number'] == '+33012340000'
+    assert content['sms_type'] == 'message'
+    assert content['mms_address'] == 'http://213.227.3.60/mms.php?xP'
+    assert content['mms_number'] == content['sms_number']

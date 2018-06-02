@@ -62,12 +62,19 @@ class GammuSMSParser(object):
     BACKUPFILE_SMS_TYPE_MAPPING = dict({
         'Deliver': 'message',
         'Submit': 'message',
-        'Status_Report': 'delivery_report',
+        'Status_Report': 'status_report',
     })
     BACKUPFILE_SMS_FIELD_MAPPING = dict({
         'Class': 'sms_class',
         'Number': 'sms_number',
     })
+
+    ERROR_DUPLICATE_VALUE = 'DUPLICATE_VALUE'
+    ERROR_NO_CONTENT = 'NO_CONTENT'
+    ERROR_INCONSISTENCY = 'INCONSISTENCY'
+    ERROR_BACKUP_FILE = 'BACKUP_FILE'
+    ERROR_PYTHON = 'PYTHON'
+    ERROR_IMPLEMENTATION = 'IMPLEMENTATION'
 
     @staticmethod
     def createEmptyMessage():
@@ -75,15 +82,19 @@ class GammuSMSParser(object):
         return dict(
             type=None,
             timestamp=None,
-            sms_text='',
+            sms_text=None,
             sms_class=None,
             sms_number=None,
             sms_type=None, # in 'message', 'delivery_report'
-            mms_address='',
-            mms_title='',
+            mms_address=None,
+            mms_title=None,
             mms_number=None,
             errors=[],
         )
+
+    @staticmethod
+    def appendError(message, error_type, error_message):
+        message['errors'].append((error_type, error_message))
 
     @staticmethod
     def setUniqueValueInMessage(message, key, value):
@@ -94,7 +105,9 @@ class GammuSMSParser(object):
         else:
             # if the class if already set, compare it with the previous value
             if (message[key] != value):
-                message['errors'].append('Two or more differents values for {0}'.format(key))
+                GammuSMSParser.appendError(message,
+                                            GammuSMSParser.ERROR_DUPLICATE_VALUE,
+                                            'Two or more differents values for {0}'.format(key))
 
     @classmethod
     def decodeFromEnv(cls):
@@ -137,12 +150,12 @@ class GammuSMSParser(object):
                     message['mms_address'] = os.getenv("DECODED_{0}_MMS_ADDRESS".format(i+1), '')
 
         if sms_parts == 0 and decoded_parts == 0:
-            message['errors'].append('no message content')
+            cls.appendError(message, cls.ERROR_NO_CONTENT, 'no message content')
 
         if decoded_parts > 0:
             message['sms_text'] = decoded_text
             if decoded_text != sms_text:
-                message['errors'].append('SMS text differ from decoded part, keeping decoded part')
+                cls.appendError(message, cls.ERROR_INCONSISTENCY, 'SMS text differ from decoded part, keeping decoded part')
         else:
             message['sms_text'] = sms_text
         return message
@@ -155,32 +168,85 @@ class GammuSMSParser(object):
 
         # checks
         if not os.path.exists(path) or not os.path.isfile(path):
-            message['errors'].append("the file '{}' do not exists".format(path))
+            cls.appendError(message, cls.ERROR_BACKUP_FILE, "the file '{}' do not exists".format(path))
             return message
         if not os.access(path, os.R_OK):
-            message['errors'].append("the file '{}' is not readable".format(path))
+            cls.appendError(message, cls.ERROR_BACKUP_FILE, "the file '{}' is not readable".format(path))
             return message
         if not gammu:
-            message['errors'].append('the gammu package is not available to decode backup format')
+            cls.appendError(message, cls.ERROR_PYTHON, 'the gammu package is not available to decode backup format')
             return message
 
-        raw_message = gammu.ReadSMSBackup(path)
-        text = ''
-        for raw_part in raw_message:
-            # simple mapped fields
+        backup = gammu.ReadSMSBackup(path)
+        print(type(backup))
+        print(backup)
+
+        # Make nested array
+        backup_messages = [[backup_message] for backup_message in backup]
+        raw_messages = gammu.LinkSMS(backup_messages)
+
+        if len(raw_messages) == 0:
+            cls.appendError(message, cls.ERROR_NO_CONTENT, 'the backup file do not contains any message')
+            return message
+
+        if len(raw_messages) > 1:
+            cls.appendError(message, cls.IMPLEMENTATION, 'the backup file contains more than one message')
+
+        for raw_message in raw_messages:
+            decoded_message = gammu.DecodeSMS(raw_message)
+            part = raw_message[0]
+
+            # extract meta datas
             for backup_key, message_key in cls.BACKUPFILE_SMS_FIELD_MAPPING.items():
-                if backup_key in raw_part and raw_part[backup_key]:
-                    cls.setUniqueValueInMessage(message, message_key, raw_part[backup_key])
+                if backup_key in part and part[backup_key]:
+                    cls.setUniqueValueInMessage(message, message_key, part[backup_key])
 
-            if 'Type' in raw_part and raw_part['Type'] in cls.BACKUPFILE_SMS_TYPE_MAPPING:
-                   cls.setUniqueValueInMessage(message, 'sms_type', cls.BACKUPFILE_SMS_TYPE_MAPPING[raw_part['Type']])
+            if 'Type' in part and part['Type'] in cls.BACKUPFILE_SMS_TYPE_MAPPING:
+                cls.setUniqueValueInMessage(message, 'sms_type', cls.BACKUPFILE_SMS_TYPE_MAPPING[part['Type']])
 
-            if 'Text' in raw_part and raw_part['Text']:
-                text += raw_part['Text']
+            if 'DateTime' in part and isinstance(part['DateTime'], datetime.datetime):
+                message['timestamp'] = time.mktime(part['DateTime'].timetuple())
 
-            if 'DateTime' in raw_part and isinstance(raw_part['DateTime'], datetime.datetime):
-                message['timestamp'] = time.mktime(raw_part['DateTime'].timetuple())
+            # extract message body
+            if decoded_message is None:
+                # exploit the SMS Object
+                # https://wammu.eu/docs/manual/python/objects.html#sms-obj
+                message['sms_text'] = part['Text']
+                message['type'] = 'SMS'
+            else:
+                # exploit the multipart object
+                # https://wammu.eu/docs/manual/python/objects.html#sms-info-obj
+                for entry in decoded_message['Entries']:
+                    # Use ID to exploit the entry
+                    if 'ID' in entry and entry['ID']:
+                        entry_id = entry['ID']
+                        # if we see this we can consider that message is a MMS
+                        if entry_id in ['MMSIndicatorLong']:
+                            if not message['type']:
+                                message['type'] = 'MMS'
+                        # any of theses ID can be considered as SMS message
+                        elif entry_id in ['Text',
+                                            'ConcatenatedTextLong',
+                                            'ConcatenatedAutoTextLong',
+                                            'ConcatenatedTextLong16bit',
+                                            'ConcatenatedAutoTextLong16bit']:
+                            if not message['type']:
+                                message['type'] = 'SMS'
 
-        message['sms_text'] = text
-        message['type'] = 'SMS'
+                    # String to encode in message.
+                    if entry['Buffer']:
+                        message['sms_text'] += entry['Buffer']
+                    # MMS indication to encode in message.
+                    if entry['MMSIndicator']:
+                        mms_infos = entry['MMSIndicator']
+                        message['mms_address'] = mms_infos['Address'] or ''
+                        message['mms_title'] = mms_infos['Title'] or ''
+                        # extract pure number part
+                        sender_parts = (mms_infos['Sender'] or '').split('/')
+                        if len(sender_parts) > 1:
+                            message['mms_number'] = sender_parts[0]
+
+            # prevent another message to be parsed
+            break
+
         return message
