@@ -42,7 +42,7 @@ class AbstractTransmitter(AbstractModule):
         """
         raise NotImplementedError("You must implement the 'stop' method in receiver class")
 
-    def transmit(self):
+    def transmit(self, raw):
         """
         """
         raise NotImplementedError("You must implement the 'transmit' method in transmitter class")
