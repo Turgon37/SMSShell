@@ -26,6 +26,8 @@ from . import AbstractCommand
 
 
 class Role(AbstractCommand):
+    """Command class, see module docstring for help
+    """
 
     def usage(self, argv):
         return 'role'
@@ -34,4 +36,5 @@ class Role(AbstractCommand):
         return 'print current role'
 
     def main(self, argv):
-        return str(self.session.state.name)
+        state_name = str(self.session.state.name)
+        return ''.join(state_name.split('_')[1:])

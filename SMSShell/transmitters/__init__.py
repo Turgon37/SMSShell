@@ -43,6 +43,9 @@ class AbstractTransmitter(AbstractModule):
         raise NotImplementedError("You must implement the 'stop' method in receiver class")
 
     def transmit(self, raw):
-        """
+        """Forward the message to end user
+
+        Args:
+            raw: the raw message to transmit to end user
         """
         raise NotImplementedError("You must implement the 'transmit' method in transmitter class")

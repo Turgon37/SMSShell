@@ -26,6 +26,8 @@ from . import AbstractCommand
 
 
 class Whoami(AbstractCommand):
+    """Command class, see module docstring for help
+    """
 
     def usage(self, argv):
         return 'whoami'

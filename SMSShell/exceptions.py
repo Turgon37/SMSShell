@@ -25,63 +25,41 @@ class SMSShellException(Exception):
     """
     pass
 
+class ShellInitException(Exception):
+    """Base exception for shell initialization procedures
+
+    Must be raise by parsers,transmitters,receivers on start() error
+    """
+    pass
+
+#
+# MESSAGES RELATED EXCEPTIONS
+#
+
 class SMSException(Exception):
     """Base exception relating to SMS messages error
+
+    It is currently used by parsers
     """
     pass
 
-
-class ShellInitException(Exception):
-    """Base exception for all shell inits
-    """
-    pass
-
+#
+# SHELL RELATED EXCEPTIONS
+#
 
 class ShellException(Exception):
     """Base exception relating to command execution exceptions
+
+    Args:
+        message: the standard full exception error message
+        short: an optional short message that can be send back to the user
     """
     def __init__(self, message, short='general exeception'):
         super().__init__(message)
         self.short_message = short
 
-
-class CommandException(ShellException):
-    """Base class for all exceptions relating to command execution
-    """
-    def __init__(self, message, short='internal command error'):
-        super().__init__(message, short)
-
-
 class BadCommandCall(ShellException):
     """Raised when you call a command with bad arguments
     """
     def __init__(self, message, short='bad call, use help'):
-        super().__init__(message, short)
-
-
-class CommandNotFoundException(CommandException):
-    """Exception use when a command does not exist
-    """
-    def __init__(self, message, short='command not found'):
-        super().__init__(message, short)
-
-
-class CommandBadImplemented(CommandException):
-    """Exception raised when a command class does not implement the required methods
-    """
-    pass
-
-
-class CommandForbidden(CommandException):
-    """Raised when you tried to run a command not available from the current state
-    """
-    def __init__(self, message, short='command denied'):
-        super().__init__(message, short)
-
-
-class CommandBadConfiguredException(CommandException):
-    """Exception use when a command require configuration and it config values
-     are not valid
-    """
-    def __init__(self, message, short='command not configured'):
         super().__init__(message, short)

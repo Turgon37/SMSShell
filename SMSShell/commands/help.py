@@ -27,11 +27,12 @@ This command return some help string in function of the given input parameters
 
 """
 
-from . import AbstractCommand
-from ..exceptions import CommandException
+from . import AbstractCommand, CommandException
 
 
 class Help(AbstractCommand):
+    """Command class, see module docstring for help
+    """
 
     def usage(self, argv):
         return 'help [COMMAND] [COMMAND ARGS]'
@@ -41,11 +42,11 @@ class Help(AbstractCommand):
 
     def main(self, argv):
         # call usage function of the given command
-        if len(argv) > 0:
+        if argv:
             try:
                 return self.shell.getCommand(self.session, argv[0]).usage(argv[1:])
-            except CommandException as e:
-                self.log.error("error during command execution : " + str(e))
+            except CommandException as ex:
+                self.log.error("error during command execution : " + str(ex))
                 return 'command not available'
         # return the list of availables commands
         else:

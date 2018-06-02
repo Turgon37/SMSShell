@@ -27,6 +27,8 @@ from . import AbstractCommand
 
 
 class Flush(AbstractCommand):
+    """Command class, see module docstring for help
+    """
 
     def usage(self, argv):
         return 'flush'

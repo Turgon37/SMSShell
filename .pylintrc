@@ -1,32 +1,5 @@
 [MASTER]
 
-# A comma-separated list of package or module names from where C extensions may
-# be loaded. Extensions are loading into the active Python interpreter and may
-# run arbitrary code
-extension-pkg-whitelist=
-
-# Add files or directories to the blacklist. They should be base names, not
-# paths.
-ignore=CVS
-
-# Add files or directories matching the regex patterns to the blacklist. The
-# regex matches against base names, not paths.
-ignore-patterns=
-
-# Python code to execute, usually for sys.path manipulation such as
-# pygtk.require().
-#init-hook=
-
-# Use multiple processes to speed up Pylint.
-jobs=1
-
-# List of plugins (as comma separated values of python modules names) to load,
-# usually to register additional checkers.
-load-plugins=
-
-# Pickle collected data for later comparisons.
-persistent=yes
-
 suggestion-mode=yes
 
 # Allow loading of arbitrary C extensions. Extensions are imported into the
@@ -139,14 +112,9 @@ enable=c-extension-no-member
 
 [REPORTS]
 # Set the output format. Available formats are text, parseable, colorized, json
-# and msvs (visual studio).You can also give a reporter class, eg
-# mypackage.mymodule.MyReporterClass.
+# and msvs (visual studio).
 output-format=colorized
-
-# Tells whether to display a full report or only the messages
 reports=no
-
-# Activate the evaluation score.
 score=yes
 
 
@@ -168,24 +136,15 @@ notes=TODO
 
 
 [FORMAT]
-
-# Expected format of line ending, e.g. empty (any line ending), LF or CRLF.
 expected-line-ending-format=LF
 
 # Regexp for a line that is allowed to be longer than the limit.
 ignore-long-lines=^\s*(# )?<?https?://\S+>?$
 
-# Number of spaces of indent required inside a hanging  or continued line.
 indent-after-paren=4
-
-# String used as indentation unit. This is usually "    " (4 spaces) or "\t" (1
-# tab).
 indent-string='    '
 
-# Maximum number of characters on a single line.
 max-line-length=100
-
-# Maximum number of lines in a module
 max-module-lines=1000
 
 # List of optional constructs for which whitespace checking is disabled. `dict-
@@ -205,9 +164,6 @@ single-line-if-stmt=no
 
 
 [LOGGING]
-
-# Logging modules to check that the string format arguments are in logging
-# function parameter format
 logging-modules=logging
 
 
@@ -293,52 +249,23 @@ ignore-docstrings=yes
 ignore-imports=no
 
 # Minimum lines number of a similarity.
-min-similarity-lines=4
+min-similarity-lines=5
 
 
 [BASIC]
 
-# Naming style matching correct argument names
 argument-naming-style=snake_case
-
-# Regular expression matching correct argument names. Overrides argument-
-# naming-style
-#argument-rgx=
-
-# Naming style matching correct attribute names
 attr-naming-style=snake_case
-
-# Regular expression matching correct attribute names. Overrides attr-naming-
-# style
-#attr-rgx=
-
-# Naming style matching correct class attribute names
 class-attribute-naming-style=any
-
-# Regular expression matching correct class attribute names. Overrides class-
-# attribute-naming-style
-#class-attribute-rgx=
-
-# Naming style matching correct class names
 class-naming-style=PascalCase
-
-# Regular expression matching correct class names. Overrides class-naming-style
-#class-rgx=
-
-# Naming style matching correct constant names
-const-naming-style=UPPER_CASE
-
-# Regular expression matching correct constant names. Overrides const-naming-
-# style
 const-rgx=(g_)?[a-z_]+$||[A-Z]
-
-# Minimum line length for functions/classes that require docstrings, shorter
-# ones are exempt.
-docstring-min-length=-1
-
-# Regular expression matching correct function names. Overrides function-
-# naming-style
 function-rgx=([a-z_]|__)[a-zA-Z0-9]*(__)?$
+inlinevar-naming-style=any
+method-rgx=([a-z_]|__)[a-zA-Z0-9]*(__)?$
+module-rgx=(([a-z][a-z0-9_]*)|([A-Z][a-zA-Z0-9_]+))$
+variable-naming-style=snake_case
+
+docstring-min-length=-1
 
 # Good variable names which should always be accepted, separated by a comma
 good-names=i,
@@ -350,21 +277,6 @@ good-names=i,
 # Include a hint for the correct naming format with invalid-name
 include-naming-hint=no
 
-# Naming style matching correct inline iteration names
-inlinevar-naming-style=any
-
-# Regular expression matching correct inline iteration names. Overrides
-# inlinevar-naming-style
-#inlinevar-rgx=
-
-# Regular expression matching correct method names. Overrides method-naming-
-# style
-method-rgx=([a-z_]|__)[a-zA-Z0-9]*(__)?$
-
-# Regular expression matching correct module names. Overrides module-naming-
-# style
-module-rgx=(([a-z][a-z0-9_]*)|([A-Z][a-zA-Z0-9_]+))$
-
 # Colon-delimited sets of names that determine each other's naming style when
 # the name regexes allow several styles.
 name-group=
@@ -373,25 +285,11 @@ name-group=
 # not require a docstring.
 no-docstring-rgx=^_
 
-# List of decorators that produce properties, such as abc.abstractproperty. Add
-# to this list to register other decorators that produce valid properties.
-property-classes=abc.abstractproperty
-
-# Naming style matching correct variable names
-variable-naming-style=snake_case
-
-# Regular expression matching correct variable names. Overrides variable-
-# naming-style
-#variable-rgx=
-
 
 [DESIGN]
 
-# Maximum number of arguments for function / method
 max-args=5
-
-# Maximum number of attributes for a class (see R0902).
-max-attributes=7
+max-attributes=10
 
 # Maximum number of boolean expressions in a if statement
 max-bool-expr=5

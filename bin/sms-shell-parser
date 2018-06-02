@@ -47,14 +47,14 @@ except ImportError:
             os.path.realpath(__file__)
         ),
         os.pardir)
-    )
+                   )
     try:
         import SMSShell
-    except ImportError as e:
+    except ImportError as ex:
         import traceback
         traceback.print_exc(file=sys.stdout)
         print("Impossible to load the SMSShell module")
-        print(str(e))
+        print(str(ex))
         sys.exit(1)
 
 import SMSShell.utils
@@ -63,16 +63,19 @@ import SMSShell.utils
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="SMSShell parser version v" + __version__,
-                                        argument_default=argparse.SUPPRESS,
-                                        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-i', '--input', action='store', dest='input', choices=['env', 'file'],
-                            default='env', help='Where to pick up raw messages')
-    parser.add_argument('-ia', '--input-arg', action='append', dest='input_arg', type=str, default=[],
-                            help='Optional arguments related to the input, ex : path to the inbox file...')
+                                     argument_default=argparse.SUPPRESS,
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-i', '--input', action='store', dest='input', default='env',
+                        choices=['env', 'file'],
+                        help='Where to pick up raw messages')
+    parser.add_argument('-ia', '--input-arg', action='append', dest='input_arg', type=str,
+                        default=[],
+                        help=('Optional arguments related to the input,'
+                              ' ex : path to the inbox file...'))
     parser.add_argument('-o', '--output', action='store', dest='output', default=None,
-                            help='File where to put the output (default to STDOUT)')
+                        help='File where to put the output (default to STDOUT)')
     parser.add_argument('-v', '--version', action='store_true', dest='show_version',
-                            help='Print the version and exit')
+                        help='Print the version and exit')
     args = parser.parse_args()
 
     if hasattr(args, 'show_version') and args.show_version:
