@@ -36,7 +36,7 @@ import socket
 import sys
 
 # Check python version
-assert sys.version_info >= (3,4)
+assert sys.version_info >= (3, 4)
 
 # Projet Import
 # Try to import from current directory
@@ -48,7 +48,7 @@ except ImportError:
             os.path.realpath(__file__)
         ),
         os.pardir)
-    )
+        )
     try:
         import SMSShell
     except ImportError as e:
@@ -91,7 +91,8 @@ def getMessageFromInput(method, *args, **kwargs):
     try:
         return func(*args, **kwargs)
     except TypeError as e:
-        logger.fatal('The input function failed maybe because it missing an input argument, see details below and refer to (-ia)')
+        logger.fatal('The input function failed maybe because it missing an input argument'
+                     ', see details below and refer to (-ia)')
         logger.fatal('error : %s', str(e))
 
 

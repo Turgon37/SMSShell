@@ -78,8 +78,12 @@ class Receiver(AbstractReceiver):
             request_data = client_socket.recv(1000)
             # if these is data, that mean client has send some bytes to read
             if request_data:
-                g_logger.info('get %d bytes of data from FD %d', len(request_data), client_socket.fileno())
-                g_logger.debug('get data from FD %d: %s', client_socket.fileno(), request_data)
+                g_logger.info('get %d bytes of data from FD %d',
+                              len(request_data),
+                              client_socket.fileno())
+                g_logger.debug('get data from FD %d: %s',
+                               client_socket.fileno(),
+                               request_data)
                 # return a simple ACK to client with received size to confirm all is OK
                 g_logger.debug('send ACK to FD %d', client_socket.fileno())
                 response = dict(status=0, length=len(request_data))

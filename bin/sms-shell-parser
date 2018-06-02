@@ -35,7 +35,7 @@ import os
 import sys
 
 # Check python version
-assert sys.version_info >= (3,4)
+assert sys.version_info >= (3, 4)
 
 # Projet Import
 # Try to import from current directory

@@ -185,7 +185,7 @@ class GammuSMSParser(object):
         backup_messages = [[backup_message] for backup_message in backup]
         raw_messages = gammu.LinkSMS(backup_messages)
 
-        if raw_messages:
+        if not raw_messages:
             cls.appendError(message, cls.ERROR_NO_CONTENT, 'the backup file do not contains any message')
             return message
 

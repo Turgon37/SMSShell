@@ -14,8 +14,8 @@ install:
   - pip install -r tests/pip-requirements.txt
 
 script:
-  - pylint SMSShell || true
-  - mypy --ignore-missing-imports SMSShell
+  - pylint SMSShell bin || true
+  - mypy --ignore-missing-imports SMSShell bin
   - python -m pytest --verbose --cov=./ --capture=sys tests/
 
 after_success:
