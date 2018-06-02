@@ -8,7 +8,7 @@ import SMSShell
 import SMSShell.utils
 
 def getBackupSample(file):
-    return os.path.join('tests/sms_backup_samples' ,file)
+    return os.path.join('tests/sms_backup_samples', file)
 
 @pytest.yield_fixture
 def environSetup():
