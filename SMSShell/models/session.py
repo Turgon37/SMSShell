@@ -37,12 +37,17 @@ class SessionRole(IntEnum):
     ROLE_GUEST = 0
     ROLE_LOGININPROGRESS = 1
     ROLE_USER = 2
-    ROLE_LOGOUT = 4
 
 
 class Session(object):
     """An user session with all user's meta data
     """
+
+    # map of authorized session states transitions
+    STATE_TRANSITION_MAP = {
+        'ROLE_GUEST': ['ROLE_LOGININPROGRESS', 'ROLE_USER'],
+        'ROLE_USER': ['ROLE_GUEST']
+    }
 
     def __init__(self, subject, timetolive=600):
         """Constructor: Build a new session for the given subject
@@ -94,6 +99,7 @@ class Session(object):
         @param s [str] : the state constant
         @return self
         """
+        assert isinstance(s, SessionRole)
         self.__state = s
         return self
 
@@ -146,6 +152,16 @@ class Session(object):
             return False
         return True
 
+    def toRole(self, role):
+        if not isinstance(role, SessionRole):
+            raise CommandBadImplemented("The given role '{}' is not valid ".format(role))
+        current = self.state.name
+        assert current in Session.STATE_TRANSITION_MAP
+        authorizeds = Session.STATE_TRANSITION_MAP[current]
+        if role.name in authorizeds:
+            self.state = role
+            return True
+
     def setStoragePrefix(self, p):
         """Define the prefix to use for key-value store
 
@@ -188,6 +204,9 @@ class Session(object):
 
             def set(self, *args, **kw):
                 return self.__session.set(*args, **kw)
+
+            def toRole(self, *args, **kw):
+                return self.__session.toRole(*args, **kw)
 
         return SessionWrapper(self)
 

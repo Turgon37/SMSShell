@@ -27,17 +27,20 @@ import logging
 from . import AbstractTransmitter
 
 # Global project declarations
-g_logger = logging.getLogger('smsshell.transmitters.file')
+g_logger = logging.getLogger('smsshell.transmitters.stdout')
 
 
 class Transmitter(AbstractTransmitter):
-    """An JSON format parser
+    """An simple stdout print
     """
 
     def start(self):
         return True
 
+    def stop(self):
+        return True
+
     def transmit(self, raw):
+        """Print message to stdout
         """
-        """
-        print(raw)
+        print('TRANSMIT : {}'.format(raw))

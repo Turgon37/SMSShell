@@ -25,8 +25,7 @@ import logging
 import json
 
 # Project imports
-from .exceptions import ParsingException
-from .exceptions import BadMessageException
+from . import DecodeException,BadMessageFormatException
 from ..models import Message
 from . import AbstractParser
 
@@ -46,12 +45,21 @@ class Parser(AbstractParser):
         """
         try:
             obj = json.loads(raw)
-        except json.JSONDecodeError as d:
-            raise ParsingException()
-        sender = obj['smsnumber']
-        content = obj['smstext']
+        except ValueError as e:
+            g_logger.debug('bad JSON %s', str(e))
+            raise DecodeException('the received message was not a valid JSON object')
+        except TypeError as e:
+            g_logger.debug('bad object type %s', str(e))
+            raise DecodeException('the received message was not a valid JSON object')
+
+        if 'sms_number' not in obj:
+            raise BadMessageFormatException('the sender field is missing')
+        sender = obj['sms_number']
+        if 'sms_text' not in obj:
+            raise BadMessageFormatException('the text field is missing')
+        content = obj['sms_text']
         if sender is None or len(sender) < 1:
-            raise BadMessageException("The sender field is null or too small")
+            raise BadMessageFormatException('the sender field is null or too small')
         if content is None or len(content) < 1:
-            raise BadMessageException("The content field is null or too small")
+            raise BadMessageFormatException('the text field is null or too small')
         return Message(sender, content)

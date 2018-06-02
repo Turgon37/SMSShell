@@ -93,7 +93,9 @@ class AbstractCommand(object):
         @return str the string usage
         """
         if self._argsParser():
-            return self._argsParser().format_usage()
+            parser = self._argsParser()
+            parser.parse_known_args(argv)
+            return parser.format_usage()
         raise CommandBadImplemented(str(self.__class__) + " must implement the usage function")
 
     def description(self, argv):

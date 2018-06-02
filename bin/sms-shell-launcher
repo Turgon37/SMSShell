@@ -1,0 +1,100 @@
+#!/usr/bin/env python3
+# -*- coding: utf8 -*-
+
+# This file is a part of SMSShell
+#
+# Copyright (c) 2016-2018 Pierre GINDRAUD
+#
+# SMSShell is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# SMSShell is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with SMSShell. If not, see <http://www.gnu.org/licenses/>.
+
+"""This is a simple launcher class for SMS Shell program
+"""
+
+# System imports
+import argparse
+import logging
+import os
+import sys
+
+# Check python version
+assert sys.version_info >= (3,4)
+
+# Projet Import
+# Try to import from current directory
+try:
+    import SMSShell
+except ImportError:
+    sys.path.insert(1, os.path.join(
+        os.path.dirname(
+            os.path.realpath(__file__)
+        ),
+        os.pardir)
+    )
+    try:
+        import SMSShell
+    except ImportError as e:
+        import traceback
+        traceback.print_exc(file=sys.stdout)
+        print("Impossible to load the SMSShell module")
+        print(str(e))
+        sys.exit(1)
+
+import SMSShell.exceptions
+
+# Global project declarations
+logger = logging.getLogger('smsshell-launcher')
+
+formatter = logging.Formatter("%(asctime)s %(name)-30s[%(process)d]: %(levelname)-7s %(message)s")
+hdlr = logging.StreamHandler(sys.stdout)
+hdlr.setFormatter(formatter)
+logger.addHandler(hdlr)
+
+
+##
+# Run launcher as the main program
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="SMSShell version v" + SMSShell.version,
+                                        argument_default=argparse.SUPPRESS,
+                                        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-b', '--background', action='store_true', dest='daemon', default=False,
+                            help='Cause the SMSShell to fork as a background process on start')
+    parser.add_argument('-c', '--config-file', action='store', dest='config_file', default='/etc/smsshell.conf',
+                            help='Path of the configuration file')
+    parser.add_argument('-p', '--pid-file', action='store', dest='pid_file', default=None,
+                            help='Path of the pidfile')
+    parser.add_argument('-d', '--debug', action='store_const', const='DEBUG', dest='log_level', default=None,
+                            help='Enable DEBUG logging')
+    parser.add_argument('-v', '--version', action='store_true', dest='show_version',
+                            help='Print the version and exit')
+    args = parser.parse_args()
+
+    if hasattr(args, 'show_version') and args.show_version:
+        print('SMSShell version v' + SMSShell.version)
+        sys.exit(0)
+
+    if args.log_level:
+        logger.setLevel(args.log_level)
+    logger.debug('launch with args %s', vars(args))
+
+    program = SMSShell.SMSShell(args.daemon, args.log_level)
+    status, msg = program.load(args.config_file)
+    if not status:
+        logger.fatal('Unable to load configuration file')
+        logger.fatal(msg)
+        sys.exit(3)
+    try:
+        sys.exit(program.start(args.pid_file))
+    except SMSShell.exceptions.SMSShellException as e:
+        logger.fatal(msg)
+        sys.exit(1)

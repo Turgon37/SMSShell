@@ -29,11 +29,20 @@ class AbstractTransmitter(AbstractModule):
     """
 
     def start(self):
-        """
+        """Prepare the transmitter
+
+        @return bool : True if init has success, otherwise False
         """
         raise NotImplementedError("You must implement the 'start' method in transmitter class")
 
-    def transmit(self):
+    def stop(self):
+        """Close properly the transmitter
+
+        @return bool : True if stop has success, otherwise False
+        """
+        raise NotImplementedError("You must implement the 'stop' method in receiver class")
+
+    def transmit(self, raw):
         """
         """
         raise NotImplementedError("You must implement the 'transmit' method in transmitter class")

@@ -1,0 +1,25 @@
+; This file format was designed for Gammu and is compatible with Gammu+
+; See <http://www.gammu.org> for more info
+; Saved 20180513T221043 (Sun 13 May 2018 22:10:43 )
+
+[SMSBackup000]
+; É
+SMSC = "+3343210"
+SMSCUnicode = 002b0033003300340033003200310030
+PDU = Deliver
+DateTime = 20180513T221040
+State = UnRead
+Number = "+3301234"
+NumberUnicode = 002b0033003300300031003200330034
+Name = ""
+NameUnicode = 
+Text00 = 00C9
+Coding = Default_No_Compression
+Folder = 1
+Length = 1
+Class = -1
+ReplySMSC = False
+RejectDuplicates = False
+ReplaceMessage = 0
+MessageReference = 0
+

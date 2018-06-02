@@ -74,7 +74,7 @@ class Message(object):
         """
         self.__content = c
 
-    def getStr(self):
+    def asString(self):
         """Return the command argument vector associated with this message
 
         @return list of command argments

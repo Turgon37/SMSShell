@@ -21,21 +21,20 @@
 """
 
 # System imports
+import configparser
 import grp
 import logging
 import pwd
 import re
 import sys
-from configparser import ConfigParser
-from configparser import Error
 
 # Project imports
 
 # Global project declarations
-g_logger = logging.getLogger('openvpn-uam.config')
+g_logger = logging.getLogger('smsshell.config')
 
 
-class MyConfigParser(ConfigParser):
+class MyConfigParser(configparser.ConfigParser):
     """(extend ConfigParser) Set specific function for configuration file parsing
 
     Refer to the config file provide some function to parse directly the config
@@ -45,13 +44,13 @@ class MyConfigParser(ConfigParser):
 # CLASS CONSTANTS
 # list of logging level available by configuration file
     LOGLEVEL_MAP = ['ERROR', 'WARN', 'INFO', 'DEBUG']
-    MODE_MAP = ['STANDALONE', 'ONESHOT']
+    MODE_MAP = ['DAEMON', 'STANDALONE']
     MAIN_SECTION = 'main'
 
     def __init__(self):
         """Constructor : init a new config parser
         """
-        ConfigParser.__init__(self)
+        configparser.ConfigParser.__init__(self)
 
         # boolean that indicates if the configparser is available
         self.__is_config_loaded = False
@@ -63,13 +62,14 @@ class MyConfigParser(ConfigParser):
         @return [boolean] : True if loading is sucess
         False if loading fail
         """
-        # if file is defined
-        if path is None:
-            return False
-
-        if path in self.read(path):
-            self.__is_config_loaded = True
-        return self.__is_config_loaded
+        assert path is not None
+        msg = 'ok'
+        try:
+            if path in self.read(path):
+                self.__is_config_loaded = True
+        except configparser.Error as e:
+            msg = 'Unable to load the configuration file because of error : {}'.format(str(e))
+        return self.__is_config_loaded, msg
 
     def isLoaded(self):
         """Return the load state of this config parser
@@ -79,7 +79,7 @@ class MyConfigParser(ConfigParser):
         """
         return self.__is_config_loaded
 
-    def getPidPath(self, default='/var/run/openvpn-uam.pid'):
+    def getPidPath(self, default='/var/run/smsshell.pid'):
         """Return path to pid file option
 
         @param default [str] : the default value to return if nothing is found
@@ -96,15 +96,6 @@ class MyConfigParser(ConfigParser):
         @return [str] : the loglevel
         """
         return self.__getValueInArray(self.MAIN_SECTION, 'log_level', self.LOGLEVEL_MAP, default)
-
-    def getLogTarget(self, default='STDOUT'):
-        """Return logtarget option
-
-        @param default [str] : the default value to return if nothing is found
-        in the config file
-        @return [str] : the logtarget
-        """
-        return self.get(self.MAIN_SECTION, 'log_target', fallback=default)
 
     def getUid(self):
         """Return the uid (int) option from configfile
@@ -142,7 +133,7 @@ class MyConfigParser(ConfigParser):
         @return str : the current mode if it belong to the availables values
                         an empty string otherwise
         """
-        return self.__getValueInArray(self.MAIN_SECTION, 'mode', self.MODE_MAP, '')
+        return self.__getValueInArray(self.MAIN_SECTION, 'mode', self.MODE_MAP, 'DAEMON')
 
     def getModeConfig(self, key, fallback=None):
         """Return a configuration option of the current mode

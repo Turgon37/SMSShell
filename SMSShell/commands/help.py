@@ -34,7 +34,7 @@ from ..exceptions import CommandException
 class Help(AbstractCommand):
 
     def argsProperties(self):
-        return dict(max=1)
+        return dict()
 
     def inputStates(self):
         return []

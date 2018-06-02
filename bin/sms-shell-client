@@ -1,0 +1,208 @@
+#!/usr/bin/env python3
+# -*- coding: utf8 -*-
+
+# This file is a part of SMSShell
+#
+# Copyright (c) 2018 Pierre GINDRAUD
+#
+# SMSShell is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# SMSShell is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with SMSShell. If not, see <http://www.gnu.org/licenses/>.
+
+"""This is a simple client class for SMS Shell program
+"""
+
+__author__ = 'Pierre GINDRAUD'
+__license__ = 'GPL-3.0'
+__version__ = '1.0.0'
+__maintainer__ = 'Pierre GINDRAUD'
+__email__ = 'pgindraud@gmail.com'
+
+# System imports
+import argparse
+import json
+import logging
+import os
+import socket
+import sys
+
+# Check python version
+assert sys.version_info >= (3,4)
+
+# Projet Import
+# Try to import from current directory
+try:
+    import SMSShell
+except ImportError:
+    sys.path.insert(1, os.path.join(
+        os.path.dirname(
+            os.path.realpath(__file__)
+        ),
+        os.pardir)
+    )
+    try:
+        import SMSShell
+    except ImportError as e:
+        import traceback
+        traceback.print_exc(file=sys.stdout)
+        print("Impossible to load the SMSShell module")
+        print(str(e))
+        sys.exit(1)
+
+import SMSShell.utils
+
+# Global project declarations
+logger = logging.getLogger('smsshell-client')
+
+formatter = logging.Formatter("%(asctime)s %(name)-30s[%(process)d]: %(levelname)-7s %(message)s")
+hdlr = logging.StreamHandler(sys.stdout)
+hdlr.setFormatter(formatter)
+logger.addHandler(hdlr)
+
+
+def getMessageFromInput(method, *args, **kwargs):
+    """Fetch message using the input method
+
+    @param str method the name of the method
+    @return the raw message object
+    """
+    if method == 'env':
+        logger.debug('read message from environment variables')
+        return SMSShell.utils.GammuSMSParser.decodeFromEnv()
+
+    logger.fatal('You must choose a valid input method')
+    sys.exit(1)
+
+def encodeMessage(method, message, *args, **kwargs):
+    """Encode the raw message object using the given method
+
+    @param str method how to encode the raw message
+    @param str message encoded as a string ready to be transmitted
+    """
+    if method == 'json':
+        logger.debug('encode message in JSON')
+        return json.dumps(message)
+
+    logger.fatal('You must choose a valid encoding method')
+    sys.exit(1)
+
+def sendMessageToOutput(method, message, *args, **kwargs):
+    """Use the output method to send message to SMSShell
+
+    @param str method the name of the method to use
+    @param str message the string corresponding to the message that must be written
+    """
+    if method == 'unix':
+        logger.debug('send message using the unix socket')
+        func = sendMessageToOutputUnix
+    elif method == 'fifo':
+        logger.debug('send message using the fifo')
+        func = sendMessageToOutputFifo
+    else:
+        logger.fatal('You must choose a valid output method')
+        sys.exit(1)
+
+    try:
+        return func(message, *args, **kwargs)
+    except TypeError as e:
+        logger.fatal('The output function failed maybe because it missing an output argument, see details below and refer to (-a)')
+        logger.fatal('error : %s', str(e))
+
+def sendMessageToOutputUnix(message, socket_path, **kwargs):
+    """
+    """
+    # prepare message
+    message_data = message
+    if not isinstance(message_data, bytes):
+        message_data = message_data.encode()
+    message_data_size = len(message_data)
+
+    # Create a UDS socket
+    client_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    logger.debug('connecting to Unix socket at %s', socket_path)
+    try:
+        client_socket.connect(socket_path)
+        client_socket.sendall(message_data)
+        ack_data = client_socket.recv(100)
+        client_socket.close()
+    except socket.error as e:
+        logger.fatal("Unable to connect to unix server socket '%s' because : %s", socket_path, str(e))
+        sys.exit(1)
+
+    if not isinstance(ack_data, str):
+        ack_data = ack_data.decode()
+    try:
+        ack = json.loads(ack_data)
+    except json.JSONDecodeError as e:
+        logger.error('Received bad JSON in ACK, the smsshell server may have not received correctly the message')
+        return False
+    if ack['length'] != message_data_size:
+        logger.error('Size of sent data differ from size of received data given in acknowledgment')
+        return False
+
+    logger.info('Successfully written message to SMSShell using unix socket')
+    return True
+
+def sendMessageToOutputFifo(message, fifo_path, **kwargs):
+    """
+    """
+    try:
+        with open(fifo_path, 'w') as fifo:
+            fifo.write(message)
+    except IOError as e:
+        logger.fatal("Unable to write to fifo file '%s' because : %s", fifo_path, str(e))
+        return False
+    logger.info('Successfully written message to SMSShell using fifo')
+    return True
+
+
+##
+# Run client as the main program
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='SMSShell client version v' + __version__,
+                                        argument_default=argparse.SUPPRESS,
+                                        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    # parser.add_argument('-c', '--config-file', action='store', dest='config_file', default='/etc/smsshell.conf',
+    #                         help='Path of the configuration file')
+    parser.add_argument('-i', '--input', action='store', dest='input', choices=['env'], default='env',
+                            help='Where to pick up raw messages')
+    parser.add_argument('-e', '--encoding', action='store', dest='encoding', choices=['json'], default='json',
+                            help='Type of encoding to apply on message before to send it to output')
+    parser.add_argument('-o', '--output', action='store', dest='output', choices=['fifo', 'unix'],
+                            help='Type of output (must agree with the receiver type of the running smsshell)')
+    parser.add_argument('-a', '--output-arg', action='append', dest='output_arg', type=str, default=[],
+                            help='Optional arguments related to the receiver, ex : path to the socket/fifo, hostname...')
+    parser.add_argument('-d', '--debug', action='store_const', const='DEBUG', dest='log_level', default='INFO',
+                            help='Enable DEBUG logging')
+    parser.add_argument('-v', '--version', action='store_true', dest='show_version',
+                            help='Print the version and exit')
+    args = parser.parse_args()
+
+    if hasattr(args, 'show_version') and args.show_version:
+        print('SMSShell client version v{}'.format(__version__))
+        sys.exit(0)
+    if not hasattr(args, 'output'):
+        logger.fatal('output type is required, use --help')
+        sys.exit(1)
+
+    logger.setLevel(args.log_level)
+    logger.debug('launch with args %s', vars(args))
+
+    message = getMessageFromInput(args.input)
+    logger.debug('get message %s', str(message))
+
+    message = encodeMessage(args.encoding, message)
+    logger.debug('encoded message to %s', str(message))
+
+    sendMessageToOutput(args.output, message, *args.output_arg)
+
+    sys.exit(0)

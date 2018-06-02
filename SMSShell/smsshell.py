@@ -20,6 +20,12 @@
 """
 """
 
+__author__ = 'Pierre GINDRAUD'
+__license__ = 'GPL-3.0'
+__version__ = '1.0.0'
+__maintainer__ = 'Pierre GINDRAUD'
+__email__ = 'pgindraud@gmail.com'
+
 # System imports
 import configparser
 import datetime
@@ -39,7 +45,7 @@ try:
     from .parsers import AbstractParser
     from .transmitters import AbstractTransmitter
     from .shell import Shell
-    from .exceptions import SMSException,ShellException,ShellInitException
+    from .exceptions import SMSShellException,SMSException,ShellException,ShellInitException
 except Exception as e:
     import traceback
     traceback.print_exc(file=sys.stdout)
@@ -55,7 +61,7 @@ class SMSShell(object):
     """SMSShell main class
     """
 
-    def __init__(self, daemon=False, log_level='INFO'):
+    def __init__(self, daemon=False, log_level=None):
         """Constructor : Build the program lead object
 
         @param bool daemon if the server must be daemonized (False)
@@ -67,25 +73,31 @@ class SMSShell(object):
         self.__daemon = daemon
 
         # log parameters
-        self.__log_level = None
-        self.__log_target = None
+        self.__log_level = log_level
 
         # List of callable to call on smsshell stop
         self.__stop_callbacks = []
 
-    def load(self, config):
+    def load(self, config_file):
         """Load configuration function
 
         Use this function to load settings from given configuration file
         @param str config The path fo the configuration file
-        @return boolean True if success, False otherwise
+        @return tuple (boolean, str) True if success, False otherwise
+                                                and the status message
         """
-        if config is not None:
-            if self.cp.load(config):
-                self.setLogLevel(self.cp.getLogLevel())
-                self.setLogTarget(self.cp.getLogTarget())
-                return True
-        return False
+        if config_file is None:
+            return False, 'no file given'
+        if not os.path.isfile(config_file):
+            return False, 'the configuration file {} do not exists'.format(config_file)
+        if not os.access(config_file, os.R_OK):
+            return False, 'the configuration file {} is not readable by the service'.format(config_file)
+
+        status, msg = self.cp.load(config_file)
+        if status:
+            self.setLogLevel(self.__log_level or self.cp.getLogLevel())
+            self.setLogTarget(self.cp.get(self.cp.MAIN_SECTION, 'log_target', fallback='STDOUT'))
+        return status, msg
 
     def start(self, pid_path=None):
         """Run the service features
@@ -121,12 +133,12 @@ class SMSShell(object):
         # Create the pid file
         try:
             g_logger.debug("Creating PID file '%s'", self.__pid_path)
-            pid_file = open(self.__pid_path, 'w')
-            pid_file.write(str(os.getpid()) + '\n')
-            pid_file.close()
+            with open(self.__pid_path, 'w') as pid_file:
+                pid_file.write(str(os.getpid()))
         except IOError as e:
             g_logger.error("Unable to create PID file: %s", self.__pid_path)
 
+        # loose users privileges if needed
         self.__downgrade()
         self.run()
 
@@ -167,45 +179,57 @@ class SMSShell(object):
         """This function do main applicatives stuffs
         """
         shell = Shell(self.cp)
-        if self.cp.getMode() == 'ONESHOT':
-            raise NotImplementedError('oneshot mode not yet implemented')
-        else:
+        if self.cp.getMode() == 'STANDALONE':
             # Init standalone mode
+            raise NotImplementedError('STANDALONE mode not yet implemented')
+        else:
+            # Init daemon mode
             try:
                 parser = self.importAndCheckAbstract(
-                    '.parsers.' + self.cp.get('standalone', 'message_parser', fallback="json"),
+                    '.parsers.' + self.cp.get('daemon', 'message_parser', fallback="json"),
                     'Parser', AbstractParser, 'parser'
                 )
                 recv = self.importAndCheckAbstract(
-                    '.receivers.' + self.cp.get('standalone', 'receiver_type', fallback="fifo"),
+                    '.receivers.' + self.cp.get('daemon', 'receiver_type', fallback="fifo"),
                     'Receiver', AbstractReceiver, 'receiver'
                 )
-                transv = self.importAndCheckAbstract(
-                    '.transmitters.' + self.cp.get('standalone', 'transmitter_type', fallback="file"),
+                transm = self.importAndCheckAbstract(
+                    '.transmitters.' + self.cp.get('daemon', 'transmitter_type', fallback="file"),
                     'Transmitter', AbstractTransmitter, 'transmitter'
                 )
             except ShellInitException as e:
                 g_logger.fatal("Unable to load an internal module : %s", str(e))
                 return False
-        if not recv.start():
-            g_logger.fatal('Unable to open receiver')
-            return False
-        self.__stop_callbacks.append(recv.stop)
-        if not transv.start():
-            g_logger.fatal('Unable to open transmitter')
-            return False
-        for raw in recv.read():
-            # parse received content
-            try:
-                msg = parser.parse(raw)
-                transv.transmit(shell.exec(msg.sender, msg.getStr()))
-            except SMSException as em:
-                g_logger.error("received a bad message, skipping")
-                continue
-            except ShellException as es:
-                g_logger.error("error during command execution : " + str(es))
-                print(es.short_message)
-                continue
+
+            if not recv.start():
+                g_logger.fatal('Unable to open receiver')
+                return False
+            # register the receiver close callback to properly close opened file descriptors
+            self.__stop_callbacks.append(recv.stop)
+
+            if not transm.start():
+                g_logger.fatal('Unable to open transmitter')
+                return False
+            self.__stop_callbacks.append(transm.stop)
+
+        if self.cp.getMode() == 'STANDALONE':
+            # Run standalone mode
+            raise NotImplementedError('STANDALONE mode not yet implemented')
+        else:
+            # Run daemon mode
+            # read and parse each message from receiver
+            for raw in recv.read():
+                # parse received content
+                try:
+                    msg = parser.parse(raw)
+                    transm.transmit(shell.exec(msg.sender, msg.asString()))
+                except SMSException as em:
+                    g_logger.error('received a bad message, skipping because of %s', str(em))
+                    continue
+                except ShellException as es:
+                    g_logger.error('error during command execution : %s', str(es))
+                    print(es.short_message)
+                    continue
 
     def stop(self):
         """Stop properly the server after signal received
@@ -215,11 +239,11 @@ class SMSShell(object):
         some system routine to terminate the entire program
         """
         # Properly close some objects
-        for c in self.__stop_callbacks:
+        for callback in self.__stop_callbacks:
             try:
-                c()
+                callback()
             except NotImplementedError as e:
-                g_logger.warning("Unable to close object of %s because of : %s", c.__self__.__class__, str(e))
+                g_logger.warning("Unable to close object of %s because of : %s", callback.__self__.__class__, str(e))
         # Remove the pid file
         try:
             g_logger.debug("Remove PID file %s", self.__pid_path)
@@ -232,6 +256,8 @@ class SMSShell(object):
         # Close log
         logging.shutdown()
 
+        return 0
+
     #
     # System running functions
     #
@@ -240,24 +266,35 @@ class SMSShell(object):
         """Make the program terminate after receving system signal
         """
         g_logger.debug("Caught system signal %d", signum)
-        self.stop()
-        sys.exit(1)
+        sys.exit(self.stop())
 
     def __downgrade(self):
         """Downgrade daemon privilege to another uid/gid
         """
-        uid = self.cp.getUid()
         gid = self.cp.getGid()
+        if gid is not None:
+            if os.getgid() == gid:
+                g_logger.debug("ignore setgid option because current group is already to expected one %d", gid)
+            else:
+                g_logger.debug("setting processus group to gid %d", gid)
+                try:
+                    os.setgid(gid)
+                except PermissionError:
+                    g_logger.fatal('Insufficient permissions to set process GID to %d', uid)
+                    raise SMSShellException('Insufficient permissions to downgrade processus privileges')
 
-        try:
-            if gid is not None:
-                g_logger.debug("Setting processus group to gid %d", gid)
-                os.setgid(gid)
-            if uid is not None:
-                g_logger.debug("Setting processus user to uid %d", uid)
-                os.setuid(uid)
-        except PermissionError:
-            g_logger.error('Insufficient privileges to set process id')
+        uid = self.cp.getUid()
+        if uid is not None:
+            if os.getuid() == uid:
+                g_logger.debug("ignore setuid option because current user is already to expected one %d", uid)
+            else:
+                g_logger.debug("setting processus user to uid %d", uid)
+                try:
+                    os.setuid(uid)
+                except PermissionError:
+                    g_logger.fatal('Insufficient permissions to set process UID to %d')
+                    raise SMSShellException('Insufficient permissions to downgrade processus privileges')
+
 
     def __daemonize(self):
         """Turn the service as a deamon
@@ -357,14 +394,9 @@ class SMSShell(object):
             INFO
             DEBUG
         @return [bool] : True if set success
-        False otherwise
         """
-        if self.__log_level == value:
-            return True
-
         try:
             g_logger.setLevel(value)
-            self.__log_level = value
             g_logger.info("Changed logging level to %s", value)
             return True
         except AttributeError:
@@ -382,41 +414,40 @@ class SMSShell(object):
         @return [bool] : True if set success
         False otherwise Set the log target of the logging system
         """
-        if self.__log_target == target:
-            return True
-
+        # Syslog daemons already add date to the message.
+        if target == 'SYSLOG':
+            default_format = '%(name)s[%(process)d]: %(levelname)s %(message)s'
         # set a format which is simpler for console use
-        formatter = logging.Formatter(
-            "%(asctime)s %(name)-30s[%(process)d]: %(levelname)-7s %(message)s")
-        if target == "SYSLOG":
-            # Syslog daemons already add date to the message.
-            formatter = logging.Formatter(
-                "%(name)s[%(process)d]: %(levelname)s %(message)s")
+        else:
+            default_format = '%(asctime)s %(name)-30s[%(process)d]: %(levelname)-7s %(message)s'
+        formatter = logging.Formatter(self.cp.get(self.cp.MAIN_SECTION, 'log_format', fallback=default_format))
+
+        if target == 'SYSLOG':
             facility = logging.handlers.SysLogHandler.LOG_DAEMON
-            hdlr = logging.handlers.SysLogHandler("/dev/log", facility=facility)
-        elif target == "STDOUT":
+            hdlr = logging.handlers.SysLogHandler('/dev/log', facility=facility)
+        elif target == 'STDOUT':
             hdlr = logging.StreamHandler(sys.stdout)
-        elif target == "STDERR":
+        elif target == 'STDERR':
             hdlr = logging.StreamHandler(sys.stderr)
         else:
             # Target should be a file
             try:
-                open(target, "a").close()
+                with open(target, 'a'):
+                    pass
                 hdlr = logging.handlers.RotatingFileHandler(target)
             except IOError:
-                g_logger.error("Unable to log to " + target)
+                g_logger.error("Unable to log to %s", target)
                 return False
 
-        # Remove all handler
+        # Remove all previous handlers
         for handler in g_logger.handlers:
             try:
                 g_logger.removeHandler(handler)
             except (ValueError, KeyError):
-                g_logger.warn("Unable to remove handler %s", str(type(handler)))
+                g_logger.error("Unable to remove handler %s", str(type(handler)))
 
         hdlr.setFormatter(formatter)
         g_logger.addHandler(hdlr)
         # Sets the logging target.
-        self.__log_target = target
         g_logger.info("Changed logging target to %s", target)
         return True
