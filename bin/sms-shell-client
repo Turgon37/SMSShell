@@ -240,7 +240,7 @@ if __name__ == '__main__':
                                      argument_default=argparse.SUPPRESS,
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-i', '--input', action='store', dest='input',
-                        choices=['env', 'file', 'stdin'], default='stdin',
+                        choices=['env', 'file', 'stdin'], default='env',
                         help='Where to pick up raw messages')
     parser.add_argument('-ia', '--input-arg', action='append', dest='input_arg', type=str,
                         default=[],
