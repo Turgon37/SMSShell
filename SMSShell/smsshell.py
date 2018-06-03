@@ -122,6 +122,20 @@ class SMSShell(object):
         if pid_path is None:
             pid_path = self.cp.get(self.cp.MAIN_SECTION, 'pid', fallback='/var/run/smsshell.pid')
         self.__pid_path = pid_path
+
+        # prevent program to run if the pidfile already exists
+        if os.path.isfile(self.__pid_path):
+            with open(self.__pid_path, 'r') as pid_file:
+                current_pid = pid_file.read()
+            if os.path.isdir('/proc/{}'.format(current_pid)):
+                with open('/proc/{}/cmdline'.format(current_pid)) as cmdline:
+                    current_cmdline_parts = cmdline.read().split('\0')
+
+                if current_cmdline_parts:
+                    current_cmdline = current_cmdline_parts[0]
+                raise ShellInitException('pidfile exists and associated ' +
+                                         'with running program {}'.format(current_cmdline))
+
         # Create the pid file
         try:
             g_logger.debug("Creating PID file '%s'", self.__pid_path)
