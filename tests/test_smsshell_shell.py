@@ -37,6 +37,25 @@ def test_exec_command_help():
     shell = SMSShell.shell.Shell(conf)
 
     assert shell.exec('sender', 'help')
+    assert shell.exec('sender', 'help')
+
+def test_exec_command_not_found():
+    conf = SMSShell.config.MyConfigParser()
+    assert conf.load('./config.conf')[1]
+    assert conf.isLoaded()
+
+    shell = SMSShell.shell.Shell(conf)
+
+    assert shell.exec('sender', 'nonexistent')
+
+def test_exec_command_forbidden():
+    conf = SMSShell.config.MyConfigParser()
+    assert conf.load('./config.conf')[1]
+    assert conf.isLoaded()
+
+    shell = SMSShell.shell.Shell(conf)
+
+    assert shell.exec('sender', 'logout')
 
 def test_secure_wrapper():
     """Test to use secure shell wrapper
