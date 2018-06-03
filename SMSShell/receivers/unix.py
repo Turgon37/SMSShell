@@ -264,5 +264,5 @@ class Receiver(AbstractReceiver):
                 socket_data = callback(key.fileobj, mask)
                 # yield only data read from client sockets
                 # compare the data object with the onread function
-                if key.data == self.__onRead:
+                if key.data == self.__onRead and socket_data is not None:
                     yield socket_data
