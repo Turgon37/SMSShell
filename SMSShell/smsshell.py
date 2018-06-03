@@ -82,7 +82,8 @@ class SMSShell(object):
         if not os.path.isfile(config_file):
             return False, 'the configuration file {} do not exists'.format(config_file)
         if not os.access(config_file, os.R_OK):
-            return False, 'the configuration file {} is not readable by the service'.format(config_file)
+            return False, ('the configuration file {} is '
+                           'not readable by the service').format(config_file)
 
         status, msg = self.cp.load(config_file)
         if status:
@@ -119,7 +120,7 @@ class SMSShell(object):
 
         # Check pidfile
         if pid_path is None:
-            pid_path = self.cp.getPidPath()
+            pid_path = self.cp.get(self.cp.MAIN_SECTION, 'pid', fallback='/var/run/smsshell.pid')
         self.__pid_path = pid_path
         # Create the pid file
         try:
@@ -150,8 +151,9 @@ class SMSShell(object):
         """
         try:
             mod = importlib.import_module(module_path, package='SMSShell')
-        except ImportError as e:
-            raise ShellInitException("Unable to import the module {0}. Reason : {1}".format(module_path, str(e)))
+        except ImportError as ex:
+            raise ShellInitException(("Unable to import the module {0}."
+                                      " Reason : {1}").format(module_path, str(ex)))
         try: # instanciate
             _class = getattr(mod, class_name)
             if config_section and config_section in self.cp:
@@ -163,7 +165,8 @@ class SMSShell(object):
 
         # handler class checking
         if not isinstance(inst, abstract):
-            raise ShellInitException("Class '{0}' must extend AbstractCommand class".format(module_path))
+            raise ShellInitException(("Class '{0}' must extend "
+                                      "AbstractCommand class").format(module_path))
         return inst
 
     def run(self):
@@ -230,17 +233,19 @@ class SMSShell(object):
         some system routine to terminate the entire program
         """
         # Properly close some objects
-        for callback in self.__stop_callbacks:
+        for cb_stop in self.__stop_callbacks:
             try:
-                callback()
-            except NotImplementedError as e:
-                g_logger.warning("Unable to close object of %s because of : %s", callback.__self__.__class__, str(e))
+                cb_stop()
+            except NotImplementedError as ex:
+                g_logger.warning("Unable to close object of %s because of : %s",
+                                 cb_stop.__self__.__class__,
+                                 str(ex))
         # Remove the pid file
         try:
             g_logger.debug("Remove PID file %s", self.__pid_path)
             os.remove(self.__pid_path)
-        except OSError as e:
-            g_logger.error("Unable to remove PID file: %s", str(e))
+        except OSError as ex:
+            g_logger.error("Unable to remove PID file: %s", str(ex))
 
         g_logger.info("Exiting SMSShell")
 
@@ -267,26 +272,30 @@ class SMSShell(object):
         gid = self.cp.getGid()
         if gid is not None:
             if os.getgid() == gid:
-                g_logger.debug("ignore setgid option because current group is already to expected one %d", gid)
+                g_logger.debug(("ignore setgid option because current "
+                                "group is already to expected one %d"), gid)
             else:
                 g_logger.debug("setting processus group to gid %d", gid)
                 try:
                     os.setgid(gid)
                 except PermissionError:
                     g_logger.fatal('Insufficient permissions to set process GID to %d', gid)
-                    raise SMSShellException('Insufficient permissions to downgrade processus privileges')
+                    raise SMSShellException('Insufficient permissions to ' +
+                                            'downgrade processus privileges')
 
         uid = self.cp.getUid()
         if uid is not None:
             if os.getuid() == uid:
-                g_logger.debug("ignore setuid option because current user is already to expected one %d", uid)
+                g_logger.debug(("ignore setuid option because current user "
+                                "is already to expected one %d"), uid)
             else:
                 g_logger.debug("setting processus user to uid %d", uid)
                 try:
                     os.setuid(uid)
                 except PermissionError:
                     g_logger.fatal('Insufficient permissions to set process UID to %d')
-                    raise SMSShellException('Insufficient permissions to downgrade processus privileges')
+                    raise SMSShellException('Insufficient permissions to ' +
+                                            'downgrade processus privileges')
 
     @staticmethod
     def __daemonize():
@@ -303,8 +312,8 @@ class SMSShell(object):
             # and inherits the parent's process group ID.  This step is required
             # to insure that the next call to os.setsid is successful.
             pid = os.fork()
-        except OSError as e:
-            return (e.errno, e.strerror)
+        except OSError as ex:
+            return (ex.errno, ex.strerror)
 
         if pid == 0:  # The first child.
             # To become the session leader of this new session and the process group
@@ -351,8 +360,8 @@ class SMSShell(object):
                 # longer a session leader, preventing the daemon from ever acquiring
                 # a controlling terminal.
                 pid = os.fork()  # Fork a second child.
-            except OSError as e:
-                return (e.errno, e.strerror)
+            except OSError as ex:
+                return (ex.errno, ex.strerror)
 
             if pid == 0:  # The second child.
                 # Since the current working directory may be a mounted filesystem, we
@@ -414,7 +423,9 @@ class SMSShell(object):
         # set a format which is simpler for console use
         else:
             default_format = '%(asctime)s %(name)-30s[%(process)d]: %(levelname)-7s %(message)s'
-        formatter = logging.Formatter(self.cp.get(self.cp.MAIN_SECTION, 'log_format', fallback=default_format))
+        formatter = logging.Formatter(self.cp.get(self.cp.MAIN_SECTION,
+                                                  'log_format',
+                                                  fallback=default_format))
 
         if target == 'SYSLOG':
             facility = logging.handlers.SysLogHandler.LOG_DAEMON

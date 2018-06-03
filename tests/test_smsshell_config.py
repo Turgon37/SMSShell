@@ -27,7 +27,6 @@ def test_getter():
     assert conf.load('./config.conf')[1]
     assert conf.isLoaded()
 
-    assert isinstance(conf.getPidPath(), str)
     assert conf.getLogLevel('null') != 'null'
 
     uid = conf.getUid()

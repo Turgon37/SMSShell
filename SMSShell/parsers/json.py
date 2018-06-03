@@ -45,11 +45,11 @@ class Parser(AbstractParser):
         """
         try:
             obj = json.loads(raw)
-        except ValueError as e:
-            g_logger.debug('bad JSON %s', str(e))
+        except ValueError as ex:
+            g_logger.debug('bad JSON %s', str(ex))
             raise DecodeException('the received message was not a valid JSON object')
-        except TypeError as e:
-            g_logger.debug('bad object type %s', str(e))
+        except TypeError as ex:
+            g_logger.debug('bad object type %s', str(ex))
             raise DecodeException('the received message was not a valid JSON object')
 
         if 'sms_number' not in obj:

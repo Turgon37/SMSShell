@@ -22,11 +22,10 @@
 
 # System imports
 import configparser
-import grp
 import logging
-import pwd
 
 # Project imports
+from .utils import userToUid, groupToGid
 
 # Global project declarations
 g_logger = logging.getLogger('smsshell.config')
@@ -77,53 +76,68 @@ class MyConfigParser(configparser.ConfigParser):
         """
         return self.__is_config_loaded
 
-    def getPidPath(self, default='/var/run/smsshell.pid'):
-        """Return path to pid file option
+    def getLogLevel(self, section=MAIN_SECTION, item='log_level', default='INFO'):
+        """A log level option from configparser
 
-        @param default [str] : the default value to return if nothing is found
-        in the config file
-        @return [str] : the logtarget
+        Ensure the returned value is a valid log level acceptable by logging module
+
+        Args:
+            section: the section name from which to pick up the value
+                            Default to main section
+            item: the name of the item from which to pick up the value
+                            Default to 'log_level'
+            default: the fallback value to return if the item is not found
+                        or if the item value is not valid
+        Returns:
+            the validated log level as a string or the default's value
         """
-        return self.get(self.MAIN_SECTION, 'pid', fallback=default)
+        return self.__getValueInArray(section, item, self.LOGLEVEL_MAP, default)
 
-    def getLogLevel(self, default='INFO'):
-        """Return loglevel option from configuration file
+    def getUid(self, section=MAIN_SECTION, item='user', default=None):
+        """Return the uid corresponding to a value in configuration file
 
-        @param default [str] : the default value to return if nothing is found
-        in the config file
-        @return [str] : the loglevel
+        Args:
+            section: the section name from which to pick up the value
+                        Default to main section
+            item: the name of the item from which to pick up the value
+                        Default to 'user'
+            default: the fallback value to return if the item is not found
+                    or if the item value is not valid
+        Returns:
+            the uid as integer object or the default's value
         """
-        return self.__getValueInArray(self.MAIN_SECTION, 'log_level', self.LOGLEVEL_MAP, default)
-
-    def getUid(self):
-        """Return the uid (int) option from configfile
-
-        @return [int/None]: integer : the numeric value of
-            None: if group is not defined
-        """
-        user = self.get(self.MAIN_SECTION, 'user', fallback=None)
+        user = self.get(section, item, fallback=None)
         if not user:
-            return None
+            return default
         try:
-            return pwd.getpwnam(user).pw_uid
+            return userToUid(user)
         except KeyError:
-            g_logger.error("Incorrect username '%s' read in configuration file", user)
-        return None
+            g_logger.error(("Incorrect user name '%s' read in configuration"
+                            " file at section %s and key %s"), user, section, item)
+        return default
 
-    def getGid(self):
-        """Return the gid (int) option from configfile
+    def getGid(self, section=MAIN_SECTION, item='group', default=None):
+        """Return the gid corresponding to a value in configuration file
 
-        @return [int/None] : integer : the numeric value of group id
-        None: if group is not defined
+        Args:
+            section: the section name from which to pick up the value
+                        Default to main section
+            item: the name of the item from which to pick up the value
+                        Default to 'group'
+            default: the fallback value to return if the item is not found
+                    or if the item value is not valid
+        Returns:
+            the gid as integer object or the default's value
         """
-        group = self.get(self.MAIN_SECTION, 'group', fallback=None)
+        group = self.get(section, item, fallback=None)
         if not group:
-            return None
+            return default
         try:
-            return grp.getgrnam(group).gr_gid
+            return groupToGid(group)
         except KeyError:
-            g_logger.error("Incorrect groupname '%s' read in configuration file", group)
-        return None
+            g_logger.error(("Incorrect group name '%s' read in configuration"
+                            " file at section %s and key %s"), group, section, item)
+        return default
 
     def getMode(self):
         """Return the main mode of this application

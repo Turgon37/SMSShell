@@ -33,7 +33,7 @@ class Desc(AbstractCommand):
         parser = self.createArgsParser()
         parser.add_argument("command", help="The command's name")
         parser.add_argument("command_argv", nargs='*', default=[],
-                                    help="optional argument to pass to desc")
+                            help="optional argument to pass to desc")
         return parser
 
     def usage(self, argv):
@@ -45,7 +45,8 @@ class Desc(AbstractCommand):
     def main(self, argv, pargs):
         print(pargs)
         try:
-            return self.shell.getCommand(self.session, pargs.command).description(pargs.command_argv)
+            return self.shell.getCommand(self.session,
+                                         pargs.command).description(pargs.command_argv)
         except CommandException as ex:
             self.log.error("error during command execution : %s", str(ex))
             return 'command not available'

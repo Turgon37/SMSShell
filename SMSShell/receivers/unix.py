@@ -30,6 +30,7 @@ import stat
 
 # Project import
 from . import AbstractReceiver
+from ..utils import groupToGid
 
 # Global project declarations
 g_logger = logging.getLogger('smsshell.receivers.unix')
@@ -54,6 +55,7 @@ class Receiver(AbstractReceiver):
         # config
         self.__path = self.getConfig('path', fallback="/var/run/smsshell.sock")
         self.__umask = self.getConfig('umask', fallback='{:o}'.format(self.__default_umask))
+        self.__group = self.getConfig('group')
         self.__listen_queue = int(self.getConfig('listen_queue', fallback=10))
 
     def __onAccept(self, server_socket, mask):
@@ -99,7 +101,9 @@ class Receiver(AbstractReceiver):
             else:
                 self.__closeConnection(client_socket)
         except ConnectionError as ex:
-            g_logger.warning('client connection with FD %s raise connection error : %s', client_socket.fileno(), str(ex))
+            g_logger.warning('client connection with FD %s raise connection error : %s',
+                             client_socket.fileno(),
+                             str(ex))
             self.__closeConnection(client_socket)
 
     def __closeConnection(self, client_socket):
@@ -138,7 +142,8 @@ class Receiver(AbstractReceiver):
                         g_logger.fatal('The unix socket path already exists and cannot be removed')
                         return False
             else:
-                g_logger.fatal('The unix socket path given is already a file but not a unix socket. Please delete it manually')
+                g_logger.fatal('The unix socket path given is already a file' +
+                               ' but not a unix socket. Please delete it manually')
                 return False
 
         # check directory write rights
@@ -167,10 +172,22 @@ class Receiver(AbstractReceiver):
         self.__server_socket.bind(self.__path)
         os.umask(old_umask)
 
+        if self.__group:
+            try:
+                os.chown(self.__path,
+                         -1,
+                         groupToGid(self.__group))
+            except KeyError:
+                g_logger.error("Incorrect group name '%s' for receiver, ignoring group directive",
+                               self.__group)
+
         # Listen for incoming connections
-        g_logger.debug('set socket to listening mode with listen queue size %d', self.__listen_queue)
+        g_logger.debug('set socket to listening mode with listen queue size %d',
+                       self.__listen_queue)
         self.__server_socket.listen(self.__listen_queue)
-        g_logger.info('Unix receiver ready to listen on %s FD %d', self.__path, self.__server_socket.fileno())
+        g_logger.info('Unix receiver ready to listen on %s FD %d',
+                      self.__path,
+                      self.__server_socket.fileno())
 
         ## Init sockets selector
         self.__socket_selector.register(fileobj=self.__server_socket,
@@ -191,6 +208,7 @@ class Receiver(AbstractReceiver):
         g_logger.debug('closing server socket')
         self.__server_socket.close()
         self.__socket_selector.close()
+        g_logger.debug('remove server socket')
         try:
             os.unlink(self.__path)
         except OSError:
