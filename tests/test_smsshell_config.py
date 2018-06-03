@@ -38,8 +38,8 @@ def test_getter():
 
     assert isinstance(conf.getMode(), str)
 
-    c_mode = conf.getMode()
-    assert isinstance(c_mode, str) or c_mode is None
+    c_mode = conf.getModeConfig(conf.getMode())
+    assert isinstance(c_mode, dict) or c_mode is None
 
     assert not conf.getSectionOrEmpty('no_section')
 
