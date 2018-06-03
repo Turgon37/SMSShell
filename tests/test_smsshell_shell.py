@@ -6,6 +6,7 @@ import SMSShell
 import SMSShell.config
 import SMSShell.shell
 import SMSShell.models.session
+import SMSShell.commands
 
 
 def test_loading():
@@ -46,7 +47,8 @@ def test_exec_command_not_found():
 
     shell = SMSShell.shell.Shell(conf)
 
-    assert shell.exec('sender', 'nonexistent')
+    with pytest.raises(SMSShell.commands.CommandNotFoundException):
+        shell.exec('sender', 'nonexistent')
 
 def test_exec_command_forbidden():
     conf = SMSShell.config.MyConfigParser()
@@ -55,7 +57,8 @@ def test_exec_command_forbidden():
 
     shell = SMSShell.shell.Shell(conf)
 
-    assert shell.exec('sender', 'logout')
+    with pytest.raises(SMSShell.commands.CommandForbidden):
+        shell.exec('sender', 'logout')
 
 def test_secure_wrapper():
     """Test to use secure shell wrapper
