@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with SMSShell. If not, see <http://www.gnu.org/licenses/>.
 
-"""This module contains all input parser classes
+"""This module contains abstract class for receivers
 """
 
 # Project imports
@@ -31,20 +31,23 @@ class AbstractReceiver(AbstractModule):
     def start(self):
         """Prepare the receiver/init connections
 
-        @return bool : True if init has success, otherwise False
+        Returns:
+            True if init has success, otherwise False
         """
         raise NotImplementedError("You must implement the 'start' method in receiver class")
 
     def stop(self):
         """Close properly the receiver, flush, close connections
 
-        @return bool : True if stop has success, otherwise False
+        Returns:
+            True if stop has success, otherwise False
         """
         raise NotImplementedError("You must implement the 'stop' method in receiver class")
 
     def read(self):
-        """Return a read blocking iterable object for each content in the fifo
+        """Return a read blocking iterable object for each content in the receiver
 
-        @return Iterable
+        Returns:
+            Iterable
         """
         raise NotImplementedError("You must implement the 'read' method in receiver class")

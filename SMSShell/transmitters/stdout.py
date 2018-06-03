@@ -31,7 +31,7 @@ g_logger = logging.getLogger('smsshell.transmitters.stdout')
 
 
 class Transmitter(AbstractTransmitter):
-    """An simple stdout print
+    """Transmitter class, see module docstring for help
     """
 
     def start(self):

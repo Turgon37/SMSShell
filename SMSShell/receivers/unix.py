@@ -36,7 +36,7 @@ g_logger = logging.getLogger('smsshell.receivers.unix')
 
 
 class Receiver(AbstractReceiver):
-    """A receiver class based on unix socket
+    """Receiver class, see module docstring for help
     """
 
     def init(self):
@@ -51,10 +51,9 @@ class Receiver(AbstractReceiver):
         self.__server_socket = None
         self.__default_umask = 0o117
 
-
         # config
         self.__path = self.getConfig('path', fallback="/var/run/smsshell.sock")
-        self.__umask = self.getConfig('umask', fallback=self.__default_umask)
+        self.__umask = self.getConfig('umask', fallback='{:o}'.format(self.__default_umask))
         self.__listen_queue = int(self.getConfig('listen_queue', fallback=10))
 
     def __onAccept(self, server_socket, mask):
@@ -62,7 +61,7 @@ class Receiver(AbstractReceiver):
         client_socket.setblocking(0)
         # Register incoming client with metadatas
         assert client_socket.fileno() not in self.__current_peers
-        self.__current_peers[client_socket.fileno()] = dict(size=None, )
+        self.__current_peers[client_socket.fileno()] = dict(sock=client_socket)
 
         self.__socket_selector.register(fileobj=client_socket,
                                         events=selectors.EVENT_READ,
@@ -72,7 +71,8 @@ class Receiver(AbstractReceiver):
     def __onRead(self, client_socket, mask):
         """Call each time a socket received an event
 
-        @param socket client_socket the source socket
+        Args:
+            client_socket: the source client socket
         """
         try:
             request_data = client_socket.recv(1000)
@@ -117,7 +117,9 @@ class Receiver(AbstractReceiver):
         """Start the unix socket receiver
 
         Init the socket
-        @return self
+
+        Returns:
+            a boolean that indicates the successful of the stop operation
         """
         directory = os.path.dirname(self.__path)
         # check permissions
@@ -155,7 +157,9 @@ class Receiver(AbstractReceiver):
         try:
             umask = int(self.__umask, 8)
         except ValueError:
-            g_logger.error('Invalid UMASK format, fallback to default umask %s', self.__default_umask)
+            g_logger.error("Invalid UMASK format '%s', fallback to default umask %s",
+                           self.__umask,
+                           self.__default_umask)
             umask = self.__default_umask
         g_logger.debug('bind socket to path %s with umask %s', self.__path, oct(umask))
 
@@ -172,26 +176,33 @@ class Receiver(AbstractReceiver):
         self.__socket_selector.register(fileobj=self.__server_socket,
                                         events=selectors.EVENT_READ,
                                         data=self.__onAccept)
-
         return True
 
     def stop(self):
         """Stop the unix socket receiver
 
-        @return self
+        Returns:
+            a boolean that indicates the successful of the stop operation
         """
         g_logger.info('Closing unix receiver')
         g_logger.debug('closing all unix sockets')
-        for fd in self.__current_peers:
-            fd.close()
+        for peer in self.__current_peers.values():
+            peer['sock'].close()
         g_logger.debug('closing server socket')
         self.__server_socket.close()
         self.__socket_selector.close()
+        try:
+            os.unlink(self.__path)
+        except OSError:
+            g_logger.error('unable to delete socket')
+            return False
+        return True
 
     def read(self):
         """Wait and receive data from network clients
 
-        @return Iterable
+        Returns:
+            Iterable
         """
         while True:
             # Wait until some registered socket becomes ready.
