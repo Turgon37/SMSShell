@@ -22,75 +22,224 @@
 
 # system imports
 import argparse
+import logging
 
 # Project imports
-from ..exceptions import CommandBadImplemented, BadCommandCall
+from ..exceptions import ShellException, BadCommandCall
+from ..models import SessionStates
+
+
+#
+# COMMANDS RELATED EXCEPTIONS
+#
+
+class CommandException(ShellException):
+    """Base class for all exceptions relating to command execution
+    """
+    def __init__(self, message, short='internal command error'):
+        super().__init__(message, short)
+
+
+class CommandNotFoundException(CommandException):
+    """Exception use when a command does not exist
+    """
+    def __init__(self, message, short='command not found'):
+        super().__init__(message, short)
+
+
+class CommandBadImplemented(CommandException):
+    """Exception raised when a command class does not implement the required methods
+    """
+    pass
+
+
+class CommandForbidden(CommandException):
+    """Raised when you tried to run a command not available from the current state
+    """
+    def __init__(self, message, short='command denied'):
+        super().__init__(message, short)
+
+
+class CommandBadConfiguredException(CommandException):
+    """Exception use when a command do not validate it's configuration
+    """
+    def __init__(self, message, short='command not configured'):
+        super().__init__(message, short)
+
 
 
 class AbstractCommand(object):
-    """This is a abstract command, all user defined comand must inherit this one"""
+    """This is a abstract command, all user defined comand must inherit this class
+    """
 
     class ArgParser(argparse.ArgumentParser):
-        def __init__(self, *args, **kw):
-            kw['add_help'] = False
-            super().__init__(*args, **kw)
+        """Customized argparser class
+
+        This class should be instanciated using the createArgsParser() method
+        """
+
+        def __init__(self, *args, **kwargs):
+            """Override default constructors
+            """
+            kwargs['add_help'] = False
+            super().__init__(*args, **kwargs)
 
         def error(self, message):
+            """Raise custom exception on parse error
+
+            Args:
+                message: The error message
+
+            Raises:
+                BadCommandCall with the original message
+            """
             raise BadCommandCall(message)
 
     def __init__(self, logger, shell, config):
         """Build a new instance of the command
 
-        @param [logging.Logger] : the logger instance to use
-        @param [Shell] : the logger instance to use
-        @param [dict] : the config dict
+        Args:
+            logger: the logger instance to use for this command
+            Shell: the caller shell instance
+            dict: the config dict specific for this command
         """
+        self.__session = None
+
+        assert isinstance(logger, logging.Logger)
         self.log = logger
         self.shell = shell
         self.config = config
         self.session = None
 
+    #
+    # PUBLIC PROPERTIES
+    #
+
     @property
     def name(self):
+        """Return this command name
+
+        Returns:
+            Command name as String
+        """
         return self.__class__.__name__.lower()
 
     @property
     def session(self):
         """Return the session associated with the request
 
-        @return [models.Session] the session id
+        Returns:
+            models.Session the session of the current run of this command
+
+            Each time this command is run, the session is replaced by
+                the session of the current user
         """
         assert self.__session is not None
         return self.__session
 
     @session.setter
-    def session(self, s):
+    def session(self, sess):
         """Set the session's associated with the request
 
-        @param s [str] : the session
-        @return self
+        Args:
+            sess: the new session
+        Returns:
+            self the instance of this command
         """
-        self.__session = s
+        self.__session = sess
         return self
+
+    #
+    # PUBLIC METHODS
+    #
+
+    def argsParser(self):
+        """Return the argparser that the command will use to validate it's arguments
+
+        The usage of an arg parser is optionnal. It allow the user's command
+        to be more complicated in the manner it takes arguments
+
+        Returns:
+            must return an instance of AbstractCommand.ArgParser,
+            use createArgsParser() to create a new and customize it before
+            return it
+        """
+        assert self
+        return None
 
     def checkConfig(self):
         """Validates the configuration required by the command
+
+        Returns:
+            A boolean, true if the configuration is reported as valid,
+            false otherwise
         """
+        assert self
         return True
 
-    def main(self, argv, args=None):
+    def createArgsParser(self):
+        """Build helper for new arguments parser
+
+        Returns:
+            a new instance of an empty AbstractCommand.ArgParser
+        """
+        return AbstractCommand.ArgParser(description=self.description([]),
+                                         prog=self.name)
+
+    def description(self, argv):
+        """This function must return a short description message of what the command do
+
+        Args:
+            argv: List<String> the list of arguments if the user send it
+                    It may be used to customize the help message with
+                    the already send arguments
+        Returns:
+            The description of this command as a string
+        """
+        assert argv
+        raise CommandBadImplemented(str(self.__class__) +
+                                    " must implement the description function")
+
+    def inputStates(self):
+        """This function must return the list of session's state(s) from which
+         the command can be reacheable
+
+        Returns:
+            List<SessionStates> the list of SessionStates from which the user
+            can run this command
+        """
+        assert self
+        return []
+
+    def main(self, argv, pargs):
         """The main running entry point of this command
 
-        @param List<Str> the list of arguments
-        @param dict OPTIONAL the dict that contains arg parser results
+        Args:
+            argv: List<String> the list of arguments
+            pargs: dict OPTIONAL if the the dict that contains arg parser results
+                    if the function argsParser() return a valid argument
+                    parser instance, all argument in argv will be passed to it
+                    and the result will be in pargs
+        Returns:
+            Optional output that will be send back to original user
         """
+        assert argv
+        assert pargs is None
         raise CommandBadImplemented(str(self.__class__) + " must implement the main function")
 
     def usage(self, argv):
         """This function must return a short usage message
 
-        @param List<Str> the list of arguments
-        @return str the string usage
+        It is use to help the user to type command line.
+        By default, is an argument parser is set, it will be used to produce
+        an usage string
+
+        Args:
+            argv: List<String> the list of arguments if the user send it
+                    It may be used to customize the help message with
+                    the already send arguments
+        Returns:
+            the usage help as a String
         """
         if self._argsParser():
             parser = self._argsParser()
@@ -98,85 +247,42 @@ class AbstractCommand(object):
             return parser.format_usage()
         raise CommandBadImplemented(str(self.__class__) + " must implement the usage function")
 
-    def description(self, argv):
-        """This function must return a short description message of what the command do
-
-        @param List<Str> the list of arguments
-        @return str the string description
-        """
-        raise CommandBadImplemented(str(self.__class__) + " must implement the description function")
+    #
+    # PRIVATE PROPERTIES
+    #
 
     def _inputStates(self):
         """Private entry point for Shell
 
-        @return the list of input states formatted and validated for shell usage
+        Returns:
+            the list of input states formatted and validated for shell usage
         """
-        l = self.inputStates()
-        if not isinstance(l, list):
-            raise CommandBadImplemented(str(self.__class__) + " inputStates function must return a list of session's states")
-        return l
-
-    def inputStates(self):
-        """This function must return the list of session's state(s) from which
-         the command can be run
-
-        @return List<SessionRole>
-        """
-        raise CommandBadImplemented(str(self.__class__) + " must implement the inputStates function")
-
-    def _argsProperties(self):
-        """Private entry point for Shell
-
-        @return the properties array formatted and validated for Shell usage
-        """
-        props = {'min': 0, 'max': -1}
-        try:
-            p = self.argsProperties()
-        except BaseException as e:
-            raise CommandBadImplemented(str(self.__class__) + " argsProperties function encounter an error {}".format(e))
-        if not isinstance(p, dict):
-            raise CommandBadImplemented(str(self.__class__) + " argsProperties function must return a dict of properties")
-        for k in p:
-            props[k] = p[k]
-        return props
-
-    def argsProperties(self):
-        """This function must return the list of session's state(s) from which
-         the command can be run
-
-        @return dict{}
-        """
-        raise CommandBadImplemented(str(self.__class__) + " must implement the argsProperties function")
-
-    def newArgsParser(self):
-        """Build helper for new arguments parser
-
-        @return AbstractCommand.ArgParser new instance
-        """
-        return AbstractCommand.ArgParser(description=self.description([]), prog=self.name)
+        states = self.inputStates()
+        if not isinstance(states, list):
+            raise CommandBadImplemented(str(self.__class__) + ' inputStates function must return'
+                                        " a list of session's states")
+        for state in states:
+            if not isinstance(state, SessionStates):
+                raise CommandBadImplemented(str(self.__class__) + ' inputStates function must'
+                                            ' return a list of valid SessionStates objects')
+        return states
 
     def _argsParser(self):
         """Private entry point for Shell
 
-        @return the argparser formatted and validated for Shell usage
+        Returns:
+            The argparser formatted and validated for Shell usage
         """
         try:
             parser = self.argsParser()
-        except BaseException as e:
-            raise CommandBadImplemented(str(self.__class__) + " argsParser function encounter an error {}".format(e))
+        except BaseException as ex:
+            raise CommandBadImplemented(str(self.__class__) +
+                                        " argsParser function encounter an error {}".format(ex))
         if parser:
             if not isinstance(parser, AbstractCommand.ArgParser):
-                raise CommandBadImplemented(str(self.__class__) + " argsParser function must return a instance of ArgumentParser")
-            if parser.add_help == True:
-                raise CommandBadImplemented(str(self.__class__) + " your argparser must not contains predefined help option")
+                raise CommandBadImplemented(str(self.__class__) + 'argsParser function ' +
+                                            "must return a instance of ArgumentParser")
+            if parser.add_help:
+                raise CommandBadImplemented(str(self.__class__) + ' your argparser'
+                                            " must not contains predefined help option")
         return parser
-
-    def argsParser(self):
-        """Return the argparser that the command will use
-
-        The usage of an arg parser is optionnal. It allow the user's command
-        to be more complicated in the manner it takes arguments
-
-        @return AbstractCommand.ArgParser
-        """
-        return None

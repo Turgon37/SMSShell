@@ -25,14 +25,15 @@ content that will be analysed
 
 
 class Message(object):
-    """A simple message with sender id
+    """This class represent a message with sender id and content
     """
 
     def __init__(self, sender, content):
         """Constructor: Build a new message object
 
-        @param sender [str] : sender unique identifier
-        @param content [str] : message content
+        Args:
+            sender: sender's unique identifier
+            content: the message content as a string
         """
         self.__sender = None
         self.__content = None
@@ -44,40 +45,45 @@ class Message(object):
     def sender(self):
         """Return the sender id
 
-        @return [str] the sender id
+        Returns:
+            the sender id as a string
         """
         assert self.__sender is not None
         return self.__sender
 
     @sender.setter
-    def sender(self, s):
+    def sender(self, send):
         """Set the sender id
 
-        @param s [str] : the sender id
+        Args:
+            send: the sender id as a string
         """
-        self.__sender = s
+        self.__sender = send
 
     @property
     def content(self):
-        """Return the content payload
+        """Return the message content
 
-        @return [str] the content
+        Returns:
+            the message content as a string
         """
         assert self.__content is not None
         return self.__content
 
     @content.setter
-    def content(self, c):
+    def content(self, cont):
         """Set the message content
 
-        @param c [str] : the content
+        Args:
+            cont: the raw message content
         """
-        self.__content = c
+        self.__content = cont
 
     def asString(self):
-        """Return the command argument vector associated with this message
+        """Return the message content and ensure it is a string
 
-        @return list of command argments
+        Returns:
+            ensure the returned message content is a string
         """
         assert isinstance(self.content, str)
         return self.content
@@ -87,7 +93,8 @@ class Message(object):
     def __str__(self):
         """[DEBUG] Produce a description string for this message
 
-        @return [str] a formatted string
+        Returns:
+            a formatted description of this message and his content
         """
         content = ("Message from(" + str(self.sender) + ")" +
                    "\n  CONTENT = " + str(self.content))
@@ -98,4 +105,4 @@ class Message(object):
 
         @return [str] a formatted string that describe this object
         """
-        return ("[M(" + str(self.sender) + ")]")
+        return "[M(" + str(self.sender) + ")]"

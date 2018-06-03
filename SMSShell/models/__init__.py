@@ -22,6 +22,6 @@
 
 # Project imports
 from .message import Message
-from .session import Session, SessionRole
+from .session import Session, SessionStates
 
-__all__ = ['Message', 'Session']
+__all__ = ['Message', 'Session', 'SessionStates']

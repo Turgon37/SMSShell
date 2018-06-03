@@ -106,8 +106,8 @@ class GammuSMSParser(object):
             # if the class if already set, compare it with the previous value
             if (message[key] != value):
                 GammuSMSParser.appendError(message,
-                                            GammuSMSParser.ERROR_DUPLICATE_VALUE,
-                                            'Two or more differents values for {0}'.format(key))
+                                           GammuSMSParser.ERROR_DUPLICATE_VALUE,
+                                           'Two or more differents values for {0}'.format(key))
 
     @classmethod
     def decodeFromEnv(cls):
@@ -161,36 +161,34 @@ class GammuSMSParser(object):
         return message
 
     @classmethod
-    def decodeFromBackupFilePath(cls, path):
+    def decodeFromBackupFilePath(cls, backup_file_path):
         """
         """
         message = cls.createEmptyMessage()
 
         # checks
-        if not os.path.exists(path) or not os.path.isfile(path):
-            cls.appendError(message, cls.ERROR_BACKUP_FILE, "the file '{}' do not exists".format(path))
+        if not os.path.exists(backup_file_path) or not os.path.isfile(backup_file_path):
+            cls.appendError(message, cls.ERROR_BACKUP_FILE, "the file '{}' do not exists".format(backup_file_path))
             return message
-        if not os.access(path, os.R_OK):
-            cls.appendError(message, cls.ERROR_BACKUP_FILE, "the file '{}' is not readable".format(path))
+        if not os.access(backup_file_path, os.R_OK):
+            cls.appendError(message, cls.ERROR_BACKUP_FILE, "the file '{}' is not readable".format(backup_file_path))
             return message
         if not gammu:
             cls.appendError(message, cls.ERROR_PYTHON, 'the gammu package is not available to decode backup format')
             return message
 
-        backup = gammu.ReadSMSBackup(path)
-        print(type(backup))
-        print(backup)
+        backup = gammu.ReadSMSBackup(backup_file_path)
 
         # Make nested array
         backup_messages = [[backup_message] for backup_message in backup]
         raw_messages = gammu.LinkSMS(backup_messages)
 
-        if len(raw_messages) == 0:
+        if not raw_messages:
             cls.appendError(message, cls.ERROR_NO_CONTENT, 'the backup file do not contains any message')
             return message
 
         if len(raw_messages) > 1:
-            cls.appendError(message, cls.IMPLEMENTATION, 'the backup file contains more than one message')
+            cls.appendError(message, cls.ERROR_IMPLEMENTATION, 'the backup file contains more than one message')
 
         for raw_message in raw_messages:
             decoded_message = gammu.DecodeSMS(raw_message)
@@ -226,10 +224,10 @@ class GammuSMSParser(object):
                                 message['type'] = 'MMS'
                         # any of theses ID can be considered as SMS message
                         elif entry_id in ['Text',
-                                            'ConcatenatedTextLong',
-                                            'ConcatenatedAutoTextLong',
-                                            'ConcatenatedTextLong16bit',
-                                            'ConcatenatedAutoTextLong16bit']:
+                                          'ConcatenatedTextLong',
+                                          'ConcatenatedAutoTextLong',
+                                          'ConcatenatedTextLong16bit',
+                                          'ConcatenatedAutoTextLong16bit']:
                             if not message['type']:
                                 message['type'] = 'SMS'
 

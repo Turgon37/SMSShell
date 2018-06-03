@@ -22,17 +22,19 @@
 This command return a short description of what a command do
 """
 
-from . import AbstractCommand
-from ..exceptions import CommandException
+from . import AbstractCommand, CommandException
 
 
 class Desc(AbstractCommand):
+    """Command class, see module docstring for help
+    """
 
-    def argsProperties(self):
-        return dict(min=1, max=1)
-
-    def inputStates(self):
-        return []
+    def argsParser(self):
+        parser = self.createArgsParser()
+        parser.add_argument("command", help="The command's name")
+        parser.add_argument("command_argv", nargs='*', default=[],
+                                    help="optional argument to pass to desc")
+        return parser
 
     def usage(self, argv):
         return 'desc COMMAND'
@@ -40,9 +42,10 @@ class Desc(AbstractCommand):
     def description(self, argv):
         return 'Show commands short description'
 
-    def main(self, argv):
+    def main(self, argv, pargs):
+        print(pargs)
         try:
-            return self.shell.getCommand(self.session, argv[0]).description(argv[1:])
-        except CommandException as e:
-            self.log.error("error during command execution : " + str(e))
+            return self.shell.getCommand(self.session, pargs.command).description(pargs.command_argv)
+        except CommandException as ex:
+            self.log.error("error during command execution : %s", str(ex))
             return 'command not available'

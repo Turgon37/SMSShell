@@ -27,12 +27,8 @@ from . import AbstractCommand
 
 
 class Flush(AbstractCommand):
-
-    def argsProperties(self):
-        return dict()
-
-    def inputStates(self):
-        return []
+    """Command class, see module docstring for help
+    """
 
     def usage(self, argv):
         return 'flush'

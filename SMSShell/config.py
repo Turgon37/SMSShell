@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with SMSShell. If not, see <http://www.gnu.org/licenses/>.
 
-"""
+"""This module contains the personalised config parser for smsshell
 """
 
 # System imports
@@ -25,8 +25,6 @@ import configparser
 import grp
 import logging
 import pwd
-import re
-import sys
 
 # Project imports
 
@@ -41,8 +39,8 @@ class MyConfigParser(configparser.ConfigParser):
     file as project's needed. This class give highlevel configuration file reading
     """
 
-# CLASS CONSTANTS
-# list of logging level available by configuration file
+    # CLASS CONSTANTS
+    # list of logging level available by configuration file
     LOGLEVEL_MAP = ['ERROR', 'WARN', 'INFO', 'DEBUG']
     MODE_MAP = ['DAEMON', 'STANDALONE']
     MAIN_SECTION = 'main'
@@ -67,8 +65,8 @@ class MyConfigParser(configparser.ConfigParser):
         try:
             if path in self.read(path):
                 self.__is_config_loaded = True
-        except configparser.Error as e:
-            msg = 'Unable to load the configuration file because of error : {}'.format(str(e))
+        except configparser.Error as ex:
+            msg = 'Unable to load the configuration file because of error : {}'.format(str(ex))
         return self.__is_config_loaded, msg
 
     def isLoaded(self):
@@ -167,5 +165,4 @@ class MyConfigParser(configparser.ConfigParser):
         if val not in array:
             g_logger.error("Incorrect %s : '%s' must be in %s", key, val, array)
             return default
-        else:
-            return val
+        return val

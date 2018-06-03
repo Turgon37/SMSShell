@@ -36,7 +36,7 @@ import socket
 import sys
 
 # Check python version
-assert sys.version_info >= (3,4)
+assert sys.version_info >= (3, 4)
 
 # Projet Import
 # Try to import from current directory
@@ -48,77 +48,133 @@ except ImportError:
             os.path.realpath(__file__)
         ),
         os.pardir)
-    )
+                   )
     try:
         import SMSShell
-    except ImportError as e:
+    except ImportError as ex:
         import traceback
         traceback.print_exc(file=sys.stdout)
         print("Impossible to load the SMSShell module")
-        print(str(e))
+        print(str(ex))
         sys.exit(1)
 
 import SMSShell.utils
 
 # Global project declarations
-logger = logging.getLogger('smsshell-client')
+g_logger = logging.getLogger('smsshell-client')
 
-formatter = logging.Formatter("%(asctime)s %(name)-30s[%(process)d]: %(levelname)-7s %(message)s")
-hdlr = logging.StreamHandler(sys.stdout)
-hdlr.setFormatter(formatter)
-logger.addHandler(hdlr)
+_formatter = logging.Formatter("%(asctime)s %(name)-30s[%(process)d]: %(levelname)-7s %(message)s")
+_hdlr = logging.StreamHandler(sys.stdout)
+_hdlr.setFormatter(_formatter)
+g_logger.addHandler(_hdlr)
 
 
 def getMessageFromInput(method, *args, **kwargs):
-    """Fetch message using the input method
+    """Fetch message using the desired input method
 
-    @param str method the name of the method
-    @return the raw message object
+    Args:
+        method: the name of the method to use
+                    in env,file,stdin
+        args, kwargs: any additional arguments to pass to input function
+    Returns:
+        String
+
+        The raw message
+
+    Raises:
+        sys.exit() on error
     """
     if method == 'env':
-        logger.debug('read message from environment variables')
-        return SMSShell.utils.GammuSMSParser.decodeFromEnv()
+        g_logger.debug('read message from environment variables')
+        func = SMSShell.utils.GammuSMSParser.decodeFromEnv
+    elif method == 'file':
+        g_logger.debug('read message from backup file')
+        func = SMSShell.utils.GammuSMSParser.decodeFromBackupFilePath
+    elif method == 'stdin':
+        g_logger.debug('read message from stdin')
+        def readFromStdin():
+            return dict(sms_number='local', sms_text=input())
+        func = readFromStdin
+    else:
+        g_logger.critical('You must choose a valid input method')
+        sys.exit(1)
 
-    logger.fatal('You must choose a valid input method')
+    try:
+        return func(*args, **kwargs)
+    except TypeError as ex:
+        g_logger.critical('The input function failed maybe because it missing an input argument,'
+                          ' see details below and refer to (-ia)')
+        g_logger.critical('error : %s', str(ex))
     sys.exit(1)
 
-def encodeMessage(method, message, *args, **kwargs):
+def encodeMessage(method, message):
     """Encode the raw message object using the given method
 
-    @param str method how to encode the raw message
-    @param str message encoded as a string ready to be transmitted
+    Args:
+        method: the name of the method to use to encode the raw message
+                    in json
+        message: the raw message to encode
+    Returns:
+        String
+
+        The encoded message
+
+    Raises:
+        sys.exit() on error
     """
     if method == 'json':
-        logger.debug('encode message in JSON')
+        g_logger.debug('encode message in JSON')
         return json.dumps(message)
 
-    logger.fatal('You must choose a valid encoding method')
+    g_logger.critical('You must choose a valid encoding method')
     sys.exit(1)
 
 def sendMessageToOutput(method, message, *args, **kwargs):
     """Use the output method to send message to SMSShell
 
-    @param str method the name of the method to use
-    @param str message the string corresponding to the message that must be written
+    Args:
+        method: the name of the method to use to send the encoded message
+                    in unix,fifo
+        message: the encoded message to send
+        args, kwargs: any additional arguments to pass to output function
+    Returns:
+        Boolean
+
+        If write succeeded true, false otherwise
+
+    Raises:
+        sys.exit() on error
     """
     if method == 'unix':
-        logger.debug('send message using the unix socket')
+        g_logger.debug('send message using the unix socket')
         func = sendMessageToOutputUnix
     elif method == 'fifo':
-        logger.debug('send message using the fifo')
+        g_logger.debug('send message using the fifo')
         func = sendMessageToOutputFifo
     else:
-        logger.fatal('You must choose a valid output method')
+        g_logger.critical('You must choose a valid output method')
         sys.exit(1)
 
     try:
         return func(message, *args, **kwargs)
-    except TypeError as e:
-        logger.fatal('The output function failed maybe because it missing an output argument, see details below and refer to (-a)')
-        logger.fatal('error : %s', str(e))
+    except TypeError as ex:
+        g_logger.critical('The output function failed maybe because it missing an output argument,'
+                          'see details below and refer to (-oa)')
+        g_logger.critical('error : %s', str(ex))
 
-def sendMessageToOutputUnix(message, socket_path, **kwargs):
-    """
+def sendMessageToOutputUnix(message, socket_path):
+    """Write the message to an unix socket
+
+    Args:
+        message: the encoded message ready to be written
+        socket_path: the full path to the unix socket
+    Returns:
+        Boolean
+
+        If write succeeded true, false otherwise
+
+    Raises:
+        sys.exit() on error
     """
     # prepare message
     message_data = message
@@ -128,40 +184,52 @@ def sendMessageToOutputUnix(message, socket_path, **kwargs):
 
     # Create a UDS socket
     client_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    logger.debug('connecting to Unix socket at %s', socket_path)
+    g_logger.debug('connecting to Unix socket at %s', socket_path)
     try:
         client_socket.connect(socket_path)
         client_socket.sendall(message_data)
         ack_data = client_socket.recv(100)
         client_socket.close()
-    except socket.error as e:
-        logger.fatal("Unable to connect to unix server socket '%s' because : %s", socket_path, str(e))
+    except socket.error as ex:
+        g_logger.critical("Unable to connect to unix server socket '%s' because : %s",
+                          socket_path,
+                          str(ex))
         sys.exit(1)
 
     if not isinstance(ack_data, str):
         ack_data = ack_data.decode()
     try:
         ack = json.loads(ack_data)
-    except json.JSONDecodeError as e:
-        logger.error('Received bad JSON in ACK, the smsshell server may have not received correctly the message')
+    except json.JSONDecodeError:
+        g_logger.error('Received bad JSON in ACK,'
+                       ' the smsshell server may have not received correctly the message')
         return False
     if ack['length'] != message_data_size:
-        logger.error('Size of sent data differ from size of received data given in acknowledgment')
+        g_logger.error('Size of sent data differ from '
+                       'size of received data given in acknowledgment')
         return False
 
-    logger.info('Successfully written message to SMSShell using unix socket')
+    g_logger.info('Successfully written message to SMSShell using unix socket')
     return True
 
-def sendMessageToOutputFifo(message, fifo_path, **kwargs):
-    """
+def sendMessageToOutputFifo(message, fifo_path):
+    """Write the message to a fifo
+
+    Args:
+        message: the raw message ready to be written
+        fifo_path: the full path to the fifo
+    Returns:
+        Boolean
+
+        If write succeeded true, false otherwise
     """
     try:
         with open(fifo_path, 'w') as fifo:
             fifo.write(message)
-    except IOError as e:
-        logger.fatal("Unable to write to fifo file '%s' because : %s", fifo_path, str(e))
+    except IOError as ex:
+        g_logger.critical("Unable to write to fifo file '%s' because : %s", fifo_path, str(ex))
         return False
-    logger.info('Successfully written message to SMSShell using fifo')
+    g_logger.info('Successfully written message to SMSShell using fifo')
     return True
 
 
@@ -169,40 +237,49 @@ def sendMessageToOutputFifo(message, fifo_path, **kwargs):
 # Run client as the main program
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='SMSShell client version v' + __version__,
-                                        argument_default=argparse.SUPPRESS,
-                                        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    # parser.add_argument('-c', '--config-file', action='store', dest='config_file', default='/etc/smsshell.conf',
-    #                         help='Path of the configuration file')
-    parser.add_argument('-i', '--input', action='store', dest='input', choices=['env'], default='env',
-                            help='Where to pick up raw messages')
-    parser.add_argument('-e', '--encoding', action='store', dest='encoding', choices=['json'], default='json',
-                            help='Type of encoding to apply on message before to send it to output')
-    parser.add_argument('-o', '--output', action='store', dest='output', choices=['fifo', 'unix'],
-                            help='Type of output (must agree with the receiver type of the running smsshell)')
-    parser.add_argument('-a', '--output-arg', action='append', dest='output_arg', type=str, default=[],
-                            help='Optional arguments related to the receiver, ex : path to the socket/fifo, hostname...')
-    parser.add_argument('-d', '--debug', action='store_const', const='DEBUG', dest='log_level', default='INFO',
-                            help='Enable DEBUG logging')
+                                     argument_default=argparse.SUPPRESS,
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-i', '--input', action='store', dest='input',
+                        choices=['env', 'file', 'stdin'], default='stdin',
+                        help='Where to pick up raw messages')
+    parser.add_argument('-ia', '--input-arg', action='append', dest='input_arg', type=str,
+                        default=[],
+                        help=('Optional arguments related to the input'
+                              ', ex : path to the backup, message content...'))
+    parser.add_argument('-e', '--encoding', action='store', dest='encoding', default='json',
+                        choices=['json'],
+                        help='Type of encoding to apply on message before to send it to output')
+    parser.add_argument('-o', '--output', action='store', dest='output',
+                        choices=['fifo', 'unix'],
+                        help=('Type of output (must agree with the receiver type'
+                              ' of the running smsshell)'))
+    parser.add_argument('-oa', '--output-arg', action='append', dest='output_arg', type=str,
+                        default=[],
+                        help=('Optional arguments related to the receiver,'
+                              ' ex : path to the socket/fifo, hostname...'))
+    parser.add_argument('-d', '--debug', action='store_const', const='DEBUG', dest='log_level',
+                        default='INFO',
+                        help='Enable DEBUG logging')
     parser.add_argument('-v', '--version', action='store_true', dest='show_version',
-                            help='Print the version and exit')
-    args = parser.parse_args()
+                        help='Print the version and exit')
+    pargs = parser.parse_args()
 
-    if hasattr(args, 'show_version') and args.show_version:
+    if hasattr(pargs, 'show_version') and pargs.show_version:
         print('SMSShell client version v{}'.format(__version__))
         sys.exit(0)
-    if not hasattr(args, 'output'):
-        logger.fatal('output type is required, use --help')
+    if not hasattr(pargs, 'output'):
+        g_logger.critical('output type is required, use --help')
         sys.exit(1)
 
-    logger.setLevel(args.log_level)
-    logger.debug('launch with args %s', vars(args))
+    g_logger.setLevel(pargs.log_level)
+    g_logger.debug('launch with args %s', vars(pargs))
 
-    message = getMessageFromInput(args.input)
-    logger.debug('get message %s', str(message))
+    msg = getMessageFromInput(pargs.input, *pargs.input_arg)
+    g_logger.debug('get message %s', str(msg))
 
-    message = encodeMessage(args.encoding, message)
-    logger.debug('encoded message to %s', str(message))
+    msg = encodeMessage(pargs.encoding, msg)
+    g_logger.debug('encoded message to %s', str(msg))
 
-    sendMessageToOutput(args.output, message, *args.output_arg)
+    sendMessageToOutput(pargs.output, msg, *pargs.output_arg)
 
     sys.exit(0)

@@ -26,12 +26,8 @@ from . import AbstractCommand
 
 
 class Whoami(AbstractCommand):
-
-    def argsProperties(self):
-        return dict()
-
-    def inputStates(self):
-        return []
+    """Command class, see module docstring for help
+    """
 
     def usage(self, argv):
         return 'whoami'

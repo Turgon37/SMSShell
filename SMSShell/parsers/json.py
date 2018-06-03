@@ -25,7 +25,7 @@ import logging
 import json
 
 # Project imports
-from . import DecodeException,BadMessageFormatException
+from . import DecodeException, BadMessageFormatException
 from ..models import Message
 from . import AbstractParser
 

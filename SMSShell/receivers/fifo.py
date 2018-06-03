@@ -17,7 +17,10 @@
 # You should have received a copy of the GNU General Public License
 # along with SMSShell. If not, see <http://www.gnu.org/licenses/>.
 
-"""
+"""This receiver is based on a local fifo
+
+This receiver create an input fifo on start, and read message from
+it
 """
 
 # System imports
@@ -33,19 +36,21 @@ g_logger = logging.getLogger('smsshell.receivers.fifo')
 
 
 class Receiver(AbstractReceiver):
-    """A fifo receiver class
+    """Receiver class, see module docstring for help
     """
 
     def init(self):
         """Init
         """
-        self.__path = self.getConfig('path', fallback="/var/run/smsshell")
+        self.__path = self.getConfig('path', fallback="/var/run/smsshell.fifo")
 
     def start(self):
         """Start the socket (FIFO) runner
 
-        Init the fifo pipe and wait for incoming contents
-        @return self
+        Init the fifo pipe
+
+        Returns:
+            a boolean that indicates the successful of the start operation
         """
         directory = os.path.dirname(self.__path)
         # check permissions
@@ -62,16 +67,30 @@ class Receiver(AbstractReceiver):
             # check directory write rights
             if not os.access(directory, os.X_OK|os.W_OK):
                 g_logger.fatal('Unsufficients permissions into the directory %s to create the fifo',
-                                self.__path)
+                               self.__path)
                 return False
             g_logger.debug('creating new fifo')
             os.mkfifo(self.__path, mode=0o620)
         return self
 
+    def stop(self):
+        """We just remove the fifo
+
+        Returns:
+            a boolean that indicates the successful of the stop operation
+        """
+        try:
+            os.unlink(self.__path)
+        except OSError:
+            g_logger.error('unable to delete fifo')
+            return False
+        return True
+
     def read(self):
         """Return a read blocking iterable object for each content in the fifo
 
-        @return Iterable
+        Return:
+            Iterable
         """
         while True:
             with open(self.__path) as fifo:

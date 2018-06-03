@@ -36,48 +36,54 @@ g_logger = logging.getLogger('smsshell.receivers.unix')
 
 
 class Receiver(AbstractReceiver):
-    """A receiver class based on unix socket
+    """Receiver class, see module docstring for help
     """
 
     def init(self):
-        """Init
+        """Init function
         """
         # Keeps track of the peers currently connected. Maps socket fd to
         # peer name.
         self.__current_peers = dict()
 
         # Internal items that will be inits later
-        self.__socket_selector = None
+        self.__socket_selector = selectors.DefaultSelector()
         self.__server_socket = None
         self.__default_umask = 0o117
+
         # config
         self.__path = self.getConfig('path', fallback="/var/run/smsshell.sock")
-        self.__umask = self.getConfig('umask', fallback=self.__default_umask)
+        self.__umask = self.getConfig('umask', fallback='{:o}'.format(self.__default_umask))
         self.__listen_queue = int(self.getConfig('listen_queue', fallback=10))
 
-    def __on_accept(self, server_socket, mask):
+    def __onAccept(self, server_socket, mask):
         client_socket, addr = server_socket.accept()
         client_socket.setblocking(0)
         # Register incoming client with metadatas
         assert client_socket.fileno() not in self.__current_peers
-        self.__current_peers[client_socket.fileno()] = dict(size=None, )
+        self.__current_peers[client_socket.fileno()] = dict(sock=client_socket)
 
         self.__socket_selector.register(fileobj=client_socket,
                                         events=selectors.EVENT_READ,
-                                        data=self.__on_read)
+                                        data=self.__onRead)
         g_logger.info('accepted new client with FD %d on unix socket', client_socket.fileno())
 
-    def __on_read(self, client_socket, mask):
+    def __onRead(self, client_socket, mask):
         """Call each time a socket received an event
 
-        @param socket client_socket the source socket
+        Args:
+            client_socket: the source client socket
         """
         try:
             request_data = client_socket.recv(1000)
             # if these is data, that mean client has send some bytes to read
             if request_data:
-                g_logger.info('get %d bytes of data from FD %d', len(request_data), client_socket.fileno())
-                g_logger.debug('get data from FD %d: %s', client_socket.fileno(), request_data)
+                g_logger.info('get %d bytes of data from FD %d',
+                              len(request_data),
+                              client_socket.fileno())
+                g_logger.debug('get data from FD %d: %s',
+                               client_socket.fileno(),
+                               request_data)
                 # return a simple ACK to client with received size to confirm all is OK
                 g_logger.debug('send ACK to FD %d', client_socket.fileno())
                 response = dict(status=0, length=len(request_data))
@@ -91,12 +97,12 @@ class Receiver(AbstractReceiver):
                 return request_data
             # If there is no data, the socket must have been closed from client side
             else:
-                self.__close_connection(client_socket)
-        except ConnectionError as e:
-            g_logger.warning('client connection with FD %s raise connection error : %s', client_socket.fileno(), str(e))
-            self.__close_connection(client_socket)
+                self.__closeConnection(client_socket)
+        except ConnectionError as ex:
+            g_logger.warning('client connection with FD %s raise connection error : %s', client_socket.fileno(), str(ex))
+            self.__closeConnection(client_socket)
 
-    def __close_connection(self, client_socket):
+    def __closeConnection(self, client_socket):
         """
         """
         # We can't ask conn for getpeername() here, because the peer may no
@@ -111,7 +117,9 @@ class Receiver(AbstractReceiver):
         """Start the unix socket receiver
 
         Init the socket
-        @return self
+
+        Returns:
+            a boolean that indicates the successful of the stop operation
         """
         directory = os.path.dirname(self.__path)
         # check permissions
@@ -136,7 +144,7 @@ class Receiver(AbstractReceiver):
         # check directory write rights
         if not os.access(directory, os.X_OK|os.W_OK):
             g_logger.fatal('Unsufficients permissions into the directory %s to create the socket',
-                            self.__path)
+                           self.__path)
             return False
         g_logger.debug('creating new server socket')
 
@@ -148,8 +156,10 @@ class Receiver(AbstractReceiver):
         # Bind the socket to the port
         try:
             umask = int(self.__umask, 8)
-        except ValueError as e:
-            g_logger.error('Invalid UMASK format, fallback to default umask %s', self.__default_umask)
+        except ValueError:
+            g_logger.error("Invalid UMASK format '%s', fallback to default umask %s",
+                           self.__umask,
+                           self.__default_umask)
             umask = self.__default_umask
         g_logger.debug('bind socket to path %s with umask %s', self.__path, oct(umask))
 
@@ -163,30 +173,36 @@ class Receiver(AbstractReceiver):
         g_logger.info('Unix receiver ready to listen on %s FD %d', self.__path, self.__server_socket.fileno())
 
         ## Init sockets selector
-        self.__socket_selector = selectors.DefaultSelector()
         self.__socket_selector.register(fileobj=self.__server_socket,
                                         events=selectors.EVENT_READ,
-                                        data=self.__on_accept)
-
+                                        data=self.__onAccept)
         return True
 
     def stop(self):
         """Stop the unix socket receiver
 
-        @return self
+        Returns:
+            a boolean that indicates the successful of the stop operation
         """
         g_logger.info('Closing unix receiver')
         g_logger.debug('closing all unix sockets')
-        for fd in self.__current_peers:
-            fd.close()
+        for peer in self.__current_peers.values():
+            peer['sock'].close()
         g_logger.debug('closing server socket')
         self.__server_socket.close()
         self.__socket_selector.close()
+        try:
+            os.unlink(self.__path)
+        except OSError:
+            g_logger.error('unable to delete socket')
+            return False
+        return True
 
     def read(self):
         """Wait and receive data from network clients
 
-        @return Iterable
+        Returns:
+            Iterable
         """
         while True:
             # Wait until some registered socket becomes ready.
@@ -197,5 +213,6 @@ class Receiver(AbstractReceiver):
                 callback = key.data
                 socket_data = callback(key.fileobj, mask)
                 # yield only data read from client sockets
-                if key.data == self.__on_read:
+                # compare the data object with the onread function
+                if key.data == self.__onRead:
                     yield socket_data
