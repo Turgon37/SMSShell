@@ -4,6 +4,7 @@ import pytest
 
 import SMSShell
 import SMSShell.transmitters
+import SMSShell.models
 
 
 def test_abstract_init():
@@ -20,5 +21,6 @@ def test_abstract_transmit():
     """Test base transmitter class exception
     """
     abs = SMSShell.transmitters.AbstractTransmitter()
+    message = SMSShell.models.Message('local', '')
     with pytest.raises(NotImplementedError):
-        abs.transmit('')
+        abs.transmit(message)

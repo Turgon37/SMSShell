@@ -15,6 +15,7 @@ def test_simple_transmit(capsys):
     """Test base parser class exception
     """
     transmitter = SMSShell.transmitters.stdout.Transmitter()
-    message = transmitter.transmit('OK')
+    message = SMSShell.models.Message('local', 'OK')
+    transmitter.transmit(message)
     out, err = capsys.readouterr()
     assert 'OK' in out
