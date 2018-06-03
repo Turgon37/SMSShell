@@ -1,8 +1,13 @@
 # -*- coding: utf8 -*-
 
+import queue
 import os
 import shlex
+import stat
 import subprocess
+import threading
+
+import SMSShell.receivers.fifo
 
 
 # command line test
@@ -25,17 +30,70 @@ def test_cmdline_without_arguments():
 def test_cmdline_write_fifo():
     """Test to write to a fifo
     """
-    fifo = './fifo'
-    result = subprocess.Popen(shlex.split('./bin/sms-shell-client -i env -o fifo -oa {}'.format(fifo)), stdout=subprocess.PIPE)
-    stdout, stderr = result.communicate()
-    assert result.returncode == 0
-    # without daemon running, this is a simple file
-    assert os.path.isfile(fifo)
+    m_fifo = './fifo'
+    m_data = 'ok'
+    m_channel = queue.Queue()
+
+    def writeToFifo(channel, fifo, data):
+        p = subprocess.Popen(shlex.split('./bin/sms-shell-client -i stdin -o fifo -oa {}'.format(fifo)),
+                             stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE)
+        (stdout, stderr) = p.communicate(input=data.encode())
+        channel.put((stdout, stderr, p.returncode))
+
+    # init socket
+    receiver = SMSShell.receivers.fifo.Receiver(config=dict(path=m_fifo))
+    assert receiver.start()
+    assert os.path.exists(m_fifo)
+    assert stat.S_ISFIFO(os.stat(m_fifo).st_mode)
+
+    # start client
+    threading.Thread(target=writeToFifo, args=(m_channel, m_fifo, m_data)).start()
+
+    # fetch one data from one client
+    r_data = next(receiver.read())
+    # ensure we had received what we sent
+    assert m_data in r_data
+
+    # assert client
+    stdout, stderr, returncode = m_channel.get()
+    assert returncode == 0
+    # clean
+    assert receiver.stop()
+    assert not os.path.exists(m_fifo)
 
 def test_cmdline_write_unix():
     """Test to write to an unix socket
     """
-    unix = './unix'
-    result = subprocess.Popen(shlex.split('./bin/sms-shell-client -i env -o unix -oa {}'.format(unix)), stdout=subprocess.PIPE)
-    stdout, stderr = result.communicate()
-    assert result.returncode == 1
+    m_unix = './unix'
+    m_data = 'ok'
+    m_channel = queue.Queue()
+
+    def writeToFifo(queue, unix, data):
+        p = subprocess.Popen(shlex.split('./bin/sms-shell-client -i stdin -o unix -oa {}'.format(unix)),
+                             stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE)
+
+        (stdout, stderr) = p.communicate(input=data.encode())
+        queue.put((stdout, stderr, p.returncode))
+
+    # init socket
+    receiver = SMSShell.receivers.unix.Receiver(config=dict(path=m_unix))
+    assert receiver.start()
+    assert os.path.exists(m_unix)
+    assert stat.S_ISSOCK(os.stat(m_unix).st_mode)
+
+    # start client
+    threading.Thread(target=writeToFifo, args=(m_channel, m_unix, m_data)).start()
+
+    # fetch one data from one client
+    r_data = next(receiver.read())
+    # ensure we had received what we sent
+    assert m_data in r_data
+
+    # assert client
+    stdout, stderr, returncode = m_channel.get()
+    assert returncode == 0
+    # clean
+    assert receiver.stop()
+    assert not os.path.exists(m_unix)
