@@ -3,6 +3,7 @@
 import os
 import pytest
 import re
+import sys
 
 import SMSShell
 import SMSShell.utils
@@ -195,3 +196,17 @@ def test_backupfile_status_report_sms_decoding():
     assert content['type'] == 'SMS'
     assert content['sms_number'] == '+3301234'
     assert content['sms_type'] == 'status_report'
+
+def test_backupfile_missing_file():
+    """Test to give an unexistent file
+    """
+    content = SMSShell.utils.GammuSMSParser.decodeFromBackupFilePath(getBackupSample('unexistent_file'))
+    assert isinstance(content, dict)
+    assert content['errors']
+
+def test_backupfile_unreadable_file():
+    """Test to give an unreadable file
+    """
+    content = SMSShell.utils.GammuSMSParser.decodeFromBackupFilePath(getBackupSample('/etc/shadow'))
+    assert isinstance(content, dict)
+    assert content['errors']

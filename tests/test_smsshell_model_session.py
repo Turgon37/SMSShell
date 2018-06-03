@@ -34,6 +34,12 @@ def test_session_bad_state_transition():
     with pytest.raises(BadStateTransitionException):
         s.state = SessionStates.STATE_LOGININPROGRESS
 
+    with pytest.raises(BadStateTransitionException):
+        s.state = 1
+
+    with pytest.raises(BadStateTransitionException):
+        s.forceState(1)
+
 def test_session_ttl():
     """Test ttl validation
     """
