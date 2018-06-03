@@ -11,11 +11,11 @@ import threading
 import SMSShell
 import SMSShell.receivers.unix
 
-def test_init():
+def test_start():
     """Just start and stop the receiver
     """
     unix = './r_unix'
-    receiver = SMSShell.receivers.unix.Receiver(config=dict(path=unix))
+    receiver = SMSShell.receivers.unix.Receiver(config=dict(path=unix, umask='80'))
     assert receiver.start()
     assert os.path.exists(unix)
     assert stat.S_ISSOCK(os.stat(unix).st_mode)
@@ -23,7 +23,7 @@ def test_init():
     assert receiver.stop()
     assert not os.path.exists(unix)
 
-def test_bad_init_because_path_already_exists():
+def test_bad_start_because_path_already_exists():
     """Ensure receiver do not start if path exists
     """
     unix = './r_unix'
@@ -37,6 +37,23 @@ def test_bad_init_because_path_already_exists():
     # clean
     os.rmdir(unix)
     assert not os.path.exists(unix)
+
+def test_bad_start_because_path_not_writable():
+    """Ensure receiver do not start correctly if path is not writable
+    """
+    unix = '/root/r_unix'
+    receiver = SMSShell.receivers.unix.Receiver(config=dict(path=unix))
+    assert not receiver.start()
+
+def test_bad_stop_because_path_already_deleted():
+    """Ensure receiver do not stop correctly if path removed
+    """
+    unix = './r_unix'
+    receiver = SMSShell.receivers.unix.Receiver(config=dict(path=unix))
+    assert receiver.start()
+    # clean
+    os.unlink(unix)
+    assert not receiver.stop()
 
 def test_simple_read_from_socket():
     """Open the socket and test read/write

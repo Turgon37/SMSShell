@@ -21,7 +21,7 @@ def test_init():
     assert receiver.stop()
     assert not os.path.exists(fifo)
 
-def test_bad_init_because_path_already_exists():
+def test_bad_start_because_path_already_exists():
     """Ensure receiver do not start if path exists
     """
     fifo = './r_fifo'
@@ -35,6 +35,31 @@ def test_bad_init_because_path_already_exists():
     # clean
     os.rmdir(fifo)
     assert not os.path.exists(fifo)
+
+def test_bad_start_because_path_not_writable():
+    """Ensure receiver do not start correctly if path is not writable
+    """
+    fifo = '/root/r_fifo'
+    receiver = SMSShell.receivers.fifo.Receiver(config=dict(path=fifo))
+    assert not receiver.start()
+
+def test_good_start_on_previous_fifo():
+    """Ensure receiver start using previous fifo
+    """
+    fifo = './r_fifo'
+    receiver = SMSShell.receivers.fifo.Receiver(config=dict(path=fifo))
+    assert receiver.start()
+    assert receiver.start()
+
+def test_bad_stop_because_path_already_deleted():
+    """Ensure receiver do not stop correctly if path removed
+    """
+    fifo = './r_fifo'
+    receiver = SMSShell.receivers.fifo.Receiver(config=dict(path=fifo))
+    assert receiver.start()
+    # clean
+    os.unlink(fifo)
+    assert not receiver.stop()
 
 def test_simple_read_from_fifo():
     """Open the fifo and test read/write

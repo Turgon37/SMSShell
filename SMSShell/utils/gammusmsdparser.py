@@ -178,8 +178,6 @@ class GammuSMSParser(object):
             return message
 
         backup = gammu.ReadSMSBackup(backup_file_path)
-        print(type(backup))
-        print(backup)
 
         # Make nested array
         backup_messages = [[backup_message] for backup_message in backup]

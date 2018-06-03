@@ -40,6 +40,8 @@ class SessionException(ShellException):
 
 
 class BadStateTransitionException(SessionException):
+    """Raise when someone try to follow a state transition that is not allowed
+    """
     pass
 
 
@@ -58,8 +60,17 @@ class Session(object):
 
     # map of authorized session states transitions
     STATE_TRANSITION_MAP = {
-        'STATE_GUEST': ['STATE_LOGININPROGRESS', 'STATE_USER'],
-        'STATE_USER': ['STATE_GUEST']
+        'STATE_GUEST': [
+            'STATE_LOGININPROGRESS',
+            'STATE_USER',
+        ],
+        'STATE_LOGININPROGRESS': [
+            'STATE_USER',
+            'STATE_GUEST',
+        ],
+        'STATE_USER': [
+            'STATE_GUEST',
+        ]
     }
 
     def __init__(self, subject, time_to_live=600):
@@ -76,7 +87,7 @@ class Session(object):
         # internal attributes
         self.__subject = None
         self.__ttl = None
-        self.__prefix = None
+        self.__prefix = ''
         self.__state = None
         self.__created_at = datetime.datetime.today()
         self.__storage = dict()
@@ -198,7 +209,7 @@ class Session(object):
         Returns:
             true if the session is still valid, false otherwise
         """
-        if (datetime.datetime.today() - self.access_at).seconds > self.ttl:
+        if (datetime.datetime.today() - self.access_at).seconds >= self.ttl:
             g_logger.debug('session for %s is expired', self.subject)
             return False
         return True
