@@ -205,6 +205,10 @@ class Receiver(AbstractReceiver):
             except KeyError:
                 g_logger.error("Incorrect group name '%s' for receiver, ignoring group directive",
                                self.__group)
+            except PermissionError:
+                g_logger.error("Cannot change group ownership, you are not member of " +
+                               "group name '%s', ignoring group directive",
+                               self.__group)
 
         # Listen for incoming connections
         g_logger.debug('set socket to listening mode with listen queue size %d',
