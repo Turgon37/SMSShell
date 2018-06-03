@@ -25,7 +25,7 @@ class SMSShellException(Exception):
     """
     pass
 
-class ShellInitException(Exception):
+class ShellInitException(SMSShellException):
     """Base exception for shell initialization procedures
 
     Must be raise by parsers,transmitters,receivers on start() error

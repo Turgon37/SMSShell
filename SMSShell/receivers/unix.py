@@ -18,6 +18,9 @@
 # along with SMSShell. If not, see <http://www.gnu.org/licenses/>.
 
 """Message receiver from a local unix socket
+
+This receiver open an unix socket locally on the local host
+and listen for incoming message on it
 """
 
 # System imports
@@ -59,12 +62,21 @@ class Receiver(AbstractReceiver):
         self.__listen_queue = int(self.getConfig('listen_queue', fallback=10))
 
     def __onAccept(self, server_socket, mask):
+        """Call each time a new client connection occur
+
+        Args:
+            server_socket: the server socket from which to get
+                                    the socket to the new client
+            mask:
+        """
         client_socket, addr = server_socket.accept()
+        # disable blocking on client socket
         client_socket.setblocking(0)
-        # Register incoming client with metadatas
+        # Register incoming client with metadatas in tracking dict
         assert client_socket.fileno() not in self.__current_peers
         self.__current_peers[client_socket.fileno()] = dict(sock=client_socket)
 
+        # register socket into the selector
         self.__socket_selector.register(fileobj=client_socket,
                                         events=selectors.EVENT_READ,
                                         data=self.__onRead)
@@ -80,12 +92,14 @@ class Receiver(AbstractReceiver):
             request_data = client_socket.recv(1000)
             # if these is data, that mean client has send some bytes to read
             if request_data:
-                g_logger.info('get %d bytes of data from FD %d',
+                # receive the data
+                g_logger.info('get %d bytes of data from client socket with FD %d',
                               len(request_data),
                               client_socket.fileno())
                 g_logger.debug('get data from FD %d: %s',
                                client_socket.fileno(),
                                request_data)
+
                 # return a simple ACK to client with received size to confirm all is OK
                 g_logger.debug('send ACK to FD %d', client_socket.fileno())
                 response = dict(status=0, length=len(request_data))
@@ -94,6 +108,7 @@ class Receiver(AbstractReceiver):
                     response_data = response_data.encode()
                 client_socket.send(response_data)
 
+                # decode data
                 if not isinstance(request_data, str):
                     request_data = request_data.decode()
                 return request_data
@@ -105,17 +120,23 @@ class Receiver(AbstractReceiver):
                              client_socket.fileno(),
                              str(ex))
             self.__closeConnection(client_socket)
+        return None
 
     def __closeConnection(self, client_socket):
-        """
+        """Call each time a socket is closed
+
+        Flush and close properly client socket
+
+        Args:
+            client_socket: the client socket to close
         """
         # We can't ask conn for getpeername() here, because the peer may no
         # longer exist (hung up); instead we use our own mapping of socket
         # fds to peer names - our socket fd is still open.
-        g_logger.info('closing connection to FD %d', client_socket.fileno())
         del self.__current_peers[client_socket.fileno()]
         self.__socket_selector.unregister(client_socket)
         client_socket.close()
+        g_logger.info('closed client connection with FD %d', client_socket.fileno())
 
     def start(self):
         """Start the unix socket receiver
@@ -168,15 +189,19 @@ class Receiver(AbstractReceiver):
             umask = self.__default_umask
         g_logger.debug('bind socket to path %s with umask %s', self.__path, oct(umask))
 
+        # create socket file
         old_umask = os.umask(umask)
         self.__server_socket.bind(self.__path)
         os.umask(old_umask)
 
+        # optionally change group of the socket
         if self.__group:
             try:
                 os.chown(self.__path,
                          -1,
                          groupToGid(self.__group))
+                g_logger.info("Switched socket group owner to '%s'",
+                              self.__group)
             except KeyError:
                 g_logger.error("Incorrect group name '%s' for receiver, ignoring group directive",
                                self.__group)
@@ -228,6 +253,9 @@ class Receiver(AbstractReceiver):
 
             # For each new event, dispatch to its handler
             for key, mask in events:
+                # callback can be a function registered in selector
+                # currently we have only
+                # __onRead and __onAccept
                 callback = key.data
                 socket_data = callback(key.fileobj, mask)
                 # yield only data read from client sockets

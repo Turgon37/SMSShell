@@ -43,7 +43,6 @@ class Desc(AbstractCommand):
         return 'Show commands short description'
 
     def main(self, argv, pargs):
-        print(pargs)
         try:
             return self.shell.getCommand(self.session,
                                          pargs.command).description(pargs.command_argv)
