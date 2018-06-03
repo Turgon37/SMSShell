@@ -40,11 +40,25 @@ class Transmitter(AbstractTransmitter):
         """Init function
         """
         self.__smsd = None
+        self.__default_umask = 0o117
+
+        # configuration
         self.__config = self.getConfig('smsdrc_configuration', fallback='/etc/gammu-smsdrc')
 
+        # config
+        self.__path = self.getConfig('path', fallback="/var/run/smsshell.sock")
+
+        # parse umask
+        try:
+            self.__umask = int(self.getConfig('umask', fallback='{:o}'.format(self.__default_umask)),
+                               8)
+        except ValueError:
+            g_logger.error("Invalid UMASK format '%s', fallback to default umask %s",
+                           self.__umask,
+                           self.__default_umask)
+            self.__umask = self.__default_umask
+
     def start(self):
-        """
-        """
         try:
             import gammu.smsd
         except ImportError as ex:
@@ -82,4 +96,8 @@ class Transmitter(AbstractTransmitter):
             },
             'Number': answer.sender,
         }
+
+        # change umask before to create outbox file
+        old_umask = os.umask(self.__umask)
         self.__smsd.InjectSMS([message])
+        os.umask(old_umask)
