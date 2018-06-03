@@ -22,6 +22,7 @@
 
 # Project imports
 from ..abstract import AbstractModule
+from ..models import Message
 
 
 class AbstractTransmitter(AbstractModule):
@@ -42,10 +43,11 @@ class AbstractTransmitter(AbstractModule):
         """
         raise NotImplementedError("You must implement the 'stop' method in receiver class")
 
-    def transmit(self, raw):
+    def transmit(self, answer):
         """Forward the message to end user
 
         Args:
-            raw: the raw message to transmit to end user
+            answer: the Message instance of the message to transmit to end user
         """
+        assert isinstance(answer, Message)
         raise NotImplementedError("You must implement the 'transmit' method in transmitter class")

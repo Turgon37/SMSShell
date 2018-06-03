@@ -22,9 +22,11 @@
 
 # System imports
 import logging
+import sys
 
 # Project imports
 from . import AbstractTransmitter
+from ..models import Message
 
 # Global project declarations
 g_logger = logging.getLogger('smsshell.transmitters.stdout')
@@ -40,5 +42,7 @@ class Transmitter(AbstractTransmitter):
     def stop(self):
         return True
 
-    def transmit(self, raw):
-        print('TRANSMIT: {}'.format(raw))
+    def transmit(self, answer):
+        assert isinstance(answer, Message)
+        sys.stdout.write('TRANSMIT to {}: {}\n'.format(answer.sender,
+                                                       answer.asString()))
