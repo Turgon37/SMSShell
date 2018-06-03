@@ -6,6 +6,11 @@ import SMSShell
 import SMSShell.transmitters.stdout
 
 
+def test_init(capsys):
+    transmitter = SMSShell.transmitters.stdout.Transmitter()
+    assert transmitter.start()
+    assert transmitter.stop()
+
 def test_simple_transmit(capsys):
     """Test base parser class exception
     """
