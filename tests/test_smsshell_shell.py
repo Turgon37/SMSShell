@@ -50,15 +50,15 @@ def test_exec_command_not_found():
     with pytest.raises(SMSShell.commands.CommandNotFoundException):
         shell.exec('sender', 'nonexistent')
 
-def test_exec_command_forbidden():
-    conf = SMSShell.config.MyConfigParser()
-    assert conf.load('./config.conf')[1]
-    assert conf.isLoaded()
-
-    shell = SMSShell.shell.Shell(conf)
-
-    with pytest.raises(SMSShell.commands.CommandForbidden):
-        shell.exec('sender', 'logout')
+# def test_exec_command_forbidden():
+#     conf = SMSShell.config.MyConfigParser()
+#     assert conf.load('./config.conf')[1]
+#     assert conf.isLoaded()
+#
+#     shell = SMSShell.shell.Shell(conf)
+#
+#     with pytest.raises(SMSShell.commands.CommandForbidden):
+#         shell.exec('sender', 'logout')
 
 def test_secure_wrapper():
     """Test to use secure shell wrapper
