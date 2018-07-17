@@ -249,7 +249,7 @@ class GammuSMSParser(object):
 
                     # String to encode in message.
                     if entry['Buffer']:
-                        message['sms_text'] += entry['Buffer']
+                        message['sms_text'] = (message['sms_text'] or '') + entry['Buffer']
                     # MMS indication to encode in message.
                     if entry['MMSIndicator']:
                         mms_infos = entry['MMSIndicator']
