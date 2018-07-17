@@ -102,6 +102,8 @@ def getMessageFromInput(method, *args, **kwargs):
     try:
         return func(*args, **kwargs)
     except TypeError as ex:
+        if 'required positional argument' not in str(ex):
+            raise ex
         g_logger.critical('The input function failed maybe because it missing an input argument,'
                           ' see details below and refer to (-ia)')
         g_logger.critical('error : %s', str(ex))
