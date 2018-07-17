@@ -54,7 +54,7 @@ class ShellException(Exception):
         message: the standard full exception error message
         short: an optional short message that can be send back to the user
     """
-    def __init__(self, message, short='general exeception'):
+    def __init__(self, message, short='general exception'):
         super().__init__(message)
         self.short_message = short
 

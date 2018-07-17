@@ -69,14 +69,22 @@ class Shell(object):
             subject: an identifier of the command launcher
             cmdline: the raw command line
         """
-        argv = shlex.split(cmdline)
+        try:
+            argv = shlex.split(cmdline)
+        except ValueError as ex:
+            raise ShellException('Command line parsng failed because of bad syntax: ' + str(ex),
+                                 'bad syntax: '+str(ex).lower().strip())
         if len(argv) < 1:
-            raise ShellException('bad number of arguments')
+            raise ShellException('Not enough arguments in arguments vector',
+                                 'bad number of arguments')
+
         cmd = argv[0]
         if not cmd:
-            raise ShellException('empty command name')
+            raise ShellException('Cannot extract command name from shell command line')
+
         if not subject:
-            raise ShellException('empty subject name')
+            raise ShellException('The passed subject is empty')
+
         sess = self.__getSessionForSubject(subject)
         g_logger.info("Subject %s run command '%s' with args : %s", subject, cmd, str(argv[1:]))
         return self.__call(sess, cmd, argv[1:]).strip()
