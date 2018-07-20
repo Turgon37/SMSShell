@@ -7,6 +7,7 @@ import SMSShell.config
 import SMSShell.shell
 import SMSShell.models.session
 import SMSShell.commands
+import SMSShell.exceptions
 
 
 def test_loading():
@@ -49,6 +50,19 @@ def test_exec_command_not_found():
 
     with pytest.raises(SMSShell.commands.CommandNotFoundException):
         shell.exec('sender', 'nonexistent')
+
+def test_exec_with_bad_syntax():
+    conf = SMSShell.config.MyConfigParser()
+    assert conf.load('./config.conf')[1]
+    assert conf.isLoaded()
+
+    shell = SMSShell.shell.Shell(conf)
+
+    with pytest.raises(SMSShell.exceptions.ShellException):
+        shell.exec('sender', '"')
+
+    with pytest.raises(SMSShell.exceptions.ShellException):
+        shell.exec('sender', '\\')
 
 # def test_exec_command_forbidden():
 #     conf = SMSShell.config.MyConfigParser()

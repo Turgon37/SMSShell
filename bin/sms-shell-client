@@ -163,6 +163,7 @@ def sendMessageToOutput(method, message, *args, **kwargs):
         g_logger.critical('The output function failed maybe because it missing an output argument,'
                           'see details below and refer to (-oa)')
         g_logger.critical('error : %s', str(ex))
+    sys.exit(1)
 
 def sendMessageToOutputUnix(message, socket_path):
     """Write the message to an unix socket
@@ -282,6 +283,7 @@ if __name__ == '__main__':
     msg = encodeMessage(pargs.encoding, msg)
     g_logger.debug('encoded message to %s', str(msg))
 
-    sendMessageToOutput(pargs.output, msg, *pargs.output_arg)
+    if not sendMessageToOutput(pargs.output, msg, *pargs.output_arg):
+        sys.exit(1)
 
     sys.exit(0)

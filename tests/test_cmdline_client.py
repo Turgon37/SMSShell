@@ -27,6 +27,15 @@ def test_cmdline_without_arguments():
     stdout, stderr = result.communicate()
     assert result.returncode == 1
 
+def test_cmdline_without_input_argument_arguments():
+    """Test to write to a fifo
+    """
+    result = subprocess.Popen(shlex.split('./bin/sms-shell-client -i file'),
+                              stdin=subprocess.PIPE,
+                              stdout=subprocess.PIPE)
+    stdout, stderr = result.communicate()
+    assert result.returncode == 1
+
 def test_cmdline_write_fifo():
     """Test to write to a fifo
     """
@@ -61,6 +70,19 @@ def test_cmdline_write_fifo():
     # clean
     assert receiver.stop()
     assert not os.path.exists(m_fifo)
+
+def test_cmdline_write_fifo_with_os_error():
+    """Test to write to a fifo
+    """
+    m_fifo = '/nonexistentfolder/fifo'
+    m_data = 'ok'
+    result = subprocess.Popen(shlex.split('./bin/sms-shell-client -i stdin -o fifo -oa {}'.format(m_fifo)),
+                              stdin=subprocess.PIPE,
+                              stdout=subprocess.PIPE)
+    stdout, stderr = result.communicate(input=m_data.encode())
+    print(stdout)
+    print(stderr)
+    assert result.returncode == 1
 
 def test_cmdline_write_unix():
     """Test to write to an unix socket
