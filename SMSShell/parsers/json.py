@@ -34,7 +34,7 @@ g_logger = logging.getLogger('smsshell.parsers.json')
 
 
 class Parser(AbstractParser):
-    """An JSON format parser
+    """A JSON format parser
     """
 
     def parse(self, raw):

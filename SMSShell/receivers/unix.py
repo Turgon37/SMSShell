@@ -59,7 +59,12 @@ class Receiver(AbstractReceiver):
         self.__path = self.getConfig('path', fallback="/var/run/smsshell.sock")
         self.__umask = self.getConfig('umask', fallback='{:o}'.format(self.__default_umask))
         self.__group = self.getConfig('group')
-        self.__listen_queue = int(self.getConfig('listen_queue', fallback=10))
+        try:
+            self.__listen_queue = int(self.getConfig('listen_queue', fallback=10))
+        except ValueError:
+            self.__listen_queue = 10
+            g_logger.error(("invalid integer parameter for option 'listen_queue',"
+                            " fallback to default value 10"))
 
     def __onAccept(self, server_socket, mask):
         """Call each time a new client connection occur

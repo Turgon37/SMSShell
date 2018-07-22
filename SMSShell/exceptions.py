@@ -55,8 +55,7 @@ class ShellException(Exception):
         short: an optional short message that can be send back to the user
     """
     def __init__(self, message, short='general exception'):
-        super().__init__(message)
-        self.short_message = short
+        super().__init__(message, short)
 
 class BadCommandCall(ShellException):
     """Raised when you call a command with bad arguments
