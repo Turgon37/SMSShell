@@ -31,7 +31,6 @@ import importlib
 import logging
 import logging.handlers
 import os
-import setproctitle
 import signal
 import sys
 
@@ -123,17 +122,6 @@ class SMSShell(object):
             else:
                 g_logger.fatal('Could not create daemon')
                 raise Exception('Could not create daemon')
-
-        # init base processus title
-        proctitle = setproctitle.getproctitle().split()
-        if 'python' in proctitle[0] and len(proctitle) > 1:
-            self.__proctitle = ' '.join(proctitle[0:2])
-        else:
-            title = proctitle[0]
-            if 'sms-shell' not in title:
-                title += ' smsshell'
-            self.__proctitle = title
-        self.__setproctitle('initializing')
 
         # Check pidfile
         if pid_path is None:
@@ -262,11 +250,8 @@ class SMSShell(object):
         self.__metrics.counter('messages.receive.errors.total', value=0, description='Number of erroneous received messages')
         self.__metrics.counter('messages.transmit.total', value=0, description='Number of transmitted messages')
         self.__metrics.counter('messages.transmit.errors.total', value=0, description='Number of erroneous transmitted messages')
-        # defaut status of processus
-        self.__setproctitle('waiting for incoming message')
         # read and parse each message from receiver
         for raw in recv.read():
-            self.__setproctitle('parsing message')
             self.__metrics.counter('messages.receive.total')
             # parse received content
             try:
@@ -274,10 +259,8 @@ class SMSShell(object):
             except SMSException as ex:
                 self.__metrics.counter('messages.receive.errors.total')
                 g_logger.error('received a bad message, skipping because of %s', str(ex))
-                self.__setproctitle('waiting for incoming message')
                 continue
 
-            self.__setproctitle('executing shell command')
             # run in shell
             try:
                 response_content = shell.exec(msg.sender, msg.asString())
@@ -290,7 +273,6 @@ class SMSShell(object):
                 response_content = '#Err: {}'.format(ex_message)
 
             # forge the answer
-            self.__setproctitle('sending answer')
             self.__metrics.counter('messages.transmit.total')
             try:
                 answer = Message(msg.sender, response_content)
@@ -298,11 +280,7 @@ class SMSShell(object):
             except SMSException as ex:
                 self.__metrics.counter('messages.transmit.errors.total')
                 g_logger.error('error on emitting a message: %s', str(ex))
-                self.__setproctitle('waiting for incoming message')
                 continue
-
-            # return to waiting state
-            self.__setproctitle('waiting for incoming message')
 
 
     def stop(self):
@@ -345,11 +323,6 @@ class SMSShell(object):
         """
         g_logger.debug("Caught system signal %d", signum)
         sys.exit(self.stop())
-
-    def __setproctitle(self, suffix):
-        """Set the current processus title using the given suffix
-        """
-        setproctitle.setproctitle(''.join([self.__proctitle + ': ', suffix]))
 
     def __downgrade(self):
         """Downgrade daemon privilege to another uid/gid
