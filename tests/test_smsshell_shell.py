@@ -6,6 +6,7 @@ import SMSShell
 import SMSShell.config
 import SMSShell.shell
 import SMSShell.models.session
+import SMSShell.metrics.none
 import SMSShell.commands
 import SMSShell.exceptions
 
@@ -17,7 +18,9 @@ def test_loading():
     assert conf.load('./config.conf')[1]
     assert conf.isLoaded()
 
-    shell = SMSShell.shell.Shell(conf)
+    metrics = SMSShell.metrics.none.MetricsHelper()
+
+    shell = SMSShell.shell.Shell(conf, metrics)
     session = SMSShell.models.session.Session('sender')
 
 def test_loading_all_commands():
@@ -25,7 +28,9 @@ def test_loading_all_commands():
     assert conf.load('./config.conf')[1]
     assert conf.isLoaded()
 
-    shell = SMSShell.shell.Shell(conf)
+    metrics = SMSShell.metrics.none.MetricsHelper()
+
+    shell = SMSShell.shell.Shell(conf, metrics)
     session = SMSShell.models.session.Session('sender')
 
     assert shell.getAvailableCommands(session)
@@ -36,7 +41,9 @@ def test_exec_command_help():
     assert conf.load('./config.conf')[1]
     assert conf.isLoaded()
 
-    shell = SMSShell.shell.Shell(conf)
+    metrics = SMSShell.metrics.none.MetricsHelper()
+
+    shell = SMSShell.shell.Shell(conf, metrics)
 
     assert shell.exec('sender', 'help')
     assert shell.exec('sender', 'help')
@@ -46,7 +53,9 @@ def test_exec_command_not_found():
     assert conf.load('./config.conf')[1]
     assert conf.isLoaded()
 
-    shell = SMSShell.shell.Shell(conf)
+    metrics = SMSShell.metrics.none.MetricsHelper()
+
+    shell = SMSShell.shell.Shell(conf, metrics)
 
     with pytest.raises(SMSShell.commands.CommandNotFoundException):
         shell.exec('sender', 'nonexistent')
@@ -56,7 +65,9 @@ def test_exec_with_bad_syntax():
     assert conf.load('./config.conf')[1]
     assert conf.isLoaded()
 
-    shell = SMSShell.shell.Shell(conf)
+    metrics = SMSShell.metrics.none.MetricsHelper()
+
+    shell = SMSShell.shell.Shell(conf, metrics)
 
     with pytest.raises(SMSShell.exceptions.ShellException):
         shell.exec('sender', '"')
@@ -81,7 +92,9 @@ def test_secure_wrapper():
     assert conf.load('./config.conf')[1]
     assert conf.isLoaded()
 
-    shell = SMSShell.shell.Shell(conf)
+    metrics = SMSShell.metrics.none.MetricsHelper()
+
+    shell = SMSShell.shell.Shell(conf, metrics)
     sw = shell.getSecureShell()
     sw.flushCommandCache()
 
@@ -92,7 +105,9 @@ def test_secure_wrapper_isolation():
     assert conf.load('./config.conf')[1]
     assert conf.isLoaded()
 
-    shell = SMSShell.shell.Shell(conf)
+    metrics = SMSShell.metrics.none.MetricsHelper()
+
+    shell = SMSShell.shell.Shell(conf, metrics)
     sw = shell.getSecureShell()
 
     with pytest.raises(AttributeError):

@@ -80,8 +80,6 @@ def test_cmdline_write_fifo_with_os_error():
                               stdin=subprocess.PIPE,
                               stdout=subprocess.PIPE)
     stdout, stderr = result.communicate(input=m_data.encode())
-    print(stdout)
-    print(stderr)
     assert result.returncode == 1
 
 def test_cmdline_write_unix():

@@ -31,6 +31,7 @@ import importlib
 import logging
 import logging.handlers
 import os
+import setproctitle
 import signal
 import sys
 
@@ -40,6 +41,7 @@ from .models import Message
 from .receivers import AbstractReceiver
 from .parsers import AbstractParser
 from .transmitters import AbstractTransmitter
+from .metrics import AbstractMetricsHelper
 from .shell import Shell
 from .exceptions import SMSShellException, SMSException, ShellException, ShellInitException
 
@@ -69,6 +71,9 @@ class SMSShell(object):
 
         # List of callable to call on smsshell stop
         self.__stop_callbacks = []
+
+        # Internal reference to metrics handler
+        self.__metrics = None
 
     def load(self, config_file):
         """Load configuration function
@@ -119,6 +124,17 @@ class SMSShell(object):
                 g_logger.fatal('Could not create daemon')
                 raise Exception('Could not create daemon')
 
+        # init base processus title
+        proctitle = setproctitle.getproctitle().split()
+        if 'python' in proctitle[0] and len(proctitle) > 1:
+            self.__proctitle = ' '.join(proctitle[0:2])
+        else:
+            title = proctitle[0]
+            if 'sms-shell' not in title:
+                title += ' smsshell'
+            self.__proctitle = title
+        self.__setproctitle('initializing')
+
         # Check pidfile
         if pid_path is None:
             pid_path = self.cp.get(self.cp.MAIN_SECTION, 'pid', fallback='/var/run/smsshell.pid')
@@ -147,7 +163,29 @@ class SMSShell(object):
 
         # loose users privileges if needed
         self.__downgrade()
-        self.run()
+
+        # Init metrics handler
+        try:
+            metrics = self.importAndLoadModule(
+                '.metrics.' + self.cp.get('daemon', 'metrics_handler', fallback='prometheus'),
+                'MetricsHelper', AbstractMetricsHelper, 'metrics'
+            )
+        except ShellInitException as ex:
+            g_logger.fatal("Unable to load metrics handler module : %s", str(ex))
+            return False
+
+        if not metrics.start():
+            g_logger.fatal('Unable to open metrics handler')
+            return False
+        self.__metrics = metrics
+        self.__stop_callbacks.append(metrics.stop)
+
+        # run the fonctionnal endpoint
+        if self.cp.getMode() == 'STANDALONE':
+            # Init standalone mode
+            raise NotImplementedError('STANDALONE mode not yet implemented')
+        else:
+            self.runDaemonMode()
 
         # Stop properly
         self.stop()
@@ -155,7 +193,7 @@ class SMSShell(object):
         return True
 
 
-    def importAndCheckAbstract(self, module_path, class_name, abstract, config_section=None):
+    def importAndLoadModule(self, module_path, class_name, abstract_class=None, config_section=None):
         """Import a sub module, instanciate a class and check object's instance
 
         @param str module_path the path to the module in the file system
@@ -167,86 +205,104 @@ class SMSShell(object):
         try:
             mod = importlib.import_module(module_path, package='SMSShell')
         except ImportError as ex:
-            raise ShellInitException(("Unable to import the module {0}."
-                                      " Reason : {1}").format(module_path, str(ex)))
+            raise ShellInitException(("Unable to import the module '{0}',"
+                                      " reason : {1}").format(module_path, str(ex)))
         try: # instanciate
             _class = getattr(mod, class_name)
+            _class_args = dict(metrics=self.__metrics)
+            # append config dict if exist in config file
             if config_section and config_section in self.cp:
-                inst = _class(self.cp[config_section])
-            else:
-                inst = _class()
+                _class_args['config']=self.cp[config_section]
+            inst = _class(**_class_args)
         except AttributeError as ex:
             raise ShellInitException("Error in module '{0}' : {1}.".format(module_path, str(ex)))
 
         # handler class checking
-        if not isinstance(inst, abstract):
+        if abstract_class and not isinstance(inst, abstract_class):
             raise ShellInitException(("Class '{0}' must extend "
                                       "AbstractCommand class").format(module_path))
         return inst
 
-    def run(self):
-        """This function do main applicatives stuffs
+    def runDaemonMode(self):
+        """Entrypoint of daemon mode
         """
-        shell = Shell(self.cp)
-        if self.cp.getMode() == 'STANDALONE':
-            # Init standalone mode
-            raise NotImplementedError('STANDALONE mode not yet implemented')
-        else:
-            # Init daemon mode
+        shell = Shell(self.cp, self.__metrics)
+
+        # Init daemon mode objects
+        try:
+            parser = self.importAndLoadModule(
+                '.parsers.' + self.cp.get('daemon', 'message_parser', fallback="json"),
+                'Parser', AbstractParser, 'parser'
+            )
+            recv = self.importAndLoadModule(
+                '.receivers.' + self.cp.get('daemon', 'receiver_type', fallback="fifo"),
+                'Receiver', AbstractReceiver, 'receiver'
+            )
+            transm = self.importAndLoadModule(
+                '.transmitters.' + self.cp.get('daemon', 'transmitter_type', fallback="file"),
+                'Transmitter', AbstractTransmitter, 'transmitter'
+            )
+        except ShellInitException as ex:
+            g_logger.fatal("Unable to load an internal module : %s", str(ex))
+            return False
+
+        if not recv.start():
+            g_logger.fatal('Unable to open receiver')
+            return False
+        # register the receiver close callback to properly close opened file descriptors
+        self.__stop_callbacks.append(recv.stop)
+
+        if not transm.start():
+            g_logger.fatal('Unable to open transmitter')
+            return False
+        self.__stop_callbacks.append(transm.stop)
+
+        # init counters
+        self.__metrics.counter('messages.receive.total', value=0, description='Number of received messages')
+        self.__metrics.counter('messages.receive.errors.total', value=0, description='Number of erroneous received messages')
+        self.__metrics.counter('messages.transmit.total', value=0, description='Number of transmitted messages')
+        self.__metrics.counter('messages.transmit.errors.total', value=0, description='Number of erroneous transmitted messages')
+        # defaut status of processus
+        self.__setproctitle('waiting for incoming message')
+        # read and parse each message from receiver
+        for raw in recv.read():
+            self.__setproctitle('parsing message')
+            self.__metrics.counter('messages.receive.total')
+            # parse received content
             try:
-                parser = self.importAndCheckAbstract(
-                    '.parsers.' + self.cp.get('daemon', 'message_parser', fallback="json"),
-                    'Parser', AbstractParser, 'parser'
-                )
-                recv = self.importAndCheckAbstract(
-                    '.receivers.' + self.cp.get('daemon', 'receiver_type', fallback="fifo"),
-                    'Receiver', AbstractReceiver, 'receiver'
-                )
-                transm = self.importAndCheckAbstract(
-                    '.transmitters.' + self.cp.get('daemon', 'transmitter_type', fallback="file"),
-                    'Transmitter', AbstractTransmitter, 'transmitter'
-                )
-            except ShellInitException as ex:
-                g_logger.fatal("Unable to load an internal module : %s", str(ex))
-                return False
+                msg = parser.parse(raw)
+            except SMSException as ex:
+                self.__metrics.counter('messages.receive.errors.total')
+                g_logger.error('received a bad message, skipping because of %s', str(ex))
+                self.__setproctitle('waiting for incoming message')
+                continue
 
-            if not recv.start():
-                g_logger.fatal('Unable to open receiver')
-                return False
-            # register the receiver close callback to properly close opened file descriptors
-            self.__stop_callbacks.append(recv.stop)
+            self.__setproctitle('executing shell command')
+            # run in shell
+            try:
+                response_content = shell.exec(msg.sender, msg.asString())
+            except ShellException as ex:
+                g_logger.error('error during command execution : %s', ex.args[0])
+                if len(ex.args) > 1 and ex.args[1]:
+                    ex_message = ex.args[1]
+                else:
+                    ex_message = str(ex)
+                response_content = '#Err: {}'.format(ex_message)
 
-            if not transm.start():
-                g_logger.fatal('Unable to open transmitter')
-                return False
-            self.__stop_callbacks.append(transm.stop)
+            # forge the answer
+            self.__setproctitle('sending answer')
+            self.__metrics.counter('messages.transmit.total')
+            try:
+                answer = Message(msg.sender, response_content)
+                transm.transmit(answer)
+            except SMSException as ex:
+                self.__metrics.counter('messages.transmit.errors.total')
+                g_logger.error('error on emitting a message: %s', str(ex))
+                self.__setproctitle('waiting for incoming message')
+                continue
 
-        if self.cp.getMode() == 'STANDALONE':
-            # Run standalone mode
-            raise NotImplementedError('STANDALONE mode not yet implemented')
-        else:
-            # Run daemon mode
-            # read and parse each message from receiver
-            for raw in recv.read():
-                # parse received content
-                try:
-                    msg = parser.parse(raw)
-                except SMSException as ex:
-                    g_logger.error('received a bad message, skipping because of %s', str(ex))
-                    continue
-                # run in shell
-                try:
-                    response_content = shell.exec(msg.sender, msg.asString())
-                except ShellException as ex:
-                    g_logger.error('error during command execution : %s', str(ex))
-                    response_content = '#Err: {}'.format(ex.short_message)
-                # forge the answer
-                try:
-                    answer = Message(msg.sender, response_content)
-                    transm.transmit(answer)
-                except SMSException as ex:
-                    g_logger.error('error on emitting a message: %s', str(ex))
-                    continue
+            # return to waiting state
+            self.__setproctitle('waiting for incoming message')
 
 
     def stop(self):
@@ -289,6 +345,11 @@ class SMSShell(object):
         """
         g_logger.debug("Caught system signal %d", signum)
         sys.exit(self.stop())
+
+    def __setproctitle(self, suffix):
+        """Set the current processus title using the given suffix
+        """
+        setproctitle.setproctitle(''.join([self.__proctitle + ': ', suffix]))
 
     def __downgrade(self):
         """Downgrade daemon privilege to another uid/gid

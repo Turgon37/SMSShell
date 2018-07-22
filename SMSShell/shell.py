@@ -52,13 +52,14 @@ class Shell(object):
     """
     WORD_REGEX_PATTERN = re.compile("[^A-Za-z]+")
 
-    def __init__(self, configparser):
+    def __init__(self, configparser, metrics):
         """Constructor: Build a new shell object
 
         Args:
             configparser: the program configparser
         """
         self.configparser = configparser
+        self.__metrics = metrics
         self.__sessions = dict()
         self.__commands = dict()
 
@@ -150,7 +151,8 @@ class Shell(object):
             class_obj = getattr(mod, cls_name)
             cmd = class_obj(g_logger.getChild('command.' + name),
                             self.getSecureShell(),
-                            self.configparser.getSectionOrEmpty('command.' + name))
+                            self.configparser.getSectionOrEmpty('command.' + name),
+                            self.__metrics)
         except AttributeError as ex:
             raise CommandBadImplemented("Error in command '{0}' : {1}.".format(name, str(ex)))
 

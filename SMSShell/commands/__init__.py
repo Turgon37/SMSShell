@@ -95,7 +95,7 @@ class AbstractCommand(object):
             """
             raise BadCommandCall(message)
 
-    def __init__(self, logger, shell, config):
+    def __init__(self, logger, shell, config, metrics):
         """Build a new instance of the command
 
         Args:
@@ -109,6 +109,7 @@ class AbstractCommand(object):
         self.log = logger
         self.shell = shell
         self.config = config
+        self.metrics = metrics
         self.session = None
 
     #
