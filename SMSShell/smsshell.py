@@ -213,6 +213,84 @@ class SMSShell(object):
                                       "AbstractCommand class").format(module_path))
         return inst
 
+    def getTokensStoreFromConfig(self):
+        """Build the authentication tokens store from config
+
+        Returns:
+
+        """
+        tokens_store = dict()
+        raw_tokens = self.cp.get(self.cp.MAIN_SECTION, 'tokens', fallback='')
+        for raw_token in raw_tokens.split(','):
+            # parse token string
+            try:
+                state, token = raw_token.split(':')
+            except ValueError as ex:
+                g_logger.error('Invalid token format, ' +
+                               'it must be in the form ROLE:SECRET, it is ignored')
+                continue
+
+            # check if state exists
+            try:
+                real_state = SessionStates[state]
+            except KeyError:
+                g_logger.error('Invalid state value %s, ' +
+                               'it must be one of the SessionStates available ones, ' +
+                               'it is ignored',
+                               str(state))
+                continue
+            g_logger.debug('loaded token length %d for state %s',
+                           len(token),
+                           str(real_state))
+            if token not in tokens_store:
+                tokens_store[token] = []
+            if real_state in tokens_store[token]:
+                g_logger.warning('duplicate authentication token for state %s',
+                                 str(real_state))
+            else:
+                tokens_store[token].append(real_state)
+        return tokens_store
+
+    @staticmethod
+    def extractRoleFromMessageAndStore(tokens_store, message):
+        """
+
+        Args:
+            tokens_store : the dict of tokens and associated reachable
+                            states
+            message : the full message
+        Returns:
+            the SessionStates : if the given token is valid
+            None : if no state was enforced or token was invalid
+        """
+        try:
+            auth_attr = message.attribute('auth')
+        except KeyError:
+            return None
+
+        assert isinstance(auth_attr, dict)
+        if 'token' not in auth_attr or 'role' not in auth_attr:
+            g_logger.warning("'auth' attribute in message require a token and a role")
+            return None
+
+        if auth_attr['token'] not in tokens_store:
+            g_logger.error('The given token (length %d) is not registered in token store',
+                           len(auth_attr['token']))
+            return None
+
+        reachable_states = tokens_store[auth_attr['token']]
+        try:
+            needed_state = SessionStates[auth_attr['role']]
+        except KeyError:
+            g_logger.error('Invalid state value %s, ' +
+                           'it must be one of the SessionStates available ones, ' +
+                           'it is ignored',
+                           str(auth_attr['role']))
+            return None
+        if needed_state in reachable_states:
+            return needed_state
+        return None
+
     def runDaemonMode(self):
         """Entrypoint of daemon mode
         """
@@ -247,11 +325,17 @@ class SMSShell(object):
             return False
         self.__stop_callbacks.append(transm.stop)
 
+        g_logger.debug('initialize authentication tokens store')
+        tokens_store = self.getTokensStoreFromConfig()
+        g_logger.info('loaded %d authentication tokens in store', len(tokens_store))
+
         # init counters
+        g_logger.debug('initialize metrics counters')
         self.__metrics.counter('messages.receive.total', value=0, description='Number of received messages')
         self.__metrics.counter('messages.receive.errors.total', value=0, description='Number of erroneous received messages')
         self.__metrics.counter('messages.transmit.total', value=0, description='Number of transmitted messages')
         self.__metrics.counter('messages.transmit.errors.total', value=0, description='Number of erroneous transmitted messages')
+
         # read and parse each message from receiver
         for raw in recv.read():
             self.__metrics.counter('messages.receive.total')

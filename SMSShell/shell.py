@@ -91,7 +91,7 @@ class Shell(object):
             assert isinstance(as_role, SessionStates)
             sess = Session(subject, time_to_live=0)
             sess.forceState(as_role)
-            g_logger.info("Command '%s' run as forced role : %s", subject, cmd, as_role.name)
+            g_logger.info("Subject '%s' run command '%s' as forced role : %s", subject, cmd, as_role.name)
         else:
             sess = self.__getSessionForSubject(subject)
         return self.__call(sess, cmd, argv[1:]).strip()

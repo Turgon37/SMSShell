@@ -256,6 +256,7 @@ class Receiver(AbstractReceiver):
         Returns:
             Iterable
         """
+        g_logger.info('Reading from unix socket %s', self.__path)
         while True:
             # Wait until some registered socket becomes ready.
             events = self.__socket_selector.select()
