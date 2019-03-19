@@ -193,12 +193,17 @@ def sendMessageToOutputUnix(message, socket_path):
         client_socket.sendall(message_data)
         ack_data = client_socket.recv(100)
         client_socket.close()
+    except socket.timeout as ex:
+        g_logger.critical("Timeout reached by waiting server answer")
+        sys.exit(1)
     except socket.error as ex:
         g_logger.critical("Unable to connect to unix server socket '%s' because : %s",
                           socket_path,
                           str(ex))
         sys.exit(1)
 
+    g_logger.debug('get data from server %s',
+                   ack_data)
     if not isinstance(ack_data, str):
         ack_data = ack_data.decode()
     try:
@@ -207,7 +212,7 @@ def sendMessageToOutputUnix(message, socket_path):
         g_logger.error('Received bad JSON in ACK,'
                        ' the smsshell server may have not received correctly the message')
         return False
-    if ack['length'] != message_data_size:
+    if ack['received_length'] != message_data_size:
         g_logger.error('Size of sent data differ from '
                        'size of received data given in acknowledgment')
         return False

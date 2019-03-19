@@ -32,11 +32,32 @@ import socket
 import stat
 
 # Project import
-from . import AbstractReceiver
+from . import AbstractReceiver, AbstractClientRequest
 from ..utils import groupToGid
 
 # Global project declarations
 g_logger = logging.getLogger('smsshell.receivers.unix')
+
+
+class ClientRequest(AbstractClientRequest):
+    """Client request for unix receiver
+    """
+
+    def __init__(self, receiver, client_socket, **kwargs):
+        super().__init__(**kwargs)
+        self.__receiver = receiver
+        self.__client_socket = client_socket
+
+    def enter(self):
+        pass
+
+    def exit(self):
+        """Pop all answer data and send them to client
+        """
+        assert self.__client_socket
+        response_data = self.popResponseData()
+        response_data['chain'] = self.getTreatmentChain()
+        self.__receiver.writeToClient(self.__client_socket, json.dumps(response_data))
 
 
 class Receiver(AbstractReceiver):
@@ -65,6 +86,21 @@ class Receiver(AbstractReceiver):
             self.__listen_queue = 10
             g_logger.error(("invalid integer parameter for option 'listen_queue',"
                             " fallback to default value 10"))
+
+    def writeToClient(self, client_socket, data):
+        """
+        """
+        if not isinstance(data, bytes):
+            data = data.encode()
+
+        try:
+            client_socket.send(data)
+        except ConnectionError as ex:
+            g_logger.warning('client connection with FD %s raise connection error : %s',
+                             client_socket.fileno(),
+                             str(ex))
+            self.__closeConnection(client_socket)
+            return None
 
     def __onAccept(self, server_socket, mask):
         """Call each time a new client connection occur
@@ -95,37 +131,44 @@ class Receiver(AbstractReceiver):
         """
         try:
             request_data = client_socket.recv(1000)
-            # if these is data, that mean client has send some bytes to read
-            if request_data:
-                # receive the data
-                g_logger.info('get %d bytes of data from client socket with FD %d',
-                              len(request_data),
-                              client_socket.fileno())
-                g_logger.debug('get data from FD %d: %s',
-                               client_socket.fileno(),
-                               request_data)
-
-                # return a simple ACK to client with received size to confirm all is OK
-                g_logger.debug('send ACK to FD %d', client_socket.fileno())
-                response = dict(status=0, length=len(request_data))
-                response_data = json.dumps(response)
-                if not isinstance(response_data, bytes):
-                    response_data = response_data.encode()
-                client_socket.send(response_data)
-
-                # decode data
-                if not isinstance(request_data, str):
-                    request_data = request_data.decode()
-                return request_data
-            # If there is no data, the socket must have been closed from client side
-            else:
-                self.__closeConnection(client_socket)
         except ConnectionError as ex:
             g_logger.warning('client connection with FD %s raise connection error : %s',
                              client_socket.fileno(),
                              str(ex))
             self.__closeConnection(client_socket)
-        return None
+            return None
+
+        # If there is no data, the socket must have been closed from client side
+        if not request_data:
+            self.__closeConnection(client_socket)
+            return None
+
+        # if these is data, that mean client has send some bytes to read
+        # receive the data
+        g_logger.info('get %d bytes of data from client socket with FD %d',
+                      len(request_data),
+                      client_socket.fileno())
+        g_logger.debug('get data from FD %d: %s',
+                       client_socket.fileno(),
+                       request_data)
+        # decode data
+        raw_request_data_length = len(request_data)
+        if not isinstance(request_data, str):
+            request_data = request_data.decode()
+
+        # prepare client request context
+        request = ClientRequest(receiver=self,
+                                client_socket=client_socket,
+                                request_data=request_data)
+        # append a simple ACK to client next datas
+        # to confirm all is OK
+        g_logger.debug('send ACK to FD %d for %d bytes of data',
+                       client_socket.fileno(),
+                       raw_request_data_length)
+        request.addResponseData(received_length=raw_request_data_length)
+        request.appendTreatmentChain('received')
+
+        return request
 
     def __closeConnection(self, client_socket):
         """Call each time a socket is closed

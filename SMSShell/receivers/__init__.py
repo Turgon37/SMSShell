@@ -134,6 +134,7 @@ class AbstractClientRequest(object):
     def __enter__(self):
         self.__is_in_context = True
         self.enter()
+        return self.getRequestData()
 
     def __exit__(self, type, value, traceback):
         self.__is_in_context = False

@@ -337,36 +337,43 @@ class SMSShell(object):
         self.__metrics.counter('messages.transmit.errors.total', value=0, description='Number of erroneous transmitted messages')
 
         # read and parse each message from receiver
-        for raw in recv.read():
+        for client_context in recv.read():
             self.__metrics.counter('messages.receive.total')
-            # parse received content
-            try:
-                msg = parser.parse(raw)
-            except SMSException as ex:
-                self.__metrics.counter('messages.receive.errors.total')
-                g_logger.error('received a bad message, skipping because of %s', str(ex))
-                continue
 
-            # run in shell
-            try:
-                response_content = shell.exec(msg.sender, msg.asString())
-            except ShellException as ex:
-                g_logger.error('error during command execution : %s', ex.args[0])
-                if len(ex.args) > 1 and ex.args[1]:
-                    ex_message = ex.args[1]
-                else:
-                    ex_message = str(ex)
-                response_content = '#Err: {}'.format(ex_message)
+            with client_context as client_context_data:
+                # parse received content
+                try:
+                    msg = parser.parse(client_context_data)
+                    client_context.appendTreatmentChain('parsed')
+                except SMSException as ex:
+                    self.__metrics.counter('messages.receive.errors.total')
+                    g_logger.error('received a bad message, skipping because of %s', str(ex))
+                    continue
 
-            # forge the answer
-            self.__metrics.counter('messages.transmit.total')
-            try:
-                answer = Message(msg.sender, response_content)
-                transm.transmit(answer)
-            except SMSException as ex:
-                self.__metrics.counter('messages.transmit.errors.total')
-                g_logger.error('error on emitting a message: %s', str(ex))
-                continue
+                as_role = SMSShell.extractRoleFromMessageAndStore(tokens_store, msg)
+
+                # run in shell
+                try:
+                    response_content = shell.exec(msg.sender, msg.asString(), as_role=as_role)
+                    client_context.appendTreatmentChain('executed')
+                except ShellException as ex:
+                    g_logger.error('error during command execution : %s', ex.args[0])
+                    if len(ex.args) > 1 and ex.args[1]:
+                        ex_message = ex.args[1]
+                    else:
+                        ex_message = str(ex)
+                    response_content = '#Err: {}'.format(ex_message)
+
+                # forge the answer
+                self.__metrics.counter('messages.transmit.total')
+                try:
+                    answer = Message(msg.sender, response_content)
+                    transm.transmit(answer)
+                    client_context.appendTreatmentChain('transmitted')
+                except SMSException as ex:
+                    self.__metrics.counter('messages.transmit.errors.total')
+                    g_logger.error('error on emitting a message: %s', str(ex))
+                    continue
 
 
     def stop(self):
