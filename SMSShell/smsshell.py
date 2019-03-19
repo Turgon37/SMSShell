@@ -220,7 +220,9 @@ class SMSShell(object):
 
         """
         tokens_store = dict()
-        raw_tokens = self.cp.get(self.cp.MAIN_SECTION, 'tokens', fallback='')
+        raw_tokens = self.cp.getModeConfig('tokens')
+        if not raw_tokens:
+            return tokens_store
         for raw_token in raw_tokens.split(','):
             # parse token string
             try:
