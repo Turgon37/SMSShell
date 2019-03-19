@@ -57,6 +57,9 @@ class MetricsHelper(AbstractMetricsHelper):
         Returns:
             True if init has success, otherwise False
         """
+        g_logger.info('Prometheus metrics exporter started on %s:%d',
+                      self.__address,
+                      self.__port)
         prometheus_client.start_http_server(self.__port, self.__address)
         return True
 
