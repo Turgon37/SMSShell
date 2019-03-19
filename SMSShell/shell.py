@@ -32,7 +32,7 @@ import shlex
 
 # Project imports
 from .exceptions import ShellException, BadCommandCall
-from .models import Session
+from .models import Session, SessionStates
 from .commands import (AbstractCommand,
                        CommandForbidden,
                        CommandNotFoundException,
@@ -63,7 +63,7 @@ class Shell(object):
         self.__sessions = dict()
         self.__commands = dict()
 
-    def exec(self, subject, cmdline):
+    def exec(self, subject, cmdline, as_role=None):
         """Run the given arguments for the given subject
 
         Args:
@@ -86,8 +86,14 @@ class Shell(object):
         if not subject:
             raise ShellException('The passed subject is empty')
 
-        sess = self.__getSessionForSubject(subject)
         g_logger.info("Subject '%s' run command '%s' with args : %s", subject, cmd, str(argv[1:]))
+        if as_role is not None:
+            assert isinstance(as_role, SessionStates)
+            sess = Session(subject, time_to_live=0)
+            sess.forceState(as_role)
+            g_logger.info("Command '%s' run as forced role : %s", subject, cmd, as_role.name)
+        else:
+            sess = self.__getSessionForSubject(subject)
         return self.__call(sess, cmd, argv[1:]).strip()
 
     def flushCommandCache(self):

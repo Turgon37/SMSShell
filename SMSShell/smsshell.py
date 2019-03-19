@@ -36,7 +36,7 @@ import sys
 
 # Projet Imports
 from .config import MyConfigParser
-from .models import Message
+from .models import Message, SessionStates
 from .receivers import AbstractReceiver
 from .parsers import AbstractParser
 from .transmitters import AbstractTransmitter

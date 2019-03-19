@@ -242,6 +242,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='SMSShell client version v' + __version__,
                                      argument_default=argparse.SUPPRESS,
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--auth-token', action='store', dest='auth_token', type=str,
+                        help='Use this token as authentication credential')
+    parser.add_argument('--auth-role', action='store', dest='auth_role', type=str,
+                        default='STATE_ADMIN',
+                        help='The role to authenticate this message as')
     parser.add_argument('-i', '--input', action='store', dest='input',
                         choices=['env', 'file', 'stdin'], default='env',
                         help='Where to pick up raw messages')
@@ -266,7 +271,6 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--version', action='store_true', dest='show_version',
                         help='Print the version and exit')
     pargs = parser.parse_args()
-
     if hasattr(pargs, 'show_version') and pargs.show_version:
         print('SMSShell client version v{}'.format(__version__))
         sys.exit(0)
@@ -279,6 +283,9 @@ if __name__ == '__main__':
 
     msg = getMessageFromInput(pargs.input, *pargs.input_arg)
     g_logger.debug('get message %s', str(msg))
+
+    if hasattr(pargs, 'auth_token'):
+        msg['auth'] = dict(token=pargs.auth_token, role=pargs.auth_role)
 
     msg = encodeMessage(pargs.encoding, msg)
     g_logger.debug('encoded message to %s', str(msg))

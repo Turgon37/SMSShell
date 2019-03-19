@@ -52,6 +52,7 @@ class SessionStates(IntEnum):
     STATE_GUEST = 0
     STATE_LOGININPROGRESS = 1
     STATE_USER = 2
+    STATE_ADMIN = 9
 
 
 class Session(object):
