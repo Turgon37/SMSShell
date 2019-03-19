@@ -55,11 +55,15 @@ class Parser(AbstractParser):
         if 'sms_number' not in obj:
             raise BadMessageFormatException('the sender field is missing')
         sender = obj['sms_number']
+        if sender is None or len(sender) < 1:
+            raise BadMessageFormatException('the sender field is null or too small')
+
         if 'sms_text' not in obj:
             raise BadMessageFormatException('the text field is missing')
         content = obj['sms_text']
-        if sender is None or len(sender) < 1:
-            raise BadMessageFormatException('the sender field is null or too small')
         if content is None or len(content) < 1:
             raise BadMessageFormatException('the text field is null or too small')
-        return Message(sender, content)
+
+        extra_datas = dict(filter(lambda x: x[0] not in ['sms_text', 'sms_number'], obj.items()))
+
+        return Message(sender, content, attributes=extra_datas)

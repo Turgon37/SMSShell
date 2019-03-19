@@ -28,7 +28,7 @@ class Message(object):
     """This class represent a message with sender id and content
     """
 
-    def __init__(self, sender, content):
+    def __init__(self, sender, content, attributes=None):
         """Constructor: Build a new message object
 
         Args:
@@ -37,6 +37,10 @@ class Message(object):
         """
         self.__sender = None
         self.__content = None
+        self.__attributes = dict()
+        if attributes is not None:
+            assert isinstance(attributes, dict)
+            self.attributes = attributes
         # database model
         self.sender = sender
         self.content = content
@@ -78,6 +82,40 @@ class Message(object):
             cont: the raw message content
         """
         self.__content = cont
+
+    def attribute(self, key, fallback=KeyError):
+        """Return the optional message extra attributes
+
+        Returns:
+            a dict of message attributes
+        """
+        assert self.__attributes is not None
+        assert isinstance(self.__attributes, dict)
+        if key not in self.__attributes:
+            if issubclass(fallback, Exception):
+                raise fallback(key)
+            return fallback
+        return self.__attributes[key]
+
+    @property
+    def attributes(self):
+        """Return the optional message extra attributes
+
+        Returns:
+            a dict of message attributes
+        """
+        assert self.__attributes is not None
+        assert isinstance(self.__attributes, dict)
+        return self.__attributes
+
+    @attributes.setter
+    def attributes(self, keys):
+        """Set the message content
+
+        Args:
+            keys: the new keys value to add
+        """
+        self.__attributes.update(keys)
 
     def asString(self):
         """Return the message content and ensure it is a string
