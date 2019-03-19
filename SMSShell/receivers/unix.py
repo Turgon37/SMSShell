@@ -140,8 +140,8 @@ class Receiver(AbstractReceiver):
         # fds to peer names - our socket fd is still open.
         del self.__current_peers[client_socket.fileno()]
         self.__socket_selector.unregister(client_socket)
-        client_socket.close()
         g_logger.info('closed client connection with FD %d', client_socket.fileno())
+        client_socket.close()
 
     def start(self):
         """Start the unix socket receiver
@@ -269,5 +269,5 @@ class Receiver(AbstractReceiver):
                 socket_data = callback(key.fileobj, mask)
                 # yield only data read from client sockets
                 # compare the data object with the onread function
-                if key.data == self.__onRead and socket_data is not None:
+                if callback == self.__onRead and socket_data is not None:
                     yield socket_data

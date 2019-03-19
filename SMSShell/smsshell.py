@@ -160,10 +160,12 @@ class SMSShell(object):
             )
         except ShellInitException as ex:
             g_logger.fatal("Unable to load metrics handler module : %s", str(ex))
+            self.stop()
             return False
 
         if not metrics.start():
             g_logger.fatal('Unable to open metrics handler')
+            self.stop()
             return False
         self.__metrics = metrics
         self.__stop_callbacks.append(metrics.stop)
