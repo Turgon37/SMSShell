@@ -177,11 +177,12 @@ class MyConfigParser(configparser.ConfigParser):
         Returns:
             the dict of validators per fields
         """
-        return self.getClassesChainFromConfig(key,
+        return self.getClassesChainFromConfig(self.getMode().lower(),
+                                              key,
                                               validators,
                                               base_class=validators.AbstractValidator)
 
-    def getClassesChainFromConfig(self, key, module, base_class=None):
+    def getClassesChainFromConfig(self, section, key, module, base_class=None):
         """Extract classes instances from config key
 
         Args:
@@ -194,8 +195,8 @@ class MyConfigParser(configparser.ConfigParser):
             the dict of validators per fields
         """
         classes_config = dict()
-        raw_config = self.getModeConfig(key, fallback='')
-        fields_spec = filter(lambda x: len(x), raw_config.split('\n'))
+        raw_config = self.get(section, key, fallback='')
+        fields_spec = filter(lambda x: x, raw_config.split('\n'))
 
         # line separated spec
         for spec in fields_spec:
@@ -215,7 +216,7 @@ class MyConfigParser(configparser.ConfigParser):
                 continue
 
             classes_config[field] = []
-            classes_parts_splitted = re.split('\|(\w+:)', field_classes)
+            classes_parts_splitted = re.split('\\|(\\w+:)', field_classes)
             classes_parts = []
             i = 0
             # merge splitted classes parts because of the re.split behaviour
@@ -237,7 +238,7 @@ class MyConfigParser(configparser.ConfigParser):
                                     " does not refer to an existing filter"),
                                    class_name, field)
                     continue
-                class_args = class_args_raw.split(',')
+                class_args = filter(lambda x: x, class_args_raw.split(','))
                 _class = getattr(module, real_class_name)
                 try:
                     _instance = _class(*class_args)
