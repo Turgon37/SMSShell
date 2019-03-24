@@ -48,6 +48,20 @@ def test_exec_command_help():
     assert shell.exec('sender', 'help')
     assert shell.exec('sender', 'help')
 
+def test_exec_usage_on_all_commands():
+    conf = SMSShell.config.MyConfigParser()
+    assert conf.load('./config.conf')[1]
+    assert conf.isLoaded()
+
+    metrics = SMSShell.metrics.none.MetricsHelper()
+
+    shell = SMSShell.shell.Shell(conf, metrics)
+
+    commands = shell.exec('sender', 'help')
+    for c in commands.split():
+        assert shell.exec('sender', 'help ' + c)
+        assert shell.exec('sender', 'desc ' + c)
+
 def test_exec_command_not_found():
     conf = SMSShell.config.MyConfigParser()
     assert conf.load('./config.conf')[1]

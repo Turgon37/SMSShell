@@ -67,7 +67,6 @@ class CommandBadConfiguredException(CommandException):
         super().__init__(message, short)
 
 
-
 class AbstractCommand(object):
     """This is a abstract command, all user defined comand must inherit this class
     """
@@ -197,7 +196,6 @@ class AbstractCommand(object):
         Returns:
             The description of this command as a string
         """
-        assert argv
         raise CommandBadImplemented(str(self.__class__) +
                                     " must implement the description function")
 
@@ -209,23 +207,16 @@ class AbstractCommand(object):
             List<SessionStates> the list of SessionStates from which the user
             can run this command
         """
-        assert self
         return []
 
-    def main(self, argv, pargs):
+    def main(self, argv):
         """The main running entry point of this command
 
         Args:
             argv: List<String> the list of arguments
-            pargs: dict OPTIONAL if the the dict that contains arg parser results
-                    if the function argsParser() return a valid argument
-                    parser instance, all argument in argv will be passed to it
-                    and the result will be in pargs
         Returns:
             Optional output that will be send back to original user
         """
-        assert argv
-        assert pargs is None
         raise CommandBadImplemented(str(self.__class__) + " must implement the main function")
 
     def usage(self, argv):
@@ -242,8 +233,8 @@ class AbstractCommand(object):
         Returns:
             the usage help as a String
         """
-        if self._argsParser():
-            parser = self._argsParser()
+        parser = self._argsParser()
+        if parser:
             parser.parse_known_args(argv)
             return parser.format_usage()
         raise CommandBadImplemented(str(self.__class__) + " must implement the usage function")
