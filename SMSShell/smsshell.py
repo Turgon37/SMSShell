@@ -115,6 +115,8 @@ class SMSShell(object):
         if not self.cp.isLoaded():
             return False
 
+        g_logger.info('Starting SMSShell version ' + __version__)
+
         # Turn in daemon mode
         if self.__daemon:
             g_logger.debug('Starting in daemon mode')

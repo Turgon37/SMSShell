@@ -37,7 +37,7 @@ class MetricsHelper(AbstractMetricsHelper):
     def init(self):
         """Init function
         """
-        pass
+        g_logger.info('Using dummy metrics helper')
 
     def start(self):
         """Do nothing
