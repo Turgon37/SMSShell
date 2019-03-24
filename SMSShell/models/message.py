@@ -52,7 +52,7 @@ class Message(object):
         if attributes is not None:
             assert isinstance(attributes, dict)
             self.attributes = attributes
-        self.sender = number
+        self.number = number
         self.content = content
 
     @property
@@ -65,17 +65,8 @@ class Message(object):
         assert self.__number is not None
         return self.__number
 
-    @property
-    def sender(self):
-        """Return the sender id
-
-        Returns:
-            the sender id as a string
-        """
-        return self.number
-
-    @sender.setter
-    def sender(self, send):
+    @number.setter
+    def number(self, send):
         """Set the sender id
 
         Args:
@@ -111,7 +102,7 @@ class Message(object):
         assert self.__attributes is not None
         assert isinstance(self.__attributes, dict)
         if key not in self.__attributes:
-            if issubclass(fallback, Exception):
+            if issubclass(fallback.__class__, Exception.__class__):
                 raise fallback(key)
             return fallback
         return self.__attributes[key]
@@ -178,7 +169,7 @@ class Message(object):
         Returns:
             a formatted description of this message and his content
         """
-        content = ("Message from(" + str(self.sender) + ")" +
+        content = ("Message from/to(" + str(self.number) + ")" +
                    "\n  CONTENT = " + str(self.content))
         return content
 
@@ -187,4 +178,4 @@ class Message(object):
 
         @return [str] a formatted string that describe this object
         """
-        return "[M(" + str(self.sender) + ")]"
+        return "[M(" + str(self.number) + ")]"

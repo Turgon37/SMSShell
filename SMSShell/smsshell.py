@@ -381,7 +381,7 @@ class SMSShell(object):
 
                 # run in shell
                 try:
-                    response_content = shell.exec(msg.sender, msg.asString(), as_role=as_role)
+                    response_content = shell.exec(msg.number, msg.asString(), as_role=as_role)
                     client_context.appendTreatmentChain('executed')
                 except ShellException as ex:
                     g_logger.error('error during command execution : %s', ex.args[0])
@@ -393,7 +393,7 @@ class SMSShell(object):
 
                 # forge the answer
                 self.__metrics.counter('messages.transmit.total')
-                answer = Message(msg.sender, response_content)
+                answer = Message(msg.number, response_content)
                 client_context.addResponseData(output=answer.asString())
 
                 if not msg.attribute('transmit', True):
