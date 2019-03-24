@@ -30,3 +30,57 @@ def test_abstract_not_implemented():
         abs.usage([])
     with pytest.raises(SMSShell.commands.CommandBadImplemented):
         abs.main([])
+
+def test_abstract_bad_input_state_type():
+
+    class Bad(SMSShell.commands.AbstractCommand):
+        def inputStates(self):
+            return dict()
+
+    com = Bad(logging.getLogger(),
+              object(),
+              object(),
+              object())
+    with pytest.raises(SMSShell.commands.CommandBadImplemented):
+        com._inputStates()
+
+
+def test_abstract_bad_input_state_value():
+
+    class Bad(SMSShell.commands.AbstractCommand):
+        def inputStates(self):
+            return ['d']
+
+    com = Bad(logging.getLogger(),
+              object(),
+              object(),
+              object())
+    with pytest.raises(SMSShell.commands.CommandBadImplemented):
+        com._inputStates()
+
+
+def test_abstract_bad_arg_parser_type():
+
+    class Bad(SMSShell.commands.AbstractCommand):
+        def argsParser(self):
+            return 'a'
+
+    com = Bad(logging.getLogger(),
+              object(),
+              object(),
+              object())
+    with pytest.raises(SMSShell.commands.CommandBadImplemented):
+        com._argsParser()
+
+def test_abstract_bad_arg_parser_init():
+
+    class Bad(SMSShell.commands.AbstractCommand):
+        def argsParser(self):
+            raise ValueError('no')
+
+    com = Bad(logging.getLogger(),
+              object(),
+              object(),
+              object())
+    with pytest.raises(SMSShell.commands.CommandBadImplemented):
+        com._argsParser()

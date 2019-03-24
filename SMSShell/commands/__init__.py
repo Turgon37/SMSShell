@@ -164,7 +164,6 @@ class AbstractCommand(object):
             use createArgsParser() to create a new and customize it before
             return it
         """
-        assert self
         return None
 
     def checkConfig(self):
