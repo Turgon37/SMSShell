@@ -17,13 +17,47 @@ def test_start():
     """Just start and stop the receiver
     """
     unix = './r_unix'
-    receiver = SMSShell.receivers.unix.Receiver(config=dict(path=unix, umask='80'))
+    receiver = SMSShell.receivers.unix.Receiver(config=dict(
+                                                    path=unix,
+                                                    umask='80'))
     assert receiver.start()
     assert os.path.exists(unix)
     assert stat.S_ISSOCK(os.stat(unix).st_mode)
 
     assert receiver.stop()
     assert not os.path.exists(unix)
+
+def test_start_with_existing_socket():
+    """Just start and stop the receiver
+    """
+    unix = './r_unix'
+    receiver = SMSShell.receivers.unix.Receiver(config=dict(
+                                                    path=unix,
+                                                    umask='80'))
+
+    # create a unix socket then close it
+    server_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    server_socket.bind(unix)
+    server_socket.close()
+    assert os.path.exists(unix)
+    assert stat.S_ISSOCK(os.stat(unix).st_mode)
+
+    assert receiver.start()
+    assert os.path.exists(unix)
+    assert stat.S_ISSOCK(os.stat(unix).st_mode)
+
+    assert receiver.stop()
+    assert not os.path.exists(unix)
+
+def test_init_with_bad_config():
+    """Just start and stop the receiver
+    """
+    unix = './r_unix'
+    receiver = SMSShell.receivers.unix.Receiver(config=dict(
+                                                    path=unix,
+                                                    umask='80',
+                                                    listen_queue='a'))
+    assert isinstance(receiver, SMSShell.receivers.unix.Receiver)
 
 def test_bad_start_because_path_already_exists():
     """Ensure receiver do not start if path exists

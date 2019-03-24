@@ -156,7 +156,7 @@ class SMSShell(object):
         # Init metrics handler
         try:
             metrics = self.importAndLoadModule(
-                '.metrics.' + self.cp.get('daemon', 'metrics_handler', fallback='prometheus'),
+                '.metrics.' + self.cp.get('daemon', 'metrics_handler', fallback='none'),
                 'MetricsHelper', AbstractMetricsHelper, 'metrics'
             )
         except ShellInitException as ex:
@@ -174,6 +174,7 @@ class SMSShell(object):
         # run the fonctionnal endpoint
         if self.cp.getMode() == 'STANDALONE':
             # Init standalone mode
+            self.stop()
             raise NotImplementedError('STANDALONE mode not yet implemented')
         else:
             self.runDaemonMode()
