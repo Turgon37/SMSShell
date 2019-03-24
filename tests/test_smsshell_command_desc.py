@@ -27,3 +27,9 @@ def test_main():
         shell.exec('local', 'desc')
 
     assert isinstance(shell.exec('local', 'desc desc'), str)
+
+def test_command_not_available():
+    """Test abstract init methods
+    """
+    shell = SMSShell.shell.Shell(SMSShell.config.MyConfigParser(), object())
+    assert isinstance(shell.exec('local', 'desc nonexitent'), str)

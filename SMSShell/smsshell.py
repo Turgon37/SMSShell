@@ -22,7 +22,7 @@
 
 __author__ = 'Pierre GINDRAUD'
 __license__ = 'GPL-3.0'
-__version__ = '1.0.0'
+__version__ = '2.0.0'
 __maintainer__ = 'Pierre GINDRAUD'
 __email__ = 'pgindraud@gmail.com'
 
@@ -469,7 +469,7 @@ class SMSShell(object):
         if gid is not None:
             if os.getgid() == gid:
                 g_logger.debug(("ignore setgid option because current "
-                                "group is already to expected one %d"), gid)
+                                "group is already set to expected one %d"), gid)
             else:
                 g_logger.debug("setting processus group to gid %d", gid)
                 try:
@@ -483,7 +483,7 @@ class SMSShell(object):
         if uid is not None:
             if os.getuid() == uid:
                 g_logger.debug(("ignore setuid option because current user "
-                                "is already to expected one %d"), uid)
+                                "is already set to expected one %d"), uid)
             else:
                 g_logger.debug("setting processus user to uid %d", uid)
                 try:
