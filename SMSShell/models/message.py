@@ -26,6 +26,9 @@ content that will be analysed
 # System imports
 import logging
 
+# Project imports
+from ..validators import ValidationException
+
 # Global project declarations
 g_logger = logging.getLogger('smsshell.message')
 

@@ -37,7 +37,7 @@ class ValidationException(Exception):
 class AbstractValidator(object):
 
     def __call__(self, data):
-        raise NotImplemented()
+        raise NotImplementedError()
 
 
 class Regexp(AbstractValidator):

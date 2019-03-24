@@ -83,9 +83,10 @@ def test_simple_read_from_socket():
     threading.Thread(target=writeToSocket, args=(m_channel, m_unix, m_data)).start()
 
     # fetch one data from one client
-    r_data = next(receiver.read())
-    # ensure we had received what we sent
-    assert m_data in r_data
+    client_context = next(receiver.read())
+    with client_context as client_context_data:
+        # ensure we had received what we sent
+        assert m_data in client_context_data
 
     # ensure ack is valid
     stdout, stderr, returncode = m_channel.get()

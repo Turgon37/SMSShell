@@ -83,9 +83,10 @@ def test_simple_read_from_fifo():
     threading.Thread(target=writeToFifo, args=(data, )).start()
 
     # fetch one data from one client
-    recv_data = next(receiver.read())
-    # ensure we had received what we sent
-    assert recv_data == data
+    client_context = next(receiver.read())
+    with client_context as client_context_data:
+        # ensure we had received what we sent
+        assert data in client_context_data
 
     assert receiver.stop()
     assert not os.path.exists(fifo)

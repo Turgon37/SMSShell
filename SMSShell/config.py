@@ -243,14 +243,14 @@ class MyConfigParser(configparser.ConfigParser):
                     _instance = _class(*class_args)
                     if base_class and not isinstance(_instance, base_class):
                         raise Exception(("Class {} is not a subclass of " +
-                                         "{}").format(_class_name, base_class))
+                                         "{}").format(real_class_name, base_class))
                 except Exception as ex:
                     raise ShellInitException(("Error during instanciation of filter '{}'" +
                                               " for field '{}' : {} : {}").format(
-                                                _class.__name__.lower(),
-                                                field,
-                                                ex.__class__,
-                                                str(ex)
+                                                  _class.__name__.lower(),
+                                                  field,
+                                                  ex.__class__,
+                                                  str(ex)
                                               ))
 
                 classes_config[field].append(_instance)

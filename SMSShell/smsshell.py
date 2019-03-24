@@ -372,7 +372,7 @@ class SMSShell(object):
                     self.__metrics.counter('messages.receive.errors.total')
                     g_logger.error(('incoming message did not passed the' +
                                     ' validation step because of : %s'),
-                                    str(ex))
+                                   str(ex))
                     continue
                 client_context.appendTreatmentChain('input_validated')
 

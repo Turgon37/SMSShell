@@ -88,7 +88,11 @@ class Receiver(AbstractReceiver):
                             " fallback to default value 10"))
 
     def writeToClient(self, client_socket, data):
-        """
+        """Write data to client
+
+        Args:
+            client_socket : the socket used to write data
+            data : bytes or string to write to client
         """
         if not isinstance(data, bytes):
             data = data.encode()
@@ -100,15 +104,14 @@ class Receiver(AbstractReceiver):
                              client_socket.fileno(),
                              str(ex))
             self.__closeConnection(client_socket)
-            return None
 
     def __onAccept(self, server_socket, mask):
         """Call each time a new client connection occur
 
         Args:
-            server_socket: the server socket from which to get
+            server_socket : the server socket from which to get
                                     the socket to the new client
-            mask:
+            mask : unused
         """
         client_socket, addr = server_socket.accept()
         # disable blocking on client socket
