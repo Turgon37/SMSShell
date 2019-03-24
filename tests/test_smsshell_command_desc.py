@@ -6,6 +6,7 @@ import pytest
 
 import SMSShell
 import SMSShell.config
+import SMSShell.exceptions
 import SMSShell.commands.desc
 
 
@@ -21,4 +22,8 @@ def test_main():
     """Test abstract init methods
     """
     shell = SMSShell.shell.Shell(SMSShell.config.MyConfigParser(), object())
-    assert isinstance(shell.exec('local', 'desc'), str)
+
+    with pytest.raises(SMSShell.exceptions.BadCommandCall):
+        shell.exec('local', 'desc')
+
+    assert isinstance(shell.exec('local', 'desc desc'), str)

@@ -13,9 +13,9 @@ def test_init():
     """Test abstract init methods
     """
     com = SMSShell.commands.whoami.Whoami(logging.getLogger(),
-                                      object(),
-                                      dict(),
-                                      object())
+                                          object(),
+                                          dict(),
+                                          object())
 
 def test_main():
     """Test abstract init methods
