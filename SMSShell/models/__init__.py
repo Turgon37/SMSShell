@@ -23,7 +23,7 @@
 # Project imports
 from .message import Message
 from .session import (Session, SessionStates,
-                     BadStateTransitionException, SessionException)
+                      BadStateTransitionException, SessionException)
 
 __all__ = [
     'Message',

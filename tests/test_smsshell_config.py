@@ -188,5 +188,5 @@ def test_with_classes_chain_bad_filter_config():
         class F1:
             pass
 
-    with pytest.raises(exceptions.ShellInitException):
+    with pytest.raises(SMSShell.exceptions.ShellInitException):
         spec = conf.getClassesChainFromConfig('test', 'chain', module)
