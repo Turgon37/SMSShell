@@ -85,19 +85,33 @@ class AbstractClientRequest(object):
 
         This chain can be used to get a timeline of the request treatment to
         client
+
+        Args:
+            state_name : the name of the treatment step to append to chain
         """
         self.__treatment_chain.append((state_name, time.time()))
 
     def getTreatmentChain(self):
+        """Get the list of treatment steps
+
+        Returns:
+            the list of treatment steps
+        """
         return self.__treatment_chain
 
     def addResponseData(self, **kwargs):
         """Append data to optional answer
+
+        Args:
+            any key = value that will be put into the client answer dict
         """
         self.__response_data.update(kwargs)
 
     def popResponseData(self):
-        """
+        """Pop all response datas and reset data bucket
+
+        Returns:
+            the dict of current datas
         """
         final = self.__response_data
         self.__response_data = dict()
@@ -136,6 +150,6 @@ class AbstractClientRequest(object):
         self.enter()
         return self.getRequestData()
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, _type, value, traceback):
         self.__is_in_context = False
         self.exit()

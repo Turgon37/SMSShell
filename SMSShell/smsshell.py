@@ -203,7 +203,7 @@ class SMSShell(object):
             _class_args = dict(metrics=self.__metrics)
             # append config dict if exist in config file
             if config_section and config_section in self.cp:
-                _class_args['config']=self.cp[config_section]
+                _class_args['config'] = self.cp[config_section]
             inst = _class(**_class_args)
         except AttributeError as ex:
             raise ShellInitException("Error in module '{0}' : {1}.".format(module_path, str(ex)))

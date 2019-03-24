@@ -74,8 +74,8 @@ class Shell(object):
             argv = shlex.split(cmdline)
         except ValueError as ex:
             raise ShellException('Command line parsing failed because of bad syntax: ' + str(ex),
-                                 'bad syntax: '+str(ex).lower().strip())
-        if len(argv) < 1:
+                                 'bad syntax: ' + str(ex).lower().strip())
+        if not argv:
             raise ShellException('Not enough arguments in arguments vector',
                                  'bad number of arguments')
 

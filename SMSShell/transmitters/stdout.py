@@ -44,5 +44,5 @@ class Transmitter(AbstractTransmitter):
 
     def transmit(self, answer):
         assert isinstance(answer, Message)
-        sys.stdout.write('TRANSMIT to {}: {}\n'.format(answer.sender,
+        sys.stdout.write('TRANSMIT to {}: {}\n'.format(answer.number,
                                                        answer.asString()))

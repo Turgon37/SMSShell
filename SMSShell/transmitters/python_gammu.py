@@ -94,7 +94,7 @@ class Transmitter(AbstractTransmitter):
             'SMSC': {
                 'Location': 1
             },
-            'Number': answer.sender,
+            'Number': answer.number,
         }
 
         # change umask before to create outbox file
