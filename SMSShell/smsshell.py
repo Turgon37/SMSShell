@@ -36,6 +36,7 @@ import sys
 
 # Projet Imports
 from .config import MyConfigParser
+from .validators import ValidationException
 from .models import Message, SessionStates
 from .receivers import AbstractReceiver
 from .parsers import AbstractParser
@@ -338,6 +339,17 @@ class SMSShell(object):
         self.__metrics.counter('messages.transmit.total', value=0, description='Number of transmitted messages')
         self.__metrics.counter('messages.transmit.errors.total', value=0, description='Number of erroneous transmitted messages')
 
+        # init messages filters
+        try:
+            g_logger.debug('initialize incoming messages validators')
+            input_validators = self.cp.getValidatorsFromConfig('input_validators')
+            g_logger.debug('initialize outgoing messages validators')
+            output_validators = self.cp.getValidatorsFromConfig('output_validators')
+        except ShellInitException as ex:
+            raise ex
+            g_logger.fatal("Unable to load a classes chain : %s", str(ex))
+            return False
+
         # read and parse each message from receiver
         for client_context in recv.read():
             self.__metrics.counter('messages.receive.total')
@@ -352,6 +364,19 @@ class SMSShell(object):
                     g_logger.error('received a bad message, skipping because of %s', str(ex))
                     continue
 
+                # validate received content
+                try:
+                    msg.loadValidatators(input_validators)
+                    msg.validate()
+                except ValidationException as ex:
+                    self.__metrics.counter('messages.receive.errors.total')
+                    g_logger.error(('incoming message did not passed the' +
+                                    ' validation step because of : %s'),
+                                    str(ex))
+                    continue
+                client_context.appendTreatmentChain('input_validated')
+
+                # extract optional overrided role
                 as_role = SMSShell.extractRoleFromMessageAndStore(tokens_store, msg)
 
                 # run in shell
@@ -368,14 +393,31 @@ class SMSShell(object):
 
                 # forge the answer
                 self.__metrics.counter('messages.transmit.total')
+                answer = Message(msg.sender, response_content)
+                client_context.addResponseData(output=answer.asString())
+
+                if not msg.attribute('transmit', True):
+                    self.__metrics.counter('messages.transmit.errors.total')
+                    continue
+
+                # validate outgoing content
                 try:
-                    answer = Message(msg.sender, response_content)
+                    answer.loadValidatators(output_validators)
+                    answer.validate()
+                except ValidationException as ex:
+                    self.__metrics.counter('messages.transmit.errors.total')
+                    g_logger.error('outgoing message did not passed validation')
+                    continue
+                client_context.appendTreatmentChain('output_validated')
+
+                # transmit answer to client
+                try:
                     transm.transmit(answer)
-                    client_context.appendTreatmentChain('transmitted')
                 except SMSException as ex:
                     self.__metrics.counter('messages.transmit.errors.total')
                     g_logger.error('error on emitting a message: %s', str(ex))
                     continue
+                client_context.appendTreatmentChain('transmitted')
 
 
     def stop(self):

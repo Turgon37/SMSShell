@@ -23,9 +23,12 @@
 # System imports
 import configparser
 import logging
+import re
 
 # Project imports
 from .utils import userToUid, groupToGid
+from .exceptions import ShellInitException
+from . import validators
 
 # Global project declarations
 g_logger = logging.getLogger('smsshell.config')
@@ -165,6 +168,96 @@ class MyConfigParser(configparser.ConfigParser):
         if self.has_section(name):
             return dict(self.items(name))
         return dict()
+
+    def getValidatorsFromConfig(self, key):
+        """Return the hash of validators loaded from config key
+
+        Args:
+            key : the key from current mode configuration
+        Returns:
+            the dict of validators per fields
+        """
+        return self.getClassesChainFromConfig(key,
+                                              validators,
+                                              base_class=validators.AbstractValidator)
+
+    def getClassesChainFromConfig(self, key, module, base_class=None):
+        """Extract classes instances from config key
+
+        Args:
+            key : the config parser key which contains the value
+            module : the name of the python module containing the classes
+                        objects
+            base_class : a OPTIONAL base class to test subclass of each
+                            generated instances
+        Returns:
+            the dict of validators per fields
+        """
+        classes_config = dict()
+        raw_config = self.getModeConfig(key, fallback='')
+        fields_spec = filter(lambda x: len(x), raw_config.split('\n'))
+
+        # line separated spec
+        for spec in fields_spec:
+            try:
+                field, field_classes = spec.split('=', 1)
+            except ValueError as ex:
+                g_logger.error("The specification '%s' is invalid because of %s",
+                               spec, str(ex))
+                continue
+
+            # prevent duplicate declaration
+            if field in classes_config:
+                g_logger.error(("The config for field named '%s' was " +
+                                "already declared in configuration. " +
+                                "Ignoring the second one."),
+                                field)
+                continue
+
+            classes_config[field] = []
+            classes_parts_splitted = re.split('\|(\w+:)', field_classes)
+            classes_parts = []
+            i = 0
+            # merge splitted classes parts because of the re.split behaviour
+            while i<len(classes_parts_splitted):
+                if i == 0:
+                    classes_parts.append(classes_parts_splitted[i])
+                else:
+                    classes_parts.append(''.join(classes_parts_splitted[i:(i+2)]))
+                    i += 1
+                i += 1
+
+            # load each class instance
+            for field_classes_spec in classes_parts:
+                class_name, class_args_raw = field_classes_spec.split(':', 1)
+
+                real_class_name = class_name[0].upper() + class_name[1:]
+                if not hasattr(module, real_class_name):
+                    g_logger.error(("The filter name '%s' for field named '%s'" +
+                                    " does not refer to an existing filter"),
+                                   class_name, field)
+                    continue
+                class_args = class_args_raw.split(',')
+                _class = getattr(module, real_class_name)
+                try:
+                    _instance = _class(*class_args)
+                    if base_class and not isinstance(_instance, base_class):
+                        raise Exception(("Class {} is not a subclass of " +
+                                         "{}").format(_class_name, base_class))
+                except Exception as ex:
+                    raise ShellInitException(("Error during instanciation of filter '{}'" +
+                                              " for field '{}' : {} : {}").format(
+                                                _class.__name__.lower(),
+                                                field,
+                                                ex.__class__,
+                                                str(ex)
+                                              ))
+
+                classes_config[field].append(_instance)
+            g_logger.debug("loaded %d classes for field %s",
+                           len(classes_config[field]),
+                           field)
+        return classes_config
 
     def __getValueInArray(self, section, key, array, default=None):
         """Test if a value is in an array

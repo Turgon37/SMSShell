@@ -94,7 +94,7 @@ class AbstractClientRequest(object):
     def addResponseData(self, **kwargs):
         """Append data to optional answer
         """
-        self.__response_data.update(**kwargs)
+        self.__response_data.update(kwargs)
 
     def popResponseData(self):
         """

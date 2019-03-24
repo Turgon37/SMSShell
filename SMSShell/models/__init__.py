@@ -22,6 +22,13 @@
 
 # Project imports
 from .message import Message
-from .session import Session, SessionStates
+from .session import (Session, SessionStates,
+                     BadStateTransitionException, SessionException)
 
-__all__ = ['Message', 'Session', 'SessionStates']
+__all__ = [
+    'Message',
+    'Session',
+    'SessionStates',
+    'BadStateTransitionException',
+    'SessionException'
+]

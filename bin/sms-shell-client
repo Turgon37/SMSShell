@@ -93,7 +93,7 @@ def getMessageFromInput(method, *args, **kwargs):
     elif method == 'stdin':
         g_logger.debug('read message from stdin')
         def readFromStdin():
-            return dict(sms_number='local', sms_text=input())
+            return dict(sms_number='+localhost', sms_text=input())
         func = readFromStdin
     else:
         g_logger.critical('You must choose a valid input method')
@@ -219,6 +219,8 @@ def sendMessageToOutputUnix(message, socket_path):
         return False
 
     g_logger.info('Successfully written message to SMSShell using unix socket')
+    if 'output' in ack:
+        print(ack['output'])
     return True
 
 def sendMessageToOutputFifo(message, fifo_path):
@@ -248,6 +250,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='SMSShell client version v' + __version__,
                                      argument_default=argparse.SUPPRESS,
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.set_defaults(transmit=False)
+    parser.add_argument('--transmit', action='store_true', dest='transmit',
+                        help='Unflag the message from no-transmit')
     parser.add_argument('--auth-token', action='store', dest='auth_token', type=str,
                         help='Use this token as authentication credential')
     parser.add_argument('--auth-role', action='store', dest='auth_role', type=str,
@@ -274,6 +279,9 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--debug', action='store_const', const='DEBUG', dest='log_level',
                         default='INFO',
                         help='Enable DEBUG logging')
+    parser.add_argument('-q', '--quiet', action='store_true', dest='quiet',
+                        default=False,
+                        help='Disable any logging')
     parser.add_argument('-v', '--version', action='store_true', dest='show_version',
                         help='Print the version and exit')
     pargs = parser.parse_args()
@@ -281,17 +289,20 @@ if __name__ == '__main__':
         print('SMSShell client version v{}'.format(__version__))
         sys.exit(0)
     if not hasattr(pargs, 'output'):
-        g_logger.critical('output type is required, use --help')
-        sys.exit(1)
+        parser.error('output type is required, use --help')
 
     g_logger.setLevel(pargs.log_level)
-    g_logger.debug('launch with args %s', vars(pargs))
+    if pargs.quiet:
+        g_logger.setLevel(logging.CRITICAL+1)
+    g_logger.debug('launch with args %s', str(vars(pargs)))
 
     msg = getMessageFromInput(pargs.input, *pargs.input_arg)
     g_logger.debug('get message %s', str(msg))
 
     if hasattr(pargs, 'auth_token'):
         msg['auth'] = dict(token=pargs.auth_token, role=pargs.auth_role)
+    if hasattr(pargs, 'transmit'):
+        msg['transmit'] = pargs.transmit
 
     msg = encodeMessage(pargs.encoding, msg)
     g_logger.debug('encoded message to %s', str(msg))

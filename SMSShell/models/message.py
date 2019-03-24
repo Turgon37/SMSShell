@@ -23,27 +23,44 @@ Each message have a sender reference used to keep session consistency and a
 content that will be analysed
 """
 
+# System imports
+import logging
+
+# Global project declarations
+g_logger = logging.getLogger('smsshell.message')
+
 
 class Message(object):
     """This class represent a message with sender id and content
     """
 
-    def __init__(self, sender, content, attributes=None):
+    def __init__(self, number, content, attributes=None):
         """Constructor: Build a new message object
 
         Args:
-            sender: sender's unique identifier
-            content: the message content as a string
+            number : message number
+            content : the message content as a string
         """
-        self.__sender = None
+        self.__number = None
         self.__content = None
         self.__attributes = dict()
+        self.__validators = dict()
+        # database model
         if attributes is not None:
             assert isinstance(attributes, dict)
             self.attributes = attributes
-        # database model
-        self.sender = sender
+        self.sender = number
         self.content = content
+
+    @property
+    def number(self):
+        """Return this message number
+
+        Returns:
+            the sender id as a string
+        """
+        assert self.__number is not None
+        return self.__number
 
     @property
     def sender(self):
@@ -52,8 +69,7 @@ class Message(object):
         Returns:
             the sender id as a string
         """
-        assert self.__sender is not None
-        return self.__sender
+        return self.number
 
     @sender.setter
     def sender(self, send):
@@ -62,7 +78,7 @@ class Message(object):
         Args:
             send: the sender id as a string
         """
-        self.__sender = send
+        self.__number = send
 
     @property
     def content(self):
@@ -126,6 +142,31 @@ class Message(object):
         assert isinstance(self.content, str)
         return self.content
 
+    def loadValidatators(self, validators):
+        """Initialize filters for this message
+
+        Args:
+            config_hash : the filters configuration hash
+                            given by config parser
+        Raise:
+            ValidationException : if a filter raise an error
+        """
+        for field, filters in validators.items():
+            if not hasattr(self, field):
+                raise ValidationException(("Field '{}' does not exist in " +
+                                           "message objects").format(field))
+            if field not in self.__validators:
+                self.__validators[field] = []
+            for filter in filters:
+                self.__validators[field].append(filter)
+
+    def validate(self):
+        """Validate this message using the defined validators
+        """
+        for field, validators in self.__validators.items():
+            for v in validators:
+                v(getattr(self, field))
+        return True
 
     # DEBUG methods
     def __str__(self):
