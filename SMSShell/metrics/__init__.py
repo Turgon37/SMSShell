@@ -59,7 +59,7 @@ class AbstractMetricsHelper(AbstractModule):
             return self.PREFIX + self.SEPARATOR + path
         return path
 
-    def counter(self, name, value=1, description=None):
+    def counter(self, name, value=1, description=None, labels=None):
         """Increase the given counter name by the given value
 
         Args:
@@ -70,7 +70,7 @@ class AbstractMetricsHelper(AbstractModule):
         Returns:
             mixed (self)
         """
-        return self._counter(self.normalizeName(name), value, description)
+        return self._counter(self.normalizeName(name), value, description, labels)
 
     def _counter(self, name, value=1, description=None):
         """

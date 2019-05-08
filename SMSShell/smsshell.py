@@ -337,10 +337,8 @@ class SMSShell(object):
 
         # init counters
         g_logger.debug('initialize metrics counters')
-        self.__metrics.counter('messages.receive.total', value=0, description='Number of received messages')
-        self.__metrics.counter('messages.receive.errors.total', value=0, description='Number of erroneous received messages')
-        self.__metrics.counter('messages.transmit.total', value=0, description='Number of transmitted messages')
-        self.__metrics.counter('messages.transmit.errors.total', value=0, description='Number of erroneous transmitted messages')
+        self.__metrics.counter('message.receive.total', labels=['status'], description='Number of received messages per status')
+        self.__metrics.counter('message.transmit.total', labels=['status'], description='Number of transmitted messages per status')
 
         # init messages filters
         try:
@@ -355,15 +353,13 @@ class SMSShell(object):
 
         # read and parse each message from receiver
         for client_context in recv.read():
-            self.__metrics.counter('messages.receive.total')
-
             with client_context as client_context_data:
                 # parse received content
                 try:
                     msg = parser.parse(client_context_data)
                     client_context.appendTreatmentChain('parsed')
                 except SMSException as ex:
-                    self.__metrics.counter('messages.receive.errors.total')
+                    self.__metrics.counter('message.receive.total', labels=dict(status='error'))
                     g_logger.error('received a bad message, skipping because of %s', str(ex))
                     continue
 
@@ -372,11 +368,12 @@ class SMSShell(object):
                     msg.loadValidatators(input_validators)
                     msg.validate()
                 except ValidationException as ex:
-                    self.__metrics.counter('messages.receive.errors.total')
+                    self.__metrics.counter('message.receive.total', labels=dict(status='error'))
                     g_logger.error(('incoming message did not passed the' +
                                     ' validation step because of : %s'),
                                    str(ex))
                     continue
+                self.__metrics.counter('message.receive.total', labels=dict(status='ok'))
                 client_context.appendTreatmentChain('input_validated')
 
                 # extract optional overrided role
@@ -395,12 +392,12 @@ class SMSShell(object):
                     response_content = '#Err: {}'.format(ex_message)
 
                 # forge the answer
-                self.__metrics.counter('messages.transmit.total')
+
                 answer = Message(msg.number, response_content)
                 client_context.addResponseData(output=answer.asString())
 
                 if not msg.attribute('transmit', True):
-                    self.__metrics.counter('messages.transmit.errors.total')
+                    self.__metrics.counter('message.transmit.total', labels=dict(status='discarded'))
                     continue
 
                 # validate outgoing content
@@ -408,7 +405,7 @@ class SMSShell(object):
                     answer.loadValidatators(output_validators)
                     answer.validate()
                 except ValidationException as ex:
-                    self.__metrics.counter('messages.transmit.errors.total')
+                    self.__metrics.counter('message.transmit.total', labels=dict(status='error'))
                     g_logger.error('outgoing message did not passed validation')
                     continue
                 client_context.appendTreatmentChain('output_validated')
@@ -417,9 +414,10 @@ class SMSShell(object):
                 try:
                     transm.transmit(answer)
                 except SMSException as ex:
-                    self.__metrics.counter('messages.transmit.errors.total')
+                    self.__metrics.counter('message.transmit.total', labels=dict(status='error'))
                     g_logger.error('error on emitting a message: %s', str(ex))
                     continue
+                self.__metrics.counter('message.transmit.total', labels=dict(status='ok'))
                 client_context.appendTreatmentChain('transmitted')
 
 

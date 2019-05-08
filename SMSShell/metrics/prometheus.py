@@ -71,7 +71,7 @@ class MetricsHelper(AbstractMetricsHelper):
         """
         return True
 
-    def _counter(self, name, value=1, description=None):
+    def _counter(self, name, value=1, description=None, labels=None):
         """Declare or increase a counter
 
         The counter is initialized on first usage, if you want to set
@@ -88,14 +88,37 @@ class MetricsHelper(AbstractMetricsHelper):
         if name not in self.__counters:
             # ensure description
             if not description:
-                g_logger.warning(("First usage of count metric '%s' require a description,"
+                g_logger.error(("First usage of count metric '%s' require a description,"
+                                  " metric is discarded"), name)
+                return self
+            # check labels format
+            if isinstance(labels, dict):
+                _labels = labels.keys()
+            elif isinstance(labels, list):
+                _labels = labels
+            else:
+                g_logger.error(("First usage of counter metric '%s' require labels to be a list,"
                                   " metric is discarded"), name)
                 return self
             # create counter
-            self.__counters[name] = prometheus_client.Counter(name, description)
+            self.__counters[name] = prometheus_client.Counter(name, description, _labels)
+            if isinstance(labels, list):
+                # only declare counter, do not initialize it
+                return
         counter = self.__counters[name]
         assert counter
 
+        if not isinstance(labels, dict):
+            g_logger.error(("Subsequents metrics usage required labels to be a dict with"
+                            " values, value discarded for metric named '%s'"), name)
+            return self
+
         if value > 0:
-            counter.inc(value)
+            try:
+                if labels:
+                    counter.labels(**labels).inc(value)
+                else:
+                    counter.inc(value)
+            except ValueError as ex:
+                g_logger.error("invalid metrics counter : %s", str(ex))
         return self
