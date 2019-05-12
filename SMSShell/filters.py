@@ -24,6 +24,7 @@
 import re
 
 # Project imports
+from .exceptions import ShellInitException
 from .chain import Chain
 
 __all__ = [
@@ -67,8 +68,11 @@ class LowerCase(AbstractFilter):
     """
 
     def __init__(self, length, start=0):
-        self.length = int(length)
-        self.start = int(start)
+        try:
+            self.length = int(length)
+            self.start = int(start)
+        except ValueError as ex:
+            raise ShellInitException(str(ex))
 
     def __call__(self, data):
         return data[self.start:self.length].lower() + data[(self.start+self.length):]
