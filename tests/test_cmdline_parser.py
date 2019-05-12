@@ -57,4 +57,4 @@ def test_cmdline_with_file_input():
         stdout = stdout.decode()
     obj = json.loads(stdout)
     assert result.returncode == 0
-    assert 'sms_number' in obj and obj['sms_number'] == '0124'
+    assert 'sms_number' in obj and obj['sms_number'] == '+3365'
