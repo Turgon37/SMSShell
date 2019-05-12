@@ -289,22 +289,35 @@ class Shell(object):
         class ShellWrapper(object):
             """This class if a wrapper for Shell
 
-            It restrict available attributes
-
-            Args:
-                shell: the initial shell instance
+            It prevent some shell attributes to be accessed directly
             """
+            ALLOWED_ATTRIBUTES = [
+                'flushCommandCache',
+                'getAvailableCommands',
+                'getCommand'
+            ]
+
             def __init__(self, shell):
+                """Build a new shell wrapper
+
+                Args:
+                    shell: the initial shell instance
+                """
                 self.__shell = shell
 
-            def getAvailableCommands(self, *args, **kw):
-                return self.__shell.getAvailableCommands(*args, **kw)
+            def __getattr__(self, name):
+                """Allow some shell's functions to be accessed through shell wrapper
 
-            def getCommand(self, *args, **kw):
-                return self.__shell.getCommand(*args, **kw)
-
-            def flushCommandCache(self, *args, **kw):
-                return self.__shell.flushCommandCache(*args, **kw)
+                Args:
+                    name: the attribute's name
+                Returns:
+                    the shell attribute
+                Raise:
+                    ShellException if attribute is not allowed
+                """
+                if name in ShellWrapper.ALLOWED_ATTRIBUTES:
+                    return getattr(self.__shell, name)
+                raise ShellException("attribute {} is not reachable using shell wrapper".format(name))
 
         return ShellWrapper(self)
 
