@@ -14,7 +14,7 @@ def test_abstract_init():
     with pytest.raises(NotImplementedError):
         abs('')
 
-def test_message_load_validator():
+def test_bad_validator_class():
     class V():
         def __call__(self, data):
             assert data == 'a'
@@ -23,7 +23,7 @@ def test_message_load_validator():
     with pytest.raises(SMSShell.exceptions.ShellInitException):
         chain.addLinksFromDict({'number': [V()]})
 
-def test_message_load_validator():
+def test_message_validation():
     m = SMSShell.models.message.Message('a', 'b')
 
     class V(SMSShell.validators.AbstractValidator):
@@ -32,9 +32,9 @@ def test_message_load_validator():
 
     chain = SMSShell.validators.ValidatorChain()
     chain.addLinksFromDict({'number': [V()]})
-    chain.callChainOnObject(m)
+    assert chain.callChainOnObject(m)
 
-def test_message_load_validator_on_missing_field():
+def test_message_validator_on_missing_field():
     m = SMSShell.models.message.Message('a', 'b')
 
     class V(SMSShell.validators.AbstractValidator):
