@@ -25,7 +25,7 @@ def test_message_attribute():
 def test_message_missing_attribute():
     m = SMSShell.models.message.Message('a', 'b', attributes={'a': 2})
 
-    with pytest.raises(KeyError):
+    with pytest.raises(AttributeError):
         m.attribute('b')
 
     assert m.attribute('b', 'fallback') == 'fallback'
