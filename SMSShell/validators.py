@@ -24,7 +24,7 @@
 import re
 
 # Project imports
-from .exceptions import ShellInitException
+from .chain import Chain
 
 __all__ = [
     'Regexp'
@@ -46,58 +46,15 @@ class AbstractValidator(object):
     def __call__(self, data):
         """Data validation function
         """
-        raise NotImplementedError()
+        raise NotImplementedError("Your validator must implement the call method")
 
 
-class ValidatorChain(object):
+class ValidatorChain(Chain):
     """This class validate an object using validators per field's name
     """
 
-    def __init__(self):
-        """Init a new empty validators chain
-        """
-        self.__validators = dict()
-
-    def addFieldValidator(self, field, validator):
-        """Append a validator object for specific field
-
-        Args:
-            field: the field's name
-            validator: the AbstractValidator validator instance
-        Raise:
-            ShellInitException if validator is not instance of AbstractValidator
-        """
-        if not isinstance(validator, AbstractValidator):
-            raise ShellInitException('Validator {} is not an instance of AbstractValidator'.format(
-                                        repr(validator)))
-
-        if field not in self.__validators:
-            self.__validators[field] = []
-        self.__validators[field].append(validator)
-
-    def addValidatorsFromDict(self, field_validators_map):
-        """Initialize filters for this message
-
-        Args:
-            field_validators_map : the filters configuration hash
-                            given by config parser
-        Raise:
-            ValidationException : if a filter raise an error
-        """
-        for field, validator in field_validators_map.items():
-            for v in validator:
-                self.addFieldValidator(field, v)
-
-    def validateObject(self, obj):
-        """Validate message using the defined validators
-        """
-        for field, validators in self.__validators.items():
-            if not hasattr(obj, field):
-                raise ValidationException(("Field '{}' does not exist in " +
-                                           "message").format(field))
-            for v in validators:
-                v(getattr(obj, field))
-        return True
+    ABSTRACT_CLASS = AbstractValidator
+    EXCEPTION = ValidationException
 
 
 class Regexp(AbstractValidator):
@@ -122,4 +79,4 @@ class Regexp(AbstractValidator):
         match = self.regex.match(data or '')
         if not match:
             raise ValidationException(self.message)
-        return match
+        return data

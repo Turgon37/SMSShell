@@ -37,6 +37,7 @@ import sys
 # Projet Imports
 from .config import MyConfigParser
 from .validators import ValidationException, ValidatorChain
+from .filters import FilterException, FilterChain
 from .models import Message, SessionStates
 from .receivers import AbstractReceiver
 from .parsers import AbstractParser
@@ -344,10 +345,12 @@ class SMSShell(object):
         try:
             g_logger.debug('initialize incoming messages validators')
             input_validators_chain = ValidatorChain()
-            input_validators_chain.addValidatorsFromDict(self.cp.getValidatorsFromConfig('input_validators'))
+            input_validators_chain.addLinksFromDict(self.cp.getValidatorsFromConfig('input_validators'))
+            input_filters_chain = FilterChain()
+            input_filters_chain.addLinksFromDict(self.cp.getFiltersFromConfig('input_filters'))
             g_logger.debug('initialize outgoing messages validators')
             output_validators_chain = ValidatorChain()
-            output_validators_chain.addValidatorsFromDict(self.cp.getValidatorsFromConfig('output_validators'))
+            output_validators_chain.addLinksFromDict(self.cp.getValidatorsFromConfig('output_validators'))
         except ShellInitException as ex:
             raise ex
             g_logger.fatal("Unable to load a classes : %s", str(ex))
@@ -367,7 +370,8 @@ class SMSShell(object):
 
                 # validate received content
                 try:
-                    input_validators_chain.validateObject(msg)
+                    input_validators_chain.callChainOnObject(msg)
+                    input_filters_chain.callChainOnObject(msg)
                 except ValidationException as ex:
                     self.__metrics.counter('message.receive.total', labels=dict(status='error'))
                     g_logger.error(('incoming message did not passed the' +
@@ -403,7 +407,7 @@ class SMSShell(object):
 
                 # validate outgoing content
                 try:
-                    output_validators_chain.validateObject(answer)
+                    output_validators_chain.callChainOnObject(answer)
                 except ValidationException as ex:
                     self.__metrics.counter('message.transmit.total', labels=dict(status='error'))
                     g_logger.error('outgoing message did not passed validation')

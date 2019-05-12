@@ -29,6 +29,7 @@ import re
 from .utils import userToUid, groupToGid
 from .exceptions import ShellInitException
 from . import validators
+from . import filters
 
 # Global project declarations
 g_logger = logging.getLogger('smsshell.config')
@@ -181,6 +182,19 @@ class MyConfigParser(configparser.ConfigParser):
                                               key,
                                               validators,
                                               base_class=validators.AbstractValidator)
+
+    def getFiltersFromConfig(self, key):
+        """Return the hash of filters loaded from config key
+
+        Args:
+            key : the key from current mode configuration
+        Returns:
+            the dict of validators per fields
+        """
+        return self.getClassesChainFromConfig(self.getMode().lower(),
+                                              key,
+                                              filters,
+                                              base_class=filters.AbstractFilter)
 
     def getClassesChainFromConfig(self, section, key, module, base_class=None):
         """Extract classes instances from config key
