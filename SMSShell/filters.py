@@ -28,7 +28,7 @@ from .exceptions import ShellInitException
 from .chain import Chain
 
 __all__ = [
-    'RegexpReplace'
+    'LowerCase'
 ]
 
 

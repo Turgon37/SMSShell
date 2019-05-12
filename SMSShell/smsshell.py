@@ -372,7 +372,7 @@ class SMSShell(object):
                 try:
                     input_validators_chain.callChainOnObject(msg)
                     input_filters_chain.callChainOnObject(msg)
-                except ValidationException as ex:
+                except (ValidationException, FilterException) as ex:
                     self.__metrics.counter('message.receive.total', labels=dict(status='error'))
                     g_logger.error(('incoming message did not passed the' +
                                     ' validation step because of : %s'),

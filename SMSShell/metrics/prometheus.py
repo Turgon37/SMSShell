@@ -89,7 +89,7 @@ class MetricsHelper(AbstractMetricsHelper):
             # ensure description
             if not description:
                 g_logger.error(("First usage of count metric '%s' require a description,"
-                                  " metric is discarded"), name)
+                                " metric is discarded"), name)
                 return self
             # check labels format
             if isinstance(labels, dict):
@@ -98,7 +98,7 @@ class MetricsHelper(AbstractMetricsHelper):
                 _labels = labels
             else:
                 g_logger.error(("First usage of counter metric '%s' require labels to be a list,"
-                                  " metric is discarded"), name)
+                                " metric is discarded"), name)
                 return self
             # create counter
             self.__counters[name] = prometheus_client.Counter(name, description, _labels)

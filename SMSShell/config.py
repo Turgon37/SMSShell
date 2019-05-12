@@ -226,7 +226,7 @@ class MyConfigParser(configparser.ConfigParser):
                 g_logger.error(("The config for field named '%s' was " +
                                 "already declared in configuration. " +
                                 "Ignoring the second one."),
-                                field)
+                               field)
                 continue
 
             classes_config[field] = []
@@ -234,7 +234,7 @@ class MyConfigParser(configparser.ConfigParser):
             classes_parts = []
             i = 0
             # merge splitted classes parts because of the re.split behaviour
-            while i<len(classes_parts_splitted):
+            while i < len(classes_parts_splitted):
                 if i == 0:
                     classes_parts.append(classes_parts_splitted[i])
                 else:

@@ -205,10 +205,12 @@ class Shell(object):
     def __call(self, session, cmd_name, argv):
         """Execute the command with the given name
 
-        @param models.Session session
-        @param str the name of the command
-        @param list<str> argv the command's arguments
-        @return the command output
+        Args:
+            session: models.Session the session object to use
+            cmd_name: the name of the command to call
+            argv: the list of string arguments to pass to the command
+        Returns:
+            the command output
         """
         com = self.__getCommand(cmd_name)
         # set the prefix to separate session's namespaces

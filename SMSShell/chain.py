@@ -28,7 +28,7 @@ class Chain(object):
     """This class validate an object using validators per field's name
     """
 
-    ABSTRACT_CLASS = None
+    ABSTRACT_CLASS = object
     EXCEPTION = Exception
     ASSIGN_RETURN = False
 
@@ -47,10 +47,10 @@ class Chain(object):
             ShellInitException if validator is not instance of AbstractValidator
         """
         if (self.__class__.ABSTRACT_CLASS and
-            not isinstance(link, self.__class__.ABSTRACT_CLASS)):
+                not isinstance(link, self.__class__.ABSTRACT_CLASS)):
             raise ShellInitException('Object {} is not an instance of {}'.format(
-                                        repr(link),
-                                        self.__class__.ABSTRACT_CLASS.__name__.lower()))
+                repr(link),
+                self.__class__.ABSTRACT_CLASS.__name__.lower()))
 
         if field not in self.__field_links:
             self.__field_links[field] = []
@@ -80,7 +80,7 @@ class Chain(object):
         for field, links in self.__field_links.items():
             if not hasattr(obj, field):
                 raise self.__class__.EXCEPTION(("Field '{}' does not exist in " +
-                                           "message").format(field))
+                                                "message").format(field))
             for l in links:
                 r = l(getattr(obj, field))
                 if self.__class__.ASSIGN_RETURN:
