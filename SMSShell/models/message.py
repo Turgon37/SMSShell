@@ -26,9 +26,6 @@ content that will be analysed
 # System imports
 import logging
 
-# Project imports
-from ..validators import ValidationException
-
 # Global project declarations
 g_logger = logging.getLogger('smsshell.message')
 
@@ -47,7 +44,6 @@ class Message(object):
         self.__number = None
         self.__content = None
         self.__attributes = dict()
-        self.__validators = dict()
         # database model
         if attributes is not None:
             assert isinstance(attributes, dict)
@@ -93,6 +89,14 @@ class Message(object):
         """
         self.__content = cont
 
+    def __getattr__(self, name):
+        """Magic function to retrieve message attributes
+
+        Args:
+            name: the name of the attribute
+        """
+        return self.attribute(name)
+
     def attribute(self, key, fallback=KeyError):
         """Return the optional message extra attributes
 
@@ -135,32 +139,6 @@ class Message(object):
         """
         assert isinstance(self.content, str)
         return self.content
-
-    def loadValidatators(self, validators):
-        """Initialize filters for this message
-
-        Args:
-            config_hash : the filters configuration hash
-                            given by config parser
-        Raise:
-            ValidationException : if a filter raise an error
-        """
-        for field, filters in validators.items():
-            if not hasattr(self, field):
-                raise ValidationException(("Field '{}' does not exist in " +
-                                           "message objects").format(field))
-            if field not in self.__validators:
-                self.__validators[field] = []
-            for filter in filters:
-                self.__validators[field].append(filter)
-
-    def validate(self):
-        """Validate this message using the defined validators
-        """
-        for field, validators in self.__validators.items():
-            for v in validators:
-                v(getattr(self, field))
-        return True
 
     # DEBUG methods
     def __str__(self):
