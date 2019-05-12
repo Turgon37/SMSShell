@@ -7,7 +7,10 @@ python:
   - 3.7-dev
 
 install:
-  - sudo apt-get install libgammu-dev
+  - echo deb http://fr.archive.ubuntu.com/ubuntu/ bionic main universe | sudo tee /etc/apt/sources.list.d/bionic.list
+  - 'echo -e "Package: *\nPin: release n=bionic\nPin-Priority: 400" | sudo tee /etc/apt/preferences.d/pin.pref'
+  - sudo apt-get update
+  - sudo apt-get install -t bionic libgammu-dev
   - pip install -r pip-requirements.txt
   - pip install -r tests/pip-requirements.txt
 
