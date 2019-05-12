@@ -29,23 +29,3 @@ def test_message_missing_attribute():
         m.attribute('b')
 
     assert m.attribute('b', 'fallback') == 'fallback'
-
-def test_message_load_validator():
-    m = SMSShell.models.message.Message('a', 'b')
-
-    class V():
-        def __call__(self, data):
-            assert data == 'a'
-
-    m.loadValidatators({'number': [V()]})
-    m.validate()
-
-def test_message_load_validator_on_missing_field():
-    m = SMSShell.models.message.Message('a', 'b')
-
-    class V():
-        def __call__(self, data):
-            pass
-
-    with pytest.raises(SMSShell.validators.ValidationException):
-        m.loadValidatators({'nonexistent': [V()]})

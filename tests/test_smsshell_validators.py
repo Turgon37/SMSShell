@@ -4,6 +4,7 @@ import pytest
 
 import SMSShell
 import SMSShell.validators
+import SMSShell.models.message
 
 
 def test_abstract_init():
@@ -12,6 +13,40 @@ def test_abstract_init():
     abs = SMSShell.validators.AbstractValidator()
     with pytest.raises(NotImplementedError):
         abs('')
+
+def test_message_load_validator():
+    class V():
+        def __call__(self, data):
+            assert data == 'a'
+
+    chain = SMSShell.validators.ValidatorChain()
+    with pytest.raises(SMSShell.exceptions.ShellInitException):
+        chain.addLinksFromDict({'number': [V()]})
+
+def test_message_load_validator():
+    m = SMSShell.models.message.Message('a', 'b')
+
+    class V(SMSShell.validators.AbstractValidator):
+        def __call__(self, data):
+            assert data == 'a'
+
+    chain = SMSShell.validators.ValidatorChain()
+    chain.addLinksFromDict({'number': [V()]})
+    chain.callChainOnObject(m)
+
+def test_message_load_validator_on_missing_field():
+    m = SMSShell.models.message.Message('a', 'b')
+
+    class V(SMSShell.validators.AbstractValidator):
+        def __call__(self, data):
+            pass
+
+    chain = SMSShell.validators.ValidatorChain()
+    chain.addLinksFromDict({'nonexistent': [V()]})
+    with pytest.raises(SMSShell.validators.ValidationException):
+        chain.callChainOnObject(m)
+
+# Regexp validator
 
 def test_regexp_load():
     """Simple test with configuration sample loading

@@ -97,7 +97,7 @@ class Message(object):
         """
         return self.attribute(name)
 
-    def attribute(self, key, fallback=KeyError):
+    def attribute(self, key, fallback=AttributeError):
         """Return the optional message extra attributes
 
         Returns:

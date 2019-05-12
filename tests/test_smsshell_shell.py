@@ -124,5 +124,5 @@ def test_secure_wrapper_isolation():
     shell = SMSShell.shell.Shell(conf, metrics)
     sw = shell.getSecureShell()
 
-    with pytest.raises(AttributeError):
+    with pytest.raises(SMSShell.exceptions.ShellException):
         sw.exec('user1', 'help')
