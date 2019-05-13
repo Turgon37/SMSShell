@@ -6,7 +6,7 @@ import SMSShell
 import SMSShell.transmitters.stdout
 
 
-def test_init(capsys):
+def test_init():
     transmitter = SMSShell.transmitters.stdout.Transmitter()
     assert transmitter.start()
     assert transmitter.stop()
