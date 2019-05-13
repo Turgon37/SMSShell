@@ -31,6 +31,8 @@ def test_simple_transmit():
         pass
     config = dict(umask='9', smsdrc_configuration='tests/smsdrc')
     transmitter = SMSShell.transmitters.python_gammu.Transmitter(config=config)
+    transmitter.start()
     message = SMSShell.models.Message('local', 'OK')
     transmitter.transmit(message)
+    transmitter.stop()
     os.unlink('tests/smsdrc')
