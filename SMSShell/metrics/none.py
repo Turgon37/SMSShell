@@ -55,7 +55,15 @@ class MetricsHelper(AbstractMetricsHelper):
         """
         return True
 
-    def _counter(self, name, value=1, description=None):
+    def _counter(self, name, value=1, description=None, labels=None):
+        """Do nothing
+
+        Returns:
+            mixed (self)
+        """
+        return self
+
+    def _gauge(self, name, value=None, set=None, callback=None, description=None, labels=None):
         """Do nothing
 
         Returns:

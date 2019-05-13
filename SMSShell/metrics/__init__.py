@@ -56,23 +56,44 @@ class AbstractMetricsHelper(AbstractModule):
         """
         path = name.replace('.', self.SEPARATOR)
         if path[0:len(self.PREFIX)] != self.PREFIX:
-            return self.PREFIX + self.SEPARATOR + path
+            return self.SEPARATOR.join([self.PREFIX, path])
         return path
 
-    def counter(self, name, value=1, description=None, labels=None):
-        """Increase the given counter name by the given value
+    def counter(self, name, *args, **kwargs):
+        """Declare or increase this counter by the value
 
         Args:
             name: the name (the path) of the counter
             value: the value
             description: a description of the counter
               used in some handler, must be set on the first counter usage
+            labels:
         Returns:
             mixed (self)
         """
-        return self._counter(self.normalizeName(name), value, description, labels)
+        return self._counter(self.normalizeName(name), *args, **kwargs)
 
-    def _counter(self, name, value=1, description=None):
+    def _counter(self, name, value=1, description=None, labels=None):
         """
         """
         raise NotImplementedError("You must implement the '_counter' method in metrics helper class")
+
+    def gauge(self, name, *args, **kwargs):
+        """Declare and manipulate a gauge
+
+        Args:
+            name: the name (the path) of the gauge
+            value: increase/decrease the gauge by this value
+            set: set the value of the gauge
+            callback: optional callback function to use to compute metric
+            description: a description of the gauge
+              used in some handler, must be set on the first counter usage
+        Returns:
+            mixed (self)
+        """
+        return self._gauge(self.normalizeName(name), *args, **kwargs)
+
+    def _gauge(self, name, value=None, set=None, callback=None, description=None, labels=None):
+        """
+        """
+        raise NotImplementedError("You must implement the '_gauge' method in metrics helper class")
