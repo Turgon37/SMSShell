@@ -49,12 +49,12 @@ class Transmitter(AbstractTransmitter):
         self.__path = self.getConfig('path', fallback="/var/run/smsshell.sock")
 
         # parse umask
+        umask = self.getConfig('umask', fallback='{:o}'.format(self.__default_umask))
         try:
-            self.__umask = int(self.getConfig('umask', fallback='{:o}'.format(self.__default_umask)),
-                               8)
+            self.__umask = int(umask, 8)
         except ValueError:
             g_logger.error("Invalid UMASK format '%s', fallback to default umask %s",
-                           self.__umask,
+                           umask,
                            self.__default_umask)
             self.__umask = self.__default_umask
 
@@ -89,6 +89,8 @@ class Transmitter(AbstractTransmitter):
 
     def transmit(self, answer):
         assert isinstance(answer, Message)
+        assert self.__smsd
+
         message = {
             'Text': answer.asString(),
             'SMSC': {
