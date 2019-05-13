@@ -1,5 +1,6 @@
 # -*- coding: utf8 -*-
 
+import configparser
 import pytest
 import os
 
@@ -27,12 +28,15 @@ def test_without_read_right():
 def test_simple_transmit():
     """Test base parser class exception
     """
+    smsdrc = configparser.ConfigParser()
+    smsdrc['gammu'] = dict(Device='/dev/null')
+    smsdrc['smsd'] = dict(Service='FILES')
     with open('tests/smsdrc', 'w') as w:
-        pass
-    config = dict(umask='9', smsdrc_configuration='tests/smsdrc')
+        smsdrc.write(w)
+    config = dict(umask='9', smsdrc_configuration=os.path.join(os.getcwd(), 'tests/smsdrc'))
     transmitter = SMSShell.transmitters.python_gammu.Transmitter(config=config)
     transmitter.start()
     message = SMSShell.models.Message('local', 'OK')
     transmitter.transmit(message)
     transmitter.stop()
-    os.unlink('tests/smsdrc')
+    #os.unlink('tests/smsdrc')
