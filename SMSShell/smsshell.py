@@ -272,7 +272,7 @@ class SMSShell(object):
         """
         try:
             auth_attr = message.attribute('auth')
-        except KeyError:
+        except AttributeError:
             return None
 
         assert isinstance(auth_attr, dict)
