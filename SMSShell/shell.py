@@ -324,14 +324,15 @@ class Shell():
             instance of shell wrapper
         """
         class ShellWrapper():
+            # pylint: disable=R0903
             """This class if a wrapper for Shell
 
             It prevent some shell attributes to be accessed directly
             """
             ALLOWED_ATTRIBUTES = [
-                'flushCommandCache',
-                'getAvailableCommands',
-                'getCommand'
+                'flush_command_cache',
+                'get_available_commands',
+                'get_command'
             ]
 
             def __init__(self, shell):

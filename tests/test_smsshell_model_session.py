@@ -38,15 +38,15 @@ def test_session_bad_state_transition():
         s.state = 1
 
     with pytest.raises(BadStateTransitionException):
-        s.forceState(1)
+        s.force_state(1)
 
 def test_session_ttl():
     """Test ttl validation
     """
     s = SMSShell.models.session.Session('sender', 1)
-    assert s.isValid()
+    assert s.is_valid()
     time.sleep(1.1)
-    assert not s.isValid()
+    assert not s.is_valid()
 
 def test_session_storage_access():
     """Test session storage get/set
@@ -75,7 +75,7 @@ def test_session_secure_wrapper():
     """Test to use secure session wrapper
     """
     s = SMSShell.models.session.Session('sender')
-    sw = s.getSecureSession()
+    sw = s.get_secure_session()
 
     sw.set('key', 'sample')
     assert sw.get('key') == 'sample'
@@ -84,10 +84,10 @@ def test_session_secure_wrapper_isolation():
     """Test secure session for critical attributes
     """
     s = SMSShell.models.session.Session('sender')
-    sw = s.getSecureSession()
+    sw = s.get_secure_session()
 
     with pytest.raises(AttributeError):
         sw.set_storage_prefix('user1')
 
     with pytest.raises(AttributeError):
-        sw.forceState(SessionStates.STATE_LOGININPROGRESS)
+        sw.force_state(SessionStates.STATE_LOGININPROGRESS)

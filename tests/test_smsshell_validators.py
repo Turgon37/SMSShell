@@ -21,7 +21,7 @@ def test_bad_validator_class():
 
     chain = SMSShell.validators.ValidatorChain()
     with pytest.raises(SMSShell.exceptions.ShellInitException):
-        chain.addLinksFromDict({'number': [V()]})
+        chain.add_links_from_dict({'number': [V()]})
 
 def test_message_validation():
     m = SMSShell.models.message.Message('a', 'b')
@@ -31,8 +31,8 @@ def test_message_validation():
             assert data == 'a'
 
     chain = SMSShell.validators.ValidatorChain()
-    chain.addLinksFromDict({'number': [V()]})
-    assert chain.callChainOnObject(m)
+    chain.add_links_from_dict({'number': [V()]})
+    assert chain.call_chain_on_object(m)
 
 def test_message_validator_on_missing_field():
     m = SMSShell.models.message.Message('a', 'b')
@@ -42,9 +42,9 @@ def test_message_validator_on_missing_field():
             pass
 
     chain = SMSShell.validators.ValidatorChain()
-    chain.addLinksFromDict({'nonexistent': [V()]})
+    chain.add_links_from_dict({'nonexistent': [V()]})
     with pytest.raises(SMSShell.validators.ValidationException):
-        chain.callChainOnObject(m)
+        chain.call_chain_on_object(m)
 
 # Regexp validator
 

@@ -13,14 +13,14 @@ def test_loading():
     """
     conf = SMSShell.config.MyConfigParser()
     assert conf.load('./config.conf')[1]
-    assert conf.isLoaded()
+    assert conf.is_loaded()
 
 def test_with_bad_file_path():
     """Test to give a bad file path
     """
     conf = SMSShell.config.MyConfigParser()
     assert not conf.load('/nonexistent')[0]
-    assert not conf.isLoaded()
+    assert not conf.is_loaded()
 
 def test_with_bad_file_content():
     """Test to give a bad file content
@@ -29,7 +29,7 @@ def test_with_bad_file_content():
     with open('error.ini', 'w') as configfile:
         configfile.write("test")
     assert not conf.load('error.ini')[0]
-    assert not conf.isLoaded()
+    assert not conf.is_loaded()
     os.unlink('error.ini')
 
 def test_with_bad_log_level():
@@ -44,10 +44,10 @@ def test_with_bad_log_level():
     with open('error.ini', 'w') as configfile:
         writer.write(configfile)
     assert conf.load('error.ini')[0]
-    assert conf.isLoaded()
+    assert conf.is_loaded()
     os.unlink('error.ini')
 
-    assert conf.getLogLevel(default='_default_') == '_default_'
+    assert conf.get_log_level(default='_default_') == '_default_'
 
 def test_with_bad_uid_mapping():
     """Test to give a bad uid value
@@ -61,10 +61,10 @@ def test_with_bad_uid_mapping():
     with open('error.ini', 'w') as configfile:
         writer.write(configfile)
     assert conf.load('error.ini')[0]
-    assert conf.isLoaded()
+    assert conf.is_loaded()
     os.unlink('error.ini')
 
-    assert conf.getUid() is None
+    assert conf.get_uid() is None
 
 def test_with_bad_gid_mapping():
     """Test to give a bad gid value
@@ -78,34 +78,34 @@ def test_with_bad_gid_mapping():
     with open('error.ini', 'w') as configfile:
         writer.write(configfile)
     assert conf.load('error.ini')[0]
-    assert conf.isLoaded()
+    assert conf.is_loaded()
     os.unlink('error.ini')
 
-    assert conf.getGid() is None
+    assert conf.get_gid() is None
 
 def test_getter():
     """Test getter
     """
     conf = SMSShell.config.MyConfigParser()
     assert conf.load('./config.conf')[1]
-    assert conf.isLoaded()
+    assert conf.is_loaded()
 
-    assert conf.getLogLevel('null') != 'null'
+    assert conf.get_log_level('null') != 'null'
 
-    uid = conf.getUid()
+    uid = conf.get_uid()
     assert isinstance(uid, int) or uid is None
 
-    gid = conf.getGid()
+    gid = conf.get_gid()
     assert isinstance(gid, int) or gid is None
 
-    assert isinstance(conf.getMode(), str)
+    assert isinstance(conf.get_mode(), str)
 
-    c_mode = conf.getModeConfig(conf.getMode())
+    c_mode = conf.get_mode_config(conf.get_mode())
     assert isinstance(c_mode, dict) or c_mode is None
 
-    assert not conf.getSectionOrEmpty('no_section')
+    assert not conf.get_section_or_empty('no_section')
 
-    assert conf.getSectionOrEmpty('main')
+    assert conf.get_section_or_empty('main')
 
 def test_with_classes_chain_loading():
     """Test correct parsing of classes chain
@@ -119,7 +119,7 @@ def test_with_classes_chain_loading():
     with open('chain.ini', 'w') as configfile:
         writer.write(configfile)
     assert conf.load('chain.ini')[0]
-    assert conf.isLoaded()
+    assert conf.is_loaded()
     os.unlink('chain.ini')
 
     class module:
@@ -135,7 +135,7 @@ def test_with_classes_chain_loading():
             def __init__(self, value1, value2):
                 self.values = (value1, value2)
 
-    spec = conf.getClassesChainFromConfig('test', 'chain', module)
+    spec = conf.get_classes_chain_from_config('test', 'chain', module)
     assert 'a' in spec
     assert isinstance(spec['a'][0], module.F1)
     assert isinstance(spec['a'][1], module.F2)
@@ -155,7 +155,7 @@ def test_with_classes_chain_missing_filter_class():
     with open('chain.ini', 'w') as configfile:
         writer.write(configfile)
     assert conf.load('chain.ini')[0]
-    assert conf.isLoaded()
+    assert conf.is_loaded()
     os.unlink('chain.ini')
 
     class module:
@@ -163,7 +163,7 @@ def test_with_classes_chain_missing_filter_class():
         class F1:
             pass
 
-    spec = conf.getClassesChainFromConfig('test', 'chain', module)
+    spec = conf.get_classes_chain_from_config('test', 'chain', module)
     assert 'a' in spec
     assert len(spec['a']) == 1
     assert isinstance(spec['a'][0], module.F1)
@@ -180,7 +180,7 @@ def test_with_classes_chain_bad_filter_config():
     with open('chain.ini', 'w') as configfile:
         writer.write(configfile)
     assert conf.load('chain.ini')[0]
-    assert conf.isLoaded()
+    assert conf.is_loaded()
     os.unlink('chain.ini')
 
     class module:
@@ -189,4 +189,4 @@ def test_with_classes_chain_bad_filter_config():
             pass
 
     with pytest.raises(SMSShell.exceptions.ShellInitException):
-        spec = conf.getClassesChainFromConfig('test', 'chain', module)
+        spec = conf.get_classes_chain_from_config('test', 'chain', module)

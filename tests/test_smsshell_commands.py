@@ -1,6 +1,5 @@
 # -*- coding: utf8 -*-
 
-import argparse
 import logging
 import pytest
 
@@ -11,58 +10,62 @@ import SMSShell.commands
 def test_abstract_init():
     """Test abstract init methods
     """
-    abs = SMSShell.commands.AbstractCommand(logging.getLogger(),
+    com = SMSShell.commands.AbstractCommand(logging.getLogger(),
                                             object(),
                                             object(),
                                             object())
 
-    assert abs.name == 'abstractcommand'
+    assert com.name == 'abstractcommand'
 
 def test_abstract_not_implemented():
-    abs = SMSShell.commands.AbstractCommand(logging.getLogger(),
+    com = SMSShell.commands.AbstractCommand(logging.getLogger(),
                                             object(),
                                             object(),
                                             object())
 
     with pytest.raises(SMSShell.commands.CommandBadImplemented):
-        abs.description([])
+        com.description([])
     with pytest.raises(SMSShell.commands.CommandBadImplemented):
-        abs.usage([])
+        com.usage([])
     with pytest.raises(SMSShell.commands.CommandBadImplemented):
-        abs.main([])
+        com.main([])
 
 def test_abstract_bad_input_state_type():
 
     class Bad(SMSShell.commands.AbstractCommand):
-        def inputStates(self):
+        def input_states(self):
             return dict()
 
     com = Bad(logging.getLogger(),
               object(),
               object(),
               object())
+    session = SMSShell.models.session.Session('sender')
+
     with pytest.raises(SMSShell.commands.CommandBadImplemented):
-        com._inputStates()
+        SMSShell.shell.Shell.has_session_access_to_command(session, com)
 
 
 def test_abstract_bad_input_state_value():
 
     class Bad(SMSShell.commands.AbstractCommand):
-        def inputStates(self):
+        def input_states(self):
             return ['d']
 
     com = Bad(logging.getLogger(),
               object(),
               object(),
               object())
+    session = SMSShell.models.session.Session('sender')
+
     with pytest.raises(SMSShell.commands.CommandBadImplemented):
-        com._inputStates()
+        SMSShell.shell.Shell.has_session_access_to_command(session, com)
 
 
 def test_abstract_bad_arg_parser_type():
 
     class Bad(SMSShell.commands.AbstractCommand):
-        def argsParser(self):
+        def args_parser(self):
             return 'a'
 
     com = Bad(logging.getLogger(),
@@ -70,12 +73,12 @@ def test_abstract_bad_arg_parser_type():
               object(),
               object())
     with pytest.raises(SMSShell.commands.CommandBadImplemented):
-        com._argsParser()
+        com._args_parser()
 
 def test_abstract_bad_arg_parser_init():
 
     class Bad(SMSShell.commands.AbstractCommand):
-        def argsParser(self):
+        def args_parser(self):
             raise ValueError('no')
 
     com = Bad(logging.getLogger(),
@@ -83,4 +86,4 @@ def test_abstract_bad_arg_parser_init():
               object(),
               object())
     with pytest.raises(SMSShell.commands.CommandBadImplemented):
-        com._argsParser()
+        com._args_parser()

@@ -16,7 +16,7 @@ def test_loading():
     """
     conf = SMSShell.config.MyConfigParser()
     assert conf.load('./config.conf')[1]
-    assert conf.isLoaded()
+    assert conf.is_loaded()
 
     metrics = SMSShell.metrics.none.MetricsHelper()
 
@@ -26,7 +26,7 @@ def test_loading():
 def test_loading_all_commands():
     conf = SMSShell.config.MyConfigParser()
     assert conf.load('./config.conf')[1]
-    assert conf.isLoaded()
+    assert conf.is_loaded()
 
     metrics = SMSShell.metrics.none.MetricsHelper()
 
@@ -34,12 +34,12 @@ def test_loading_all_commands():
     session = SMSShell.models.session.Session('sender')
 
     assert shell.get_available_commands(session)
-    shell.flushCommandCache()
+    shell.flush_command_cache()
 
 def test_exec_command_help():
     conf = SMSShell.config.MyConfigParser()
     assert conf.load('./config.conf')[1]
-    assert conf.isLoaded()
+    assert conf.is_loaded()
 
     metrics = SMSShell.metrics.none.MetricsHelper()
 
@@ -51,7 +51,7 @@ def test_exec_command_help():
 def test_exec_usage_on_all_commands():
     conf = SMSShell.config.MyConfigParser()
     assert conf.load('./config.conf')[1]
-    assert conf.isLoaded()
+    assert conf.is_loaded()
 
     metrics = SMSShell.metrics.none.MetricsHelper()
 
@@ -65,7 +65,7 @@ def test_exec_usage_on_all_commands():
 def test_exec_command_not_found():
     conf = SMSShell.config.MyConfigParser()
     assert conf.load('./config.conf')[1]
-    assert conf.isLoaded()
+    assert conf.is_loaded()
 
     metrics = SMSShell.metrics.none.MetricsHelper()
 
@@ -77,7 +77,7 @@ def test_exec_command_not_found():
 def test_exec_with_bad_syntax():
     conf = SMSShell.config.MyConfigParser()
     assert conf.load('./config.conf')[1]
-    assert conf.isLoaded()
+    assert conf.is_loaded()
 
     metrics = SMSShell.metrics.none.MetricsHelper()
 
@@ -89,10 +89,11 @@ def test_exec_with_bad_syntax():
     with pytest.raises(SMSShell.exceptions.ShellException):
         shell.exec('sender', '\\')
 
+# TODO
 # def test_exec_command_forbidden():
 #     conf = SMSShell.config.MyConfigParser()
 #     assert conf.load('./config.conf')[1]
-#     assert conf.isLoaded()
+#     assert conf.is_loaded()
 #
 #     shell = SMSShell.shell.Shell(conf)
 #
@@ -104,20 +105,20 @@ def test_secure_wrapper():
     """
     conf = SMSShell.config.MyConfigParser()
     assert conf.load('./config.conf')[1]
-    assert conf.isLoaded()
+    assert conf.is_loaded()
 
     metrics = SMSShell.metrics.none.MetricsHelper()
 
     shell = SMSShell.shell.Shell(conf, metrics)
     sw = shell.get_secure_shell()
-    sw.flushCommandCache()
+    sw.flush_command_cache()
 
 def test_secure_wrapper_isolation():
     """Test secure shell for critical attributes
     """
     conf = SMSShell.config.MyConfigParser()
     assert conf.load('./config.conf')[1]
-    assert conf.isLoaded()
+    assert conf.is_loaded()
 
     metrics = SMSShell.metrics.none.MetricsHelper()
 

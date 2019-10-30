@@ -83,11 +83,11 @@ if __name__ == '__main__':
         sys.exit(0)
 
     if args.input == 'env':
-        content = SMSShell.utils.GammuSMSParser.decodeFromEnv()
+        content = SMSShell.utils.GammuSMSParser.decode_from_env()
     elif args.input == 'file':
         if not args.input_arg:
             parser.error('file input require a file path as option')
-        content = SMSShell.utils.GammuSMSParser.decodeFromBackupFilePath(args.input_arg[0])
+        content = SMSShell.utils.GammuSMSParser.decode_from_backup_file_path(args.input_arg[0])
     else:
         print('You must choose a valid input method')
         sys.exit(1)

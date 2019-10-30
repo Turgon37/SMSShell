@@ -86,10 +86,10 @@ def getMessageFromInput(method, *args, **kwargs):
     """
     if method == 'env':
         g_logger.debug('read message from environment variables')
-        func = SMSShell.utils.GammuSMSParser.decodeFromEnv
+        func = SMSShell.utils.GammuSMSParser.decode_from_env
     elif method == 'file':
         g_logger.debug('read message from backup file')
-        func = SMSShell.utils.GammuSMSParser.decodeFromBackupFilePath
+        func = SMSShell.utils.GammuSMSParser.decode_from_backup_file_path
     elif method == 'stdin':
         g_logger.debug('read message from stdin')
         def readFromStdin():

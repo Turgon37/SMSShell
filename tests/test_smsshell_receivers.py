@@ -38,4 +38,4 @@ def test_abstract_context_bad_usage():
     """
     abs = SMSShell.receivers.AbstractClientRequest('')
     with pytest.raises(RuntimeError):
-        abs.getRequestData()
+        abs.get_request_data()
