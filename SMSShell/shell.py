@@ -73,7 +73,7 @@ class Shell(object):
                              callback=lambda: len(self.__sessions),
                              description='Current number of session in sessions directory')
         self.__metrics.counter('commands.call.total',
-                               labels=['status'],
+                               labels=['status','name'],
                                description='Number of commands call per name and status')
 
     def exec(self, subject, cmdline, as_role=None):
