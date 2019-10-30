@@ -17,32 +17,56 @@
 # You should have received a copy of the GNU General Public License
 # along with SMSShell. If not, see <http://www.gnu.org/licenses/>.
 
-"""A simple file output transmitter
+"""A dummy metrics exporter, drop all metrics given to it
 """
 
 # System imports
 import logging
-import sys
 
 # Project imports
-from . import AbstractTransmitter
-from ..models import Message
+from . import AbstractMetricsHelper
 
 # Global project declarations
-g_logger = logging.getLogger('smsshell.transmitters.stdout')
+g_logger = logging.getLogger('smsshell.metrics.none')
 
 
-class Transmitter(AbstractTransmitter):
-    """Transmitter class, see module docstring for help
+class MetricsHelper(AbstractMetricsHelper):
+    """The base class for all metrics helpers
     """
 
+    def init(self):
+        """Init function
+        """
+        g_logger.info('Using dummy metrics helper')
+
     def start(self):
+        """Do nothing
+
+        Returns:
+            True
+        """
         return True
 
     def stop(self):
+        """Do nothing
+
+        Returns:
+            True
+        """
         return True
 
-    def transmit(self, answer):
-        assert isinstance(answer, Message)
-        sys.stdout.write('TRANSMIT to {}: {}\n'.format(answer.number,
-                                                       answer.asString()))
+    def _counter(self, name, value=1, description=None, labels=None):
+        """Do nothing
+
+        Returns:
+            mixed (self)
+        """
+        return self
+
+    def _gauge(self, name, value=None, set=None, callback=None, description=None, labels=None):
+        """Do nothing
+
+        Returns:
+            mixed (self)
+        """
+        return self

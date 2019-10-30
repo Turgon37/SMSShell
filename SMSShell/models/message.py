@@ -23,42 +23,52 @@ Each message have a sender reference used to keep session consistency and a
 content that will be analysed
 """
 
+# System imports
+import logging
+
+# Global project declarations
+g_logger = logging.getLogger('smsshell.message')
+
 
 class Message(object):
     """This class represent a message with sender id and content
     """
 
-    def __init__(self, sender, content):
+    def __init__(self, number, content, attributes=None):
         """Constructor: Build a new message object
 
         Args:
-            sender: sender's unique identifier
-            content: the message content as a string
+            number : message number
+            content : the message content as a string
         """
-        self.__sender = None
+        self.__number = None
         self.__content = None
+        self.__attributes = dict()
         # database model
-        self.sender = sender
+        if attributes is not None:
+            assert isinstance(attributes, dict)
+            self.attributes = attributes
+        self.number = number
         self.content = content
 
     @property
-    def sender(self):
-        """Return the sender id
+    def number(self):
+        """Return this message number
 
         Returns:
             the sender id as a string
         """
-        assert self.__sender is not None
-        return self.__sender
+        assert self.__number is not None
+        return self.__number
 
-    @sender.setter
-    def sender(self, send):
+    @number.setter
+    def number(self, send):
         """Set the sender id
 
         Args:
             send: the sender id as a string
         """
-        self.__sender = send
+        self.__number = send
 
     @property
     def content(self):
@@ -79,6 +89,48 @@ class Message(object):
         """
         self.__content = cont
 
+    def __getattr__(self, name):
+        """Magic function to retrieve message attributes
+
+        Args:
+            name: the name of the attribute
+        """
+        return self.attribute(name)
+
+    def attribute(self, key, fallback=AttributeError):
+        """Return the optional message extra attributes
+
+        Returns:
+            a dict of message attributes
+        """
+        assert self.__attributes is not None
+        assert isinstance(self.__attributes, dict)
+        if key not in self.__attributes:
+            if issubclass(fallback.__class__, Exception.__class__):
+                raise fallback(key)
+            return fallback
+        return self.__attributes[key]
+
+    @property
+    def attributes(self):
+        """Return the optional message extra attributes
+
+        Returns:
+            a dict of message attributes
+        """
+        assert self.__attributes is not None
+        assert isinstance(self.__attributes, dict)
+        return self.__attributes
+
+    @attributes.setter
+    def attributes(self, keys):
+        """Set the message content
+
+        Args:
+            keys: the new keys value to add
+        """
+        self.__attributes.update(keys)
+
     def asString(self):
         """Return the message content and ensure it is a string
 
@@ -88,7 +140,6 @@ class Message(object):
         assert isinstance(self.content, str)
         return self.content
 
-
     # DEBUG methods
     def __str__(self):
         """[DEBUG] Produce a description string for this message
@@ -96,7 +147,7 @@ class Message(object):
         Returns:
             a formatted description of this message and his content
         """
-        content = ("Message from(" + str(self.sender) + ")" +
+        content = ("Message from/to(" + str(self.number) + ")" +
                    "\n  CONTENT = " + str(self.content))
         return content
 
@@ -105,4 +156,4 @@ class Message(object):
 
         @return [str] a formatted string that describe this object
         """
-        return "[M(" + str(self.sender) + ")]"
+        return "[M(" + str(self.number) + ")]"

@@ -1,1 +1,2 @@
-python-gammu
+prometheus-client==0.6.0
+python-gammu==2.11

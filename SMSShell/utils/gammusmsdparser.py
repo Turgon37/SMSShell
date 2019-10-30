@@ -100,11 +100,11 @@ class GammuSMSParser(object):
     def setUniqueValueInMessage(message, key, value):
         """Set a value with unique constraint into SMS object
         """
-        if (message[key] is None):
+        if message[key] is None:
             message[key] = value
         else:
             # if the class if already set, compare it with the previous value
-            if (message[key] != value):
+            if message[key] != value:
                 GammuSMSParser.appendError(message,
                                            GammuSMSParser.ERROR_DUPLICATE_VALUE,
                                            'Two or more differents values for {0}'.format(key))
@@ -145,7 +145,9 @@ class GammuSMSParser(object):
                     message['type'] = 'MMS'
                     sender_parts = sender.split('/')
                     if len(sender_parts) > 1:
-                        GammuSMSParser.setUniqueValueInMessage(message, 'mms_number', sender_parts[0])
+                        GammuSMSParser.setUniqueValueInMessage(message,
+                                                               'mms_number',
+                                                               sender_parts[0])
                     message['mms_title'] = os.getenv("DECODED_{0}_MMS_TITLE".format(i+1), '')
                     message['mms_address'] = os.getenv("DECODED_{0}_MMS_ADDRESS".format(i+1), '')
 
@@ -155,7 +157,9 @@ class GammuSMSParser(object):
         if decoded_parts > 0:
             message['sms_text'] = decoded_text
             if decoded_text != sms_text:
-                cls.appendError(message, cls.ERROR_INCONSISTENCY, 'SMS text differ from decoded part, keeping decoded part')
+                cls.appendError(message,
+                                cls.ERROR_INCONSISTENCY,
+                                'SMS text differ from decoded part, keeping decoded part')
         else:
             message['sms_text'] = sms_text
         return message
@@ -168,13 +172,19 @@ class GammuSMSParser(object):
 
         # checks
         if not os.path.exists(backup_file_path) or not os.path.isfile(backup_file_path):
-            cls.appendError(message, cls.ERROR_BACKUP_FILE, "the file '{}' do not exists".format(backup_file_path))
+            cls.appendError(message,
+                            cls.ERROR_BACKUP_FILE,
+                            "the file '{}' do not exists".format(backup_file_path))
             return message
         if not os.access(backup_file_path, os.R_OK):
-            cls.appendError(message, cls.ERROR_BACKUP_FILE, "the file '{}' is not readable".format(backup_file_path))
+            cls.appendError(message,
+                            cls.ERROR_BACKUP_FILE,
+                            "the file '{}' is not readable".format(backup_file_path))
             return message
         if not gammu:
-            cls.appendError(message, cls.ERROR_PYTHON, 'the gammu package is not available to decode backup format')
+            cls.appendError(message,
+                            cls.ERROR_PYTHON,
+                            'the gammu package is not available to decode backup format')
             return message
 
         backup = gammu.ReadSMSBackup(backup_file_path)
@@ -184,11 +194,15 @@ class GammuSMSParser(object):
         raw_messages = gammu.LinkSMS(backup_messages)
 
         if not raw_messages:
-            cls.appendError(message, cls.ERROR_NO_CONTENT, 'the backup file do not contains any message')
+            cls.appendError(message,
+                            cls.ERROR_NO_CONTENT,
+                            'the backup file do not contains any message')
             return message
 
         if len(raw_messages) > 1:
-            cls.appendError(message, cls.ERROR_IMPLEMENTATION, 'the backup file contains more than one message')
+            cls.appendError(message,
+                            cls.ERROR_IMPLEMENTATION,
+                            'the backup file contains more than one message')
 
         for raw_message in raw_messages:
             decoded_message = gammu.DecodeSMS(raw_message)
@@ -200,7 +214,9 @@ class GammuSMSParser(object):
                     cls.setUniqueValueInMessage(message, message_key, part[backup_key])
 
             if 'Type' in part and part['Type'] in cls.BACKUPFILE_SMS_TYPE_MAPPING:
-                cls.setUniqueValueInMessage(message, 'sms_type', cls.BACKUPFILE_SMS_TYPE_MAPPING[part['Type']])
+                cls.setUniqueValueInMessage(message,
+                                            'sms_type',
+                                            cls.BACKUPFILE_SMS_TYPE_MAPPING[part['Type']])
 
             if 'DateTime' in part and isinstance(part['DateTime'], datetime.datetime):
                 message['timestamp'] = time.mktime(part['DateTime'].timetuple())
@@ -233,7 +249,7 @@ class GammuSMSParser(object):
 
                     # String to encode in message.
                     if entry['Buffer']:
-                        message['sms_text'] += entry['Buffer']
+                        message['sms_text'] = (message['sms_text'] or '') + entry['Buffer']
                     # MMS indication to encode in message.
                     if entry['MMSIndicator']:
                         mms_infos = entry['MMSIndicator']

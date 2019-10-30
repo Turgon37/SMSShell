@@ -4,8 +4,10 @@ import json
 import os
 import pytest
 import queue
+import shlex
 import socket
 import stat
+import subprocess
 import threading
 
 import SMSShell
@@ -15,13 +17,47 @@ def test_start():
     """Just start and stop the receiver
     """
     unix = './r_unix'
-    receiver = SMSShell.receivers.unix.Receiver(config=dict(path=unix, umask='80'))
+    receiver = SMSShell.receivers.unix.Receiver(config=dict(
+                                                    path=unix,
+                                                    umask='80'))
     assert receiver.start()
     assert os.path.exists(unix)
     assert stat.S_ISSOCK(os.stat(unix).st_mode)
 
     assert receiver.stop()
     assert not os.path.exists(unix)
+
+def test_start_with_existing_socket():
+    """Just start and stop the receiver
+    """
+    unix = './r_unix'
+    receiver = SMSShell.receivers.unix.Receiver(config=dict(
+                                                    path=unix,
+                                                    umask='80'))
+
+    # create a unix socket then close it
+    server_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    server_socket.bind(unix)
+    server_socket.close()
+    assert os.path.exists(unix)
+    assert stat.S_ISSOCK(os.stat(unix).st_mode)
+
+    assert receiver.start()
+    assert os.path.exists(unix)
+    assert stat.S_ISSOCK(os.stat(unix).st_mode)
+
+    assert receiver.stop()
+    assert not os.path.exists(unix)
+
+def test_init_with_bad_config():
+    """Just start and stop the receiver
+    """
+    unix = './r_unix'
+    receiver = SMSShell.receivers.unix.Receiver(config=dict(
+                                                    path=unix,
+                                                    umask='80',
+                                                    listen_queue='a'))
+    assert isinstance(receiver, SMSShell.receivers.unix.Receiver)
 
 def test_bad_start_because_path_already_exists():
     """Ensure receiver do not start if path exists
@@ -61,46 +97,34 @@ def test_simple_read_from_socket():
     Use a separate thread to create socket client
     Use a queue to communicate between main thread and client thread
     """
-    unix = './r_unix'
-    data = 'ok'
-    chan = queue.Queue()
+    m_unix = './r_unix'
+    m_data = 'ok'
+    m_channel = queue.Queue()
 
-    def writeToSocket(chan, data):
-        # encode data
-        if not isinstance(data, bytes):
-            data = data.encode()
-        # open socket to server
-        client_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        client_socket.connect(unix)
-        # send data
-        client_socket.sendall(data)
-        # wait for ack
-        recv = client_socket.recv(100)
-        client_socket.close()
-        # decode ack
-        if not isinstance(recv, str):
-            recv = recv.decode()
-        # post ack to queue
-        chan.put(recv)
+    def writeToSocket(channel, unix, data):
+        p = subprocess.Popen(shlex.split('./bin/sms-shell-client -i stdin -o unix -oa {}'.format(unix)),
+                             stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE)
+        (stdout, stderr) = p.communicate(input=data.encode())
+        channel.put((stdout, stderr, p.returncode))
 
     # init socket
-    receiver = SMSShell.receivers.unix.Receiver(config=dict(path=unix))
+    receiver = SMSShell.receivers.unix.Receiver(config=dict(path=m_unix))
     assert receiver.start()
-    assert os.path.exists(unix)
-    assert stat.S_ISSOCK(os.stat(unix).st_mode)
+    assert os.path.exists(m_unix)
+    assert stat.S_ISSOCK(os.stat(m_unix).st_mode)
     # start client
-    threading.Thread(target=writeToSocket, args=(chan, data)).start()
+    threading.Thread(target=writeToSocket, args=(m_channel, m_unix, m_data)).start()
 
     # fetch one data from one client
-    recv_data = next(receiver.read())
-    # ensure we had received what we sent
-    assert recv_data == data
+    client_context = next(receiver.read())
+    with client_context as client_context_data:
+        # ensure we had received what we sent
+        assert m_data in client_context_data
 
     # ensure ack is valid
-    ack = chan.get()
-    jack = json.loads(ack)
-    assert 'length' in jack
-    assert jack['length'] == len(data)
+    stdout, stderr, returncode = m_channel.get()
+    assert returncode == 0
 
     assert receiver.stop()
-    assert not os.path.exists(unix)
+    assert not os.path.exists(m_unix)

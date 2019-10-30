@@ -93,7 +93,7 @@ def getMessageFromInput(method, *args, **kwargs):
     elif method == 'stdin':
         g_logger.debug('read message from stdin')
         def readFromStdin():
-            return dict(sms_number='local', sms_text=input())
+            return dict(sms_number='+localhost', sms_text=input())
         func = readFromStdin
     else:
         g_logger.critical('You must choose a valid input method')
@@ -102,6 +102,8 @@ def getMessageFromInput(method, *args, **kwargs):
     try:
         return func(*args, **kwargs)
     except TypeError as ex:
+        if 'required positional argument' not in str(ex):
+            raise ex
         g_logger.critical('The input function failed maybe because it missing an input argument,'
                           ' see details below and refer to (-ia)')
         g_logger.critical('error : %s', str(ex))
@@ -161,6 +163,7 @@ def sendMessageToOutput(method, message, *args, **kwargs):
         g_logger.critical('The output function failed maybe because it missing an output argument,'
                           'see details below and refer to (-oa)')
         g_logger.critical('error : %s', str(ex))
+    sys.exit(1)
 
 def sendMessageToOutputUnix(message, socket_path):
     """Write the message to an unix socket
@@ -187,15 +190,21 @@ def sendMessageToOutputUnix(message, socket_path):
     g_logger.debug('connecting to Unix socket at %s', socket_path)
     try:
         client_socket.connect(socket_path)
+        client_socket.settimeout(2)
         client_socket.sendall(message_data)
-        ack_data = client_socket.recv(100)
+        ack_data = client_socket.recv(1024)
         client_socket.close()
+    except socket.timeout as ex:
+        g_logger.critical("Timeout reached by waiting server answer")
+        sys.exit(1)
     except socket.error as ex:
         g_logger.critical("Unable to connect to unix server socket '%s' because : %s",
                           socket_path,
                           str(ex))
         sys.exit(1)
 
+    g_logger.debug('get data from server %s',
+                   ack_data)
     if not isinstance(ack_data, str):
         ack_data = ack_data.decode()
     try:
@@ -204,12 +213,14 @@ def sendMessageToOutputUnix(message, socket_path):
         g_logger.error('Received bad JSON in ACK,'
                        ' the smsshell server may have not received correctly the message')
         return False
-    if ack['length'] != message_data_size:
+    if ack['received_length'] != message_data_size:
         g_logger.error('Size of sent data differ from '
                        'size of received data given in acknowledgment')
         return False
 
     g_logger.info('Successfully written message to SMSShell using unix socket')
+    if 'output' in ack:
+        print(ack['output'])
     return True
 
 def sendMessageToOutputFifo(message, fifo_path):
@@ -239,8 +250,16 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='SMSShell client version v' + __version__,
                                      argument_default=argparse.SUPPRESS,
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.set_defaults(transmit=False)
+    parser.add_argument('--transmit', action='store_true', dest='transmit',
+                        help='Unflag the message from no-transmit')
+    parser.add_argument('--auth-token', action='store', dest='auth_token', type=str,
+                        help='Use this token as authentication credential')
+    parser.add_argument('--auth-role', action='store', dest='auth_role', type=str,
+                        default='STATE_ADMIN',
+                        help='The role to authenticate this message as')
     parser.add_argument('-i', '--input', action='store', dest='input',
-                        choices=['env', 'file', 'stdin'], default='stdin',
+                        choices=['env', 'file', 'stdin'], default='env',
                         help='Where to pick up raw messages')
     parser.add_argument('-ia', '--input-arg', action='append', dest='input_arg', type=str,
                         default=[],
@@ -260,26 +279,35 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--debug', action='store_const', const='DEBUG', dest='log_level',
                         default='INFO',
                         help='Enable DEBUG logging')
+    parser.add_argument('-q', '--quiet', action='store_true', dest='quiet',
+                        default=False,
+                        help='Disable any logging')
     parser.add_argument('-v', '--version', action='store_true', dest='show_version',
                         help='Print the version and exit')
     pargs = parser.parse_args()
-
     if hasattr(pargs, 'show_version') and pargs.show_version:
         print('SMSShell client version v{}'.format(__version__))
         sys.exit(0)
     if not hasattr(pargs, 'output'):
-        g_logger.critical('output type is required, use --help')
-        sys.exit(1)
+        parser.error('output type is required, use --help')
 
     g_logger.setLevel(pargs.log_level)
-    g_logger.debug('launch with args %s', vars(pargs))
+    if pargs.quiet:
+        g_logger.setLevel(logging.CRITICAL+1)
+    g_logger.debug('launch with args %s', str(vars(pargs)))
 
     msg = getMessageFromInput(pargs.input, *pargs.input_arg)
     g_logger.debug('get message %s', str(msg))
 
+    if hasattr(pargs, 'auth_token'):
+        msg['auth'] = dict(token=pargs.auth_token, role=pargs.auth_role)
+    if hasattr(pargs, 'transmit'):
+        msg['transmit'] = pargs.transmit
+
     msg = encodeMessage(pargs.encoding, msg)
     g_logger.debug('encoded message to %s', str(msg))
 
-    sendMessageToOutput(pargs.output, msg, *pargs.output_arg)
+    if not sendMessageToOutput(pargs.output, msg, *pargs.output_arg):
+        sys.exit(1)
 
     sys.exit(0)

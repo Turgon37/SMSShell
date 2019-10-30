@@ -32,7 +32,7 @@ import shlex
 
 # Project imports
 from .exceptions import ShellException, BadCommandCall
-from .models import Session
+from .models import Session, SessionStates
 from .commands import (AbstractCommand,
                        CommandForbidden,
                        CommandNotFoundException,
@@ -52,33 +52,48 @@ class Shell(object):
     """
     WORD_REGEX_PATTERN = re.compile("[^A-Za-z]+")
 
-    def __init__(self, configparser):
+    def __init__(self, configparser, metrics):
         """Constructor: Build a new shell object
 
         Args:
             configparser: the program configparser
         """
         self.configparser = configparser
+        self.__metrics = metrics
         self.__sessions = dict()
         self.__commands = dict()
 
-    def exec(self, subject, cmdline):
+    def exec(self, subject, cmdline, as_role=None):
         """Run the given arguments for the given subject
 
         Args:
             subject: an identifier of the command launcher
             cmdline: the raw command line
         """
-        argv = shlex.split(cmdline)
-        if len(argv) < 1:
-            raise ShellException('bad number of arguments')
+        try:
+            argv = shlex.split(cmdline)
+        except ValueError as ex:
+            raise ShellException('Command line parsing failed because of bad syntax: ' + str(ex),
+                                 'bad syntax: ' + str(ex).lower().strip())
+        if not argv:
+            raise ShellException('Not enough arguments in arguments vector',
+                                 'bad number of arguments')
+
         cmd = argv[0]
         if not cmd:
-            raise ShellException('empty command name')
+            raise ShellException('Cannot extract command name from shell command line')
+
         if not subject:
-            raise ShellException('empty subject name')
-        sess = self.__getSessionForSubject(subject)
-        g_logger.info("Subject %s run command '%s' with args : %s", subject, cmd, str(argv[1:]))
+            raise ShellException('The passed subject is empty')
+
+        g_logger.info("Subject '%s' run command '%s' with args : %s", subject, cmd, str(argv[1:]))
+        if as_role is not None:
+            assert isinstance(as_role, SessionStates)
+            sess = Session(subject, time_to_live=0)
+            sess.forceState(as_role)
+            g_logger.info("Subject '%s' run command '%s' as forced role : %s", subject, cmd, as_role.name)
+        else:
+            sess = self.__getSessionForSubject(subject)
         return self.__call(sess, cmd, argv[1:]).strip()
 
     def flushCommandCache(self):
@@ -142,7 +157,8 @@ class Shell(object):
             class_obj = getattr(mod, cls_name)
             cmd = class_obj(g_logger.getChild('command.' + name),
                             self.getSecureShell(),
-                            self.configparser.getSectionOrEmpty('command.' + name))
+                            self.configparser.getSectionOrEmpty('command.' + name),
+                            self.__metrics)
         except AttributeError as ex:
             raise CommandBadImplemented("Error in command '{0}' : {1}.".format(name, str(ex)))
 
@@ -189,10 +205,12 @@ class Shell(object):
     def __call(self, session, cmd_name, argv):
         """Execute the command with the given name
 
-        @param models.Session session
-        @param str the name of the command
-        @param list<str> argv the command's arguments
-        @return the command output
+        Args:
+            session: models.Session the session object to use
+            cmd_name: the name of the command to call
+            argv: the list of string arguments to pass to the command
+        Returns:
+            the command output
         """
         com = self.__getCommand(cmd_name)
         # set the prefix to separate session's namespaces
@@ -273,22 +291,35 @@ class Shell(object):
         class ShellWrapper(object):
             """This class if a wrapper for Shell
 
-            It restrict available attributes
-
-            Args:
-                shell: the initial shell instance
+            It prevent some shell attributes to be accessed directly
             """
+            ALLOWED_ATTRIBUTES = [
+                'flushCommandCache',
+                'getAvailableCommands',
+                'getCommand'
+            ]
+
             def __init__(self, shell):
+                """Build a new shell wrapper
+
+                Args:
+                    shell: the initial shell instance
+                """
                 self.__shell = shell
 
-            def getAvailableCommands(self, *args, **kw):
-                return self.__shell.getAvailableCommands(*args, **kw)
+            def __getattr__(self, name):
+                """Allow some shell's functions to be accessed through shell wrapper
 
-            def getCommand(self, *args, **kw):
-                return self.__shell.getCommand(*args, **kw)
-
-            def flushCommandCache(self, *args, **kw):
-                return self.__shell.flushCommandCache(*args, **kw)
+                Args:
+                    name: the attribute's name
+                Returns:
+                    the shell attribute
+                Raise:
+                    ShellException if attribute is not allowed
+                """
+                if name in ShellWrapper.ALLOWED_ATTRIBUTES:
+                    return getattr(self.__shell, name)
+                raise ShellException("attribute {} is not reachable using shell wrapper".format(name))
 
         return ShellWrapper(self)
 

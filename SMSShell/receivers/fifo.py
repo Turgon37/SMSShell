@@ -29,10 +29,24 @@ import os
 import stat
 
 # Project import
-from . import AbstractReceiver
+from . import AbstractReceiver, AbstractClientRequest
 
 # Global project declarations
 g_logger = logging.getLogger('smsshell.receivers.fifo')
+
+
+class ClientRequest(AbstractClientRequest):
+    """Client request for fifo receiver
+
+    With a fifo we cannot identify a client from another
+    so we cannot write any answer
+    """
+
+    def enter(self):
+        pass
+
+    def exit(self):
+        pass
 
 
 class Receiver(AbstractReceiver):
@@ -69,7 +83,7 @@ class Receiver(AbstractReceiver):
                 g_logger.fatal('Unsufficients permissions into the directory %s to create the fifo',
                                self.__path)
                 return False
-            g_logger.debug('creating new fifo')
+            g_logger.debug('creating new fifo at %s', self.__path)
             os.mkfifo(self.__path, mode=0o620)
         return self
 
@@ -92,6 +106,7 @@ class Receiver(AbstractReceiver):
         Return:
             Iterable
         """
+        g_logger.info('Reading from fifo %s', self.__path)
         while True:
             with open(self.__path) as fifo:
-                yield fifo.read()
+                yield ClientRequest(request_data=fifo.read())

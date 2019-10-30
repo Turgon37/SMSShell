@@ -32,6 +32,7 @@ from ..exceptions import ShellException
 # Global project declarations
 g_logger = logging.getLogger('smsshell.models.session')
 
+
 class SessionException(ShellException):
     """Base class for all exceptions relating to command execution
     """
@@ -52,6 +53,7 @@ class SessionStates(IntEnum):
     STATE_GUEST = 0
     STATE_LOGININPROGRESS = 1
     STATE_USER = 2
+    STATE_ADMIN = 9
 
 
 class Session(object):

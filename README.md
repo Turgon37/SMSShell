@@ -14,4 +14,4 @@ The aim of this project is to provide a SMS based shell. This shell consists in 
 ## Installation
 
 ### Requires:
-  * python3 >= 3.4
+  * python3 >= 3.5

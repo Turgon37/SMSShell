@@ -18,6 +18,9 @@
 # along with SMSShell. If not, see <http://www.gnu.org/licenses/>.
 
 """Message receiver from a local unix socket
+
+This receiver open an unix socket locally on the local host
+and listen for incoming message on it
 """
 
 # System imports
@@ -29,10 +32,32 @@ import socket
 import stat
 
 # Project import
-from . import AbstractReceiver
+from . import AbstractReceiver, AbstractClientRequest
+from ..utils import groupToGid
 
 # Global project declarations
 g_logger = logging.getLogger('smsshell.receivers.unix')
+
+
+class ClientRequest(AbstractClientRequest):
+    """Client request for unix receiver
+    """
+
+    def __init__(self, receiver, client_socket, **kwargs):
+        super().__init__(**kwargs)
+        self.__receiver = receiver
+        self.__client_socket = client_socket
+
+    def enter(self):
+        pass
+
+    def exit(self):
+        """Pop all answer data and send them to client
+        """
+        assert self.__client_socket
+        response_data = self.popResponseData()
+        response_data['chain'] = self.getTreatmentChain()
+        self.__receiver.writeToClient(self.__client_socket, json.dumps(response_data))
 
 
 class Receiver(AbstractReceiver):
@@ -54,15 +79,48 @@ class Receiver(AbstractReceiver):
         # config
         self.__path = self.getConfig('path', fallback="/var/run/smsshell.sock")
         self.__umask = self.getConfig('umask', fallback='{:o}'.format(self.__default_umask))
-        self.__listen_queue = int(self.getConfig('listen_queue', fallback=10))
+        self.__group = self.getConfig('group')
+        try:
+            self.__listen_queue = int(self.getConfig('listen_queue', fallback=10))
+        except ValueError:
+            self.__listen_queue = 10
+            g_logger.error(("invalid integer parameter for option 'listen_queue',"
+                            " fallback to default value 10"))
+
+    def writeToClient(self, client_socket, data):
+        """Write data to client
+
+        Args:
+            client_socket : the socket used to write data
+            data : bytes or string to write to client
+        """
+        if not isinstance(data, bytes):
+            data = data.encode()
+
+        try:
+            client_socket.send(data)
+        except ConnectionError as ex:
+            g_logger.warning('client connection with FD %s raise connection error : %s',
+                             client_socket.fileno(),
+                             str(ex))
+            self.__closeConnection(client_socket)
 
     def __onAccept(self, server_socket, mask):
+        """Call each time a new client connection occur
+
+        Args:
+            server_socket : the server socket from which to get
+                                    the socket to the new client
+            mask : unused
+        """
         client_socket, addr = server_socket.accept()
+        # disable blocking on client socket
         client_socket.setblocking(0)
-        # Register incoming client with metadatas
+        # Register incoming client with metadatas in tracking dict
         assert client_socket.fileno() not in self.__current_peers
         self.__current_peers[client_socket.fileno()] = dict(sock=client_socket)
 
+        # register socket into the selector
         self.__socket_selector.register(fileobj=client_socket,
                                         events=selectors.EVENT_READ,
                                         data=self.__onRead)
@@ -76,41 +134,59 @@ class Receiver(AbstractReceiver):
         """
         try:
             request_data = client_socket.recv(1000)
-            # if these is data, that mean client has send some bytes to read
-            if request_data:
-                g_logger.info('get %d bytes of data from FD %d',
-                              len(request_data),
-                              client_socket.fileno())
-                g_logger.debug('get data from FD %d: %s',
-                               client_socket.fileno(),
-                               request_data)
-                # return a simple ACK to client with received size to confirm all is OK
-                g_logger.debug('send ACK to FD %d', client_socket.fileno())
-                response = dict(status=0, length=len(request_data))
-                response_data = json.dumps(response)
-                if not isinstance(response_data, bytes):
-                    response_data = response_data.encode()
-                client_socket.send(response_data)
-
-                if not isinstance(request_data, str):
-                    request_data = request_data.decode()
-                return request_data
-            # If there is no data, the socket must have been closed from client side
-            else:
-                self.__closeConnection(client_socket)
         except ConnectionError as ex:
-            g_logger.warning('client connection with FD %s raise connection error : %s', client_socket.fileno(), str(ex))
+            g_logger.warning('client connection with FD %s raise connection error : %s',
+                             client_socket.fileno(),
+                             str(ex))
             self.__closeConnection(client_socket)
+            return None
+
+        # If there is no data, the socket must have been closed from client side
+        if not request_data:
+            self.__closeConnection(client_socket)
+            return None
+
+        # if these is data, that mean client has send some bytes to read
+        # receive the data
+        g_logger.info('get %d bytes of data from client socket with FD %d',
+                      len(request_data),
+                      client_socket.fileno())
+        g_logger.debug('get data from FD %d: %s',
+                       client_socket.fileno(),
+                       request_data)
+        # decode data
+        raw_request_data_length = len(request_data)
+        if not isinstance(request_data, str):
+            request_data = request_data.decode()
+
+        # prepare client request context
+        request = ClientRequest(receiver=self,
+                                client_socket=client_socket,
+                                request_data=request_data)
+        # append a simple ACK to client next datas
+        # to confirm all is OK
+        g_logger.debug('send ACK to FD %d for %d bytes of data',
+                       client_socket.fileno(),
+                       raw_request_data_length)
+        request.addResponseData(received_length=raw_request_data_length)
+        request.appendTreatmentChain('received')
+
+        return request
 
     def __closeConnection(self, client_socket):
-        """
+        """Call each time a socket is closed
+
+        Flush and close properly client socket
+
+        Args:
+            client_socket: the client socket to close
         """
         # We can't ask conn for getpeername() here, because the peer may no
         # longer exist (hung up); instead we use our own mapping of socket
         # fds to peer names - our socket fd is still open.
-        g_logger.info('closing connection to FD %d', client_socket.fileno())
         del self.__current_peers[client_socket.fileno()]
         self.__socket_selector.unregister(client_socket)
+        g_logger.info('closed client connection with FD %d', client_socket.fileno())
         client_socket.close()
 
     def start(self):
@@ -138,7 +214,8 @@ class Receiver(AbstractReceiver):
                         g_logger.fatal('The unix socket path already exists and cannot be removed')
                         return False
             else:
-                g_logger.fatal('The unix socket path given is already a file but not a unix socket. Please delete it manually')
+                g_logger.fatal('The unix socket path given is already a file' +
+                               ' but not a unix socket. Please delete it manually')
                 return False
 
         # check directory write rights
@@ -163,14 +240,34 @@ class Receiver(AbstractReceiver):
             umask = self.__default_umask
         g_logger.debug('bind socket to path %s with umask %s', self.__path, oct(umask))
 
+        # create socket file
         old_umask = os.umask(umask)
         self.__server_socket.bind(self.__path)
         os.umask(old_umask)
 
+        # optionally change group of the socket
+        if self.__group:
+            try:
+                os.chown(self.__path,
+                         -1,
+                         groupToGid(self.__group))
+                g_logger.info("Switched socket group owner to '%s'",
+                              self.__group)
+            except KeyError:
+                g_logger.error("Incorrect group name '%s' for receiver, ignoring group directive",
+                               self.__group)
+            except PermissionError:
+                g_logger.error("Cannot change group ownership, you are not member of " +
+                               "group name '%s', ignoring group directive",
+                               self.__group)
+
         # Listen for incoming connections
-        g_logger.debug('set socket to listening mode with listen queue size %d', self.__listen_queue)
+        g_logger.debug('set socket to listening mode with listen queue size %d',
+                       self.__listen_queue)
         self.__server_socket.listen(self.__listen_queue)
-        g_logger.info('Unix receiver ready to listen on %s FD %d', self.__path, self.__server_socket.fileno())
+        g_logger.info('Unix receiver ready to listen on %s FD %d',
+                      self.__path,
+                      self.__server_socket.fileno())
 
         ## Init sockets selector
         self.__socket_selector.register(fileobj=self.__server_socket,
@@ -191,6 +288,7 @@ class Receiver(AbstractReceiver):
         g_logger.debug('closing server socket')
         self.__server_socket.close()
         self.__socket_selector.close()
+        g_logger.debug('remove server socket')
         try:
             os.unlink(self.__path)
         except OSError:
@@ -204,15 +302,19 @@ class Receiver(AbstractReceiver):
         Returns:
             Iterable
         """
+        g_logger.info('Reading from unix socket %s', self.__path)
         while True:
             # Wait until some registered socket becomes ready.
             events = self.__socket_selector.select()
 
             # For each new event, dispatch to its handler
             for key, mask in events:
+                # callback can be a function registered in selector
+                # currently we have only
+                # __onRead and __onAccept
                 callback = key.data
                 socket_data = callback(key.fileobj, mask)
                 # yield only data read from client sockets
                 # compare the data object with the onread function
-                if key.data == self.__onRead:
+                if callback == self.__onRead and socket_data is not None:
                     yield socket_data

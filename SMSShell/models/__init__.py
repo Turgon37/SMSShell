@@ -17,11 +17,18 @@
 # You should have received a copy of the GNU General Public License
 # along with SMSShell. If not, see <http://www.gnu.org/licenses/>.
 
-"""This module contains all class models
+"""This package contains all class models
 """
 
 # Project imports
 from .message import Message
-from .session import Session, SessionStates
+from .session import (Session, SessionStates,
+                      BadStateTransitionException, SessionException)
 
-__all__ = ['Message', 'Session', 'SessionStates']
+__all__ = [
+    'Message',
+    'Session',
+    'SessionStates',
+    'BadStateTransitionException',
+    'SessionException'
+]

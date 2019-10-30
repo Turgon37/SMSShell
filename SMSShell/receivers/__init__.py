@@ -20,12 +20,16 @@
 """This module contains abstract class for receivers
 """
 
+# System import
+import time
+
 # Project imports
 from ..abstract import AbstractModule
 
 
 class AbstractReceiver(AbstractModule):
     """An abstract receiver
+    Any valid receiver implementation must inherit this one
     """
 
     def start(self):
@@ -51,3 +55,101 @@ class AbstractReceiver(AbstractModule):
             Iterable
         """
         raise NotImplementedError("You must implement the 'read' method in receiver class")
+
+
+class AbstractClientRequest(object):
+    """This class is a wrapper to client request handling
+
+    Any received must define class thaht inherit this one with enter and exit
+    method implemented.
+    This class use context to ensure that client request will always receive
+    an answer
+    """
+
+    def __init__(self, request_data):
+        """
+        """
+        # this it the treatment chain
+        # one state is associated with the corresponding timestamp
+        self.__treatment_chain = []
+        self.__response_data = dict()
+        self.__request_data = request_data
+        self.__is_in_context = False
+
+    #
+    # PUBLIC METHODS
+    #
+
+    def appendTreatmentChain(self, state_name):
+        """Append a state to the treatment chain
+
+        This chain can be used to get a timeline of the request treatment to
+        client
+
+        Args:
+            state_name : the name of the treatment step to append to chain
+        """
+        self.__treatment_chain.append((state_name, time.time()))
+
+    def getTreatmentChain(self):
+        """Get the list of treatment steps
+
+        Returns:
+            the list of treatment steps
+        """
+        return self.__treatment_chain
+
+    def addResponseData(self, **kwargs):
+        """Append data to optional answer
+
+        Args:
+            any key = value that will be put into the client answer dict
+        """
+        self.__response_data.update(kwargs)
+
+    def popResponseData(self):
+        """Pop all response datas and reset data bucket
+
+        Returns:
+            the dict of current datas
+        """
+        final = self.__response_data
+        self.__response_data = dict()
+        return final
+
+    def getRequestData(self):
+        """Return the initial client request data
+
+        Only available in client contexte to ensure a proper answer to client
+        """
+        if not self.__is_in_context:
+            raise RuntimeError("You cannot access client request's datas " +
+                               "outside of the client request context.")
+        return self.__request_data
+
+    def enter(self):
+        """This function is called when code entering client request context
+
+        Put here, any initialization in response data or metrics
+        """
+        raise NotImplementedError("You must implement the 'enter' method in client request class")
+
+    def exit(self):
+        """This function is called when code leaving client request context
+
+        Put here, any answer write procedure, or client buffer flush
+        """
+        raise NotImplementedError("You must implement the 'exit' method in client request class")
+
+    #
+    # PRIVATE PROPERTIES
+    #
+
+    def __enter__(self):
+        self.__is_in_context = True
+        self.enter()
+        return self.getRequestData()
+
+    def __exit__(self, _type, value, traceback):
+        self.__is_in_context = False
+        self.exit()

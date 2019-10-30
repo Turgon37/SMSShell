@@ -25,7 +25,7 @@ class SMSShellException(Exception):
     """
     pass
 
-class ShellInitException(Exception):
+class ShellInitException(SMSShellException):
     """Base exception for shell initialization procedures
 
     Must be raise by parsers,transmitters,receivers on start() error
@@ -54,9 +54,8 @@ class ShellException(Exception):
         message: the standard full exception error message
         short: an optional short message that can be send back to the user
     """
-    def __init__(self, message, short='general exeception'):
-        super().__init__(message)
-        self.short_message = short
+    def __init__(self, message, short='general exception'):
+        super().__init__(message, short)
 
 class BadCommandCall(ShellException):
     """Raised when you call a command with bad arguments

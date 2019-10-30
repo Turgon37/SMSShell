@@ -34,7 +34,7 @@ g_logger = logging.getLogger('smsshell.parsers.json')
 
 
 class Parser(AbstractParser):
-    """An JSON format parser
+    """A JSON format parser
     """
 
     def parse(self, raw):
@@ -45,21 +45,25 @@ class Parser(AbstractParser):
         """
         try:
             obj = json.loads(raw)
-        except ValueError as e:
-            g_logger.debug('bad JSON %s', str(e))
+        except ValueError as ex:
+            g_logger.debug('bad JSON %s', str(ex))
             raise DecodeException('the received message was not a valid JSON object')
-        except TypeError as e:
-            g_logger.debug('bad object type %s', str(e))
+        except TypeError as ex:
+            g_logger.debug('bad object type %s', str(ex))
             raise DecodeException('the received message was not a valid JSON object')
 
         if 'sms_number' not in obj:
             raise BadMessageFormatException('the sender field is missing')
-        sender = obj['sms_number']
+        number = obj['sms_number']
+        if number is None or not number:
+            raise BadMessageFormatException('the sender field is null or too small')
+
         if 'sms_text' not in obj:
             raise BadMessageFormatException('the text field is missing')
         content = obj['sms_text']
-        if sender is None or len(sender) < 1:
-            raise BadMessageFormatException('the sender field is null or too small')
-        if content is None or len(content) < 1:
+        if content is None or not content:
             raise BadMessageFormatException('the text field is null or too small')
-        return Message(sender, content)
+
+        extra_datas = dict(filter(lambda x: x[0] not in ['sms_text', 'sms_number'], obj.items()))
+
+        return Message(number, content, attributes=extra_datas)

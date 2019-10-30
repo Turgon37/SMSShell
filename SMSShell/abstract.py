@@ -25,15 +25,17 @@ class AbstractModule(object):
     """This abstract class is used to defined common base feature for modules
     """
 
-    def __init__(self, config=None):
+    def __init__(self, config=None, metrics=None):
         """Constructor :
 
-        @param dict config all available configuration keys
+        Args:
+            config : dict config all available configuration keys
+            metrics : the metrics handler
         """
-        if config:
-            self.config = config
-        else:
-            self.config = dict()
+        if not config:
+            config = dict()
+        self.config = config
+        self.metrics = metrics
         self.init()
 
     def getConfig(self, key, fallback=None):

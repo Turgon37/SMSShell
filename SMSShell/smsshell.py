@@ -22,7 +22,7 @@
 
 __author__ = 'Pierre GINDRAUD'
 __license__ = 'GPL-3.0'
-__version__ = '1.0.0'
+__version__ = '2.0.0'
 __maintainer__ = 'Pierre GINDRAUD'
 __email__ = 'pgindraud@gmail.com'
 
@@ -36,9 +36,13 @@ import sys
 
 # Projet Imports
 from .config import MyConfigParser
+from .validators import ValidationException, ValidatorChain
+from .filters import FilterException, FilterChain
+from .models import Message, SessionStates
 from .receivers import AbstractReceiver
 from .parsers import AbstractParser
 from .transmitters import AbstractTransmitter
+from .metrics import AbstractMetricsHelper
 from .shell import Shell
 from .exceptions import SMSShellException, SMSException, ShellException, ShellInitException
 
@@ -69,6 +73,9 @@ class SMSShell(object):
         # List of callable to call on smsshell stop
         self.__stop_callbacks = []
 
+        # Internal reference to metrics handler
+        self.__metrics = None
+
     def load(self, config_file):
         """Load configuration function
 
@@ -82,7 +89,8 @@ class SMSShell(object):
         if not os.path.isfile(config_file):
             return False, 'the configuration file {} do not exists'.format(config_file)
         if not os.access(config_file, os.R_OK):
-            return False, 'the configuration file {} is not readable by the service'.format(config_file)
+            return False, ('the configuration file {} is '
+                           'not readable by the service').format(config_file)
 
         status, msg = self.cp.load(config_file)
         if status:
@@ -108,6 +116,8 @@ class SMSShell(object):
         if not self.cp.isLoaded():
             return False
 
+        g_logger.info('Starting SMSShell version ' + __version__)
+
         # Turn in daemon mode
         if self.__daemon:
             g_logger.debug('Starting in daemon mode')
@@ -119,8 +129,22 @@ class SMSShell(object):
 
         # Check pidfile
         if pid_path is None:
-            pid_path = self.cp.getPidPath()
+            pid_path = self.cp.get(self.cp.MAIN_SECTION, 'pid', fallback='/var/run/smsshell.pid')
         self.__pid_path = pid_path
+
+        # prevent program to run if the pidfile already exists
+        if os.path.isfile(self.__pid_path):
+            with open(self.__pid_path, 'r') as pid_file:
+                current_pid = pid_file.read()
+            if os.path.isdir('/proc/{}'.format(current_pid)):
+                with open('/proc/{}/cmdline'.format(current_pid)) as cmdline:
+                    current_cmdline_parts = cmdline.read().split('\0')
+
+                if current_cmdline_parts:
+                    current_cmdline = current_cmdline_parts[0]
+                raise ShellInitException('pidfile exists and associated ' +
+                                         'with running program {}'.format(current_cmdline))
+
         # Create the pid file
         try:
             g_logger.debug("Creating PID file '%s'", self.__pid_path)
@@ -131,7 +155,32 @@ class SMSShell(object):
 
         # loose users privileges if needed
         self.__downgrade()
-        self.run()
+
+        # Init metrics handler
+        try:
+            metrics = self.importAndLoadModule(
+                '.metrics.' + self.cp.get('daemon', 'metrics_handler', fallback='none'),
+                'MetricsHelper', AbstractMetricsHelper, 'metrics'
+            )
+        except ShellInitException as ex:
+            g_logger.fatal("Unable to load metrics handler module : %s", str(ex))
+            self.stop()
+            return False
+
+        if not metrics.start():
+            g_logger.fatal('Unable to open metrics handler')
+            self.stop()
+            return False
+        self.__metrics = metrics
+        self.__stop_callbacks.append(metrics.stop)
+
+        # run the fonctionnal endpoint
+        if self.cp.getMode() == 'STANDALONE':
+            # Init standalone mode
+            self.stop()
+            raise NotImplementedError('STANDALONE mode not yet implemented')
+        else:
+            self.runDaemonMode()
 
         # Stop properly
         self.stop()
@@ -139,7 +188,7 @@ class SMSShell(object):
         return True
 
 
-    def importAndCheckAbstract(self, module_path, class_name, abstract, config_section=None):
+    def importAndLoadModule(self, module_path, class_name, abstract_class=None, config_section=None):
         """Import a sub module, instanciate a class and check object's instance
 
         @param str module_path the path to the module in the file system
@@ -150,77 +199,231 @@ class SMSShell(object):
         """
         try:
             mod = importlib.import_module(module_path, package='SMSShell')
-        except ImportError as e:
-            raise ShellInitException("Unable to import the module {0}. Reason : {1}".format(module_path, str(e)))
+        except ImportError as ex:
+            raise ShellInitException(("Unable to import the module '{0}',"
+                                      " reason : {1}").format(module_path, str(ex)))
         try: # instanciate
             _class = getattr(mod, class_name)
+            _class_args = dict(metrics=self.__metrics)
+            # append config dict if exist in config file
             if config_section and config_section in self.cp:
-                inst = _class(self.cp[config_section])
-            else:
-                inst = _class()
+                _class_args['config'] = self.cp[config_section]
+            inst = _class(**_class_args)
         except AttributeError as ex:
             raise ShellInitException("Error in module '{0}' : {1}.".format(module_path, str(ex)))
 
         # handler class checking
-        if not isinstance(inst, abstract):
-            raise ShellInitException("Class '{0}' must extend AbstractCommand class".format(module_path))
+        if abstract_class and not isinstance(inst, abstract_class):
+            raise ShellInitException(("Class '{0}' must extend "
+                                      "AbstractCommand class").format(module_path))
         return inst
 
-    def run(self):
-        """This function do main applicatives stuffs
+    def getTokensStoreFromConfig(self):
+        """Build the authentication tokens store from config
+
+        Returns:
+
         """
-        shell = Shell(self.cp)
-        if self.cp.getMode() == 'STANDALONE':
-            # Init standalone mode
-            raise NotImplementedError('STANDALONE mode not yet implemented')
-        else:
-            # Init daemon mode
+        tokens_store = dict()
+        raw_tokens = self.cp.getModeConfig('tokens')
+        if not raw_tokens:
+            return tokens_store
+        for raw_token in raw_tokens.split(','):
+            # parse token string
             try:
-                parser = self.importAndCheckAbstract(
-                    '.parsers.' + self.cp.get('daemon', 'message_parser', fallback="json"),
-                    'Parser', AbstractParser, 'parser'
-                )
-                recv = self.importAndCheckAbstract(
-                    '.receivers.' + self.cp.get('daemon', 'receiver_type', fallback="fifo"),
-                    'Receiver', AbstractReceiver, 'receiver'
-                )
-                transm = self.importAndCheckAbstract(
-                    '.transmitters.' + self.cp.get('daemon', 'transmitter_type', fallback="file"),
-                    'Transmitter', AbstractTransmitter, 'transmitter'
-                )
-            except ShellInitException as ex:
-                g_logger.fatal("Unable to load an internal module : %s", str(ex))
-                return False
+                state, token = raw_token.split(':')
+            except ValueError as ex:
+                g_logger.error('Invalid token format, ' +
+                               'it must be in the form ROLE:SECRET, it is ignored')
+                continue
 
-            if not recv.start():
-                g_logger.fatal('Unable to open receiver')
-                return False
-            # register the receiver close callback to properly close opened file descriptors
-            self.__stop_callbacks.append(recv.stop)
+            # check if state exists
+            try:
+                real_state = SessionStates[state]
+            except KeyError:
+                g_logger.error('Invalid state value %s, ' +
+                               'it must be one of the SessionStates available ones, ' +
+                               'it is ignored',
+                               str(state))
+                continue
+            g_logger.debug('loaded token length %d for state %s',
+                           len(token),
+                           str(real_state))
+            if token not in tokens_store:
+                tokens_store[token] = []
+            if real_state in tokens_store[token]:
+                g_logger.warning('duplicate authentication token for state %s',
+                                 str(real_state))
+            else:
+                tokens_store[token].append(real_state)
+        return tokens_store
 
-            if not transm.start():
-                g_logger.fatal('Unable to open transmitter')
-                return False
-            self.__stop_callbacks.append(transm.stop)
+    @staticmethod
+    def extractRoleFromMessageAndStore(tokens_store, message):
+        """
 
-        if self.cp.getMode() == 'STANDALONE':
-            # Run standalone mode
-            raise NotImplementedError('STANDALONE mode not yet implemented')
-        else:
-            # Run daemon mode
-            # read and parse each message from receiver
-            for raw in recv.read():
+        Args:
+            tokens_store : the dict of tokens and associated reachable
+                            states
+            message : the full message
+        Returns:
+            the SessionStates : if the given token is valid
+            None : if no state was enforced or token was invalid
+        """
+        try:
+            auth_attr = message.attribute('auth')
+        except KeyError:
+            return None
+
+        assert isinstance(auth_attr, dict)
+        if 'token' not in auth_attr or 'role' not in auth_attr:
+            g_logger.warning("'auth' attribute in message require a token and a role")
+            return None
+
+        if auth_attr['token'] not in tokens_store:
+            g_logger.error('The given token (length %d) is not registered in token store',
+                           len(auth_attr['token']))
+            return None
+
+        reachable_states = tokens_store[auth_attr['token']]
+        try:
+            needed_state = SessionStates[auth_attr['role']]
+        except KeyError:
+            g_logger.error('Invalid state value %s, ' +
+                           'it must be one of the SessionStates available ones, ' +
+                           'it is ignored',
+                           str(auth_attr['role']))
+            return None
+        if needed_state in reachable_states:
+            return needed_state
+        return None
+
+    def runDaemonMode(self):
+        """Entrypoint of daemon mode
+        """
+        shell = Shell(self.cp, self.__metrics)
+
+        # Init daemon mode objects
+        try:
+            parser = self.importAndLoadModule(
+                '.parsers.' + self.cp.get('daemon', 'message_parser', fallback="json"),
+                'Parser', AbstractParser, 'parser'
+            )
+            recv = self.importAndLoadModule(
+                '.receivers.' + self.cp.get('daemon', 'receiver_type', fallback="fifo"),
+                'Receiver', AbstractReceiver, 'receiver'
+            )
+            transm = self.importAndLoadModule(
+                '.transmitters.' + self.cp.get('daemon', 'transmitter_type', fallback="file"),
+                'Transmitter', AbstractTransmitter, 'transmitter'
+            )
+        except ShellInitException as ex:
+            g_logger.fatal("Unable to load an internal module : %s", str(ex))
+            return False
+
+        if not recv.start():
+            g_logger.fatal('Unable to open receiver')
+            return False
+        # register the receiver close callback to properly close opened file descriptors
+        self.__stop_callbacks.append(recv.stop)
+
+        if not transm.start():
+            g_logger.fatal('Unable to open transmitter')
+            return False
+        self.__stop_callbacks.append(transm.stop)
+
+        g_logger.debug('initialize authentication tokens store')
+        tokens_store = self.getTokensStoreFromConfig()
+        g_logger.info('loaded %d authentication tokens in store', len(tokens_store))
+
+        # init counters
+        g_logger.debug('initialize metrics counters')
+        self.__metrics.counter('message.receive.total', labels=['status'], description='Number of received messages per status')
+        self.__metrics.counter('message.transmit.total', labels=['status'], description='Number of transmitted messages per status')
+
+        # init messages filters
+        try:
+            g_logger.debug('initialize incoming messages validators')
+            input_validators_chain = ValidatorChain()
+            input_validators_chain.addLinksFromDict(self.cp.getValidatorsFromConfig('input_validators'))
+            input_filters_chain = FilterChain()
+            input_filters_chain.addLinksFromDict(self.cp.getFiltersFromConfig('input_filters'))
+            g_logger.debug('initialize outgoing messages validators')
+            output_validators_chain = ValidatorChain()
+            output_validators_chain.addLinksFromDict(self.cp.getValidatorsFromConfig('output_validators'))
+        except ShellInitException as ex:
+            raise ex
+            g_logger.fatal("Unable to load a classes : %s", str(ex))
+            return False
+
+        # read and parse each message from receiver
+        for client_context in recv.read():
+            with client_context as client_context_data:
                 # parse received content
                 try:
-                    msg = parser.parse(raw)
-                    transm.transmit(shell.exec(msg.sender, msg.asString()))
+                    msg = parser.parse(client_context_data)
+                    client_context.appendTreatmentChain('parsed')
                 except SMSException as ex:
+                    self.__metrics.counter('message.receive.total', labels=dict(status='error'))
                     g_logger.error('received a bad message, skipping because of %s', str(ex))
                     continue
-                except ShellException as ex:
-                    g_logger.error('error during command execution : %s', str(ex))
-                    transm.transmit('#Err: {}'.format(ex.short_message))
+
+                # validate received content
+                try:
+                    input_validators_chain.callChainOnObject(msg)
+                    input_filters_chain.callChainOnObject(msg)
+                except (ValidationException, FilterException) as ex:
+                    self.__metrics.counter('message.receive.total', labels=dict(status='error'))
+                    g_logger.error(('incoming message did not passed the' +
+                                    ' validation step because of : %s'),
+                                   str(ex))
                     continue
+                self.__metrics.counter('message.receive.total', labels=dict(status='ok'))
+                client_context.appendTreatmentChain('input_validated')
+
+                # extract optional overrided role
+                as_role = SMSShell.extractRoleFromMessageAndStore(tokens_store, msg)
+
+                # run in shell
+                try:
+                    response_content = shell.exec(msg.number, msg.asString(), as_role=as_role)
+                    client_context.appendTreatmentChain('executed')
+                except ShellException as ex:
+                    g_logger.error('error during command execution : %s', ex.args[0])
+                    if len(ex.args) > 1 and ex.args[1]:
+                        ex_message = ex.args[1]
+                    else:
+                        ex_message = str(ex)
+                    response_content = '#Err: {}'.format(ex_message)
+
+                # forge the answer
+
+                answer = Message(msg.number, response_content)
+                client_context.addResponseData(output=answer.asString())
+
+                if not msg.attribute('transmit', True):
+                    self.__metrics.counter('message.transmit.total', labels=dict(status='discarded'))
+                    continue
+
+                # validate outgoing content
+                try:
+                    output_validators_chain.callChainOnObject(answer)
+                except ValidationException as ex:
+                    self.__metrics.counter('message.transmit.total', labels=dict(status='error'))
+                    g_logger.error('outgoing message did not passed validation')
+                    continue
+                client_context.appendTreatmentChain('output_validated')
+
+                # transmit answer to client
+                try:
+                    transm.transmit(answer)
+                except SMSException as ex:
+                    self.__metrics.counter('message.transmit.total', labels=dict(status='error'))
+                    g_logger.error('error on emitting a message: %s', str(ex))
+                    continue
+                self.__metrics.counter('message.transmit.total', labels=dict(status='ok'))
+                client_context.appendTreatmentChain('transmitted')
+
 
     def stop(self):
         """Stop properly the server after signal received
@@ -230,17 +433,19 @@ class SMSShell(object):
         some system routine to terminate the entire program
         """
         # Properly close some objects
-        for callback in self.__stop_callbacks:
+        for cb_stop in self.__stop_callbacks:
             try:
-                callback()
-            except NotImplementedError as e:
-                g_logger.warning("Unable to close object of %s because of : %s", callback.__self__.__class__, str(e))
+                cb_stop()
+            except NotImplementedError as ex:
+                g_logger.warning("Unable to close object of %s because of : %s",
+                                 cb_stop.__self__.__class__,
+                                 str(ex))
         # Remove the pid file
         try:
             g_logger.debug("Remove PID file %s", self.__pid_path)
             os.remove(self.__pid_path)
-        except OSError as e:
-            g_logger.error("Unable to remove PID file: %s", str(e))
+        except OSError as ex:
+            g_logger.error("Unable to remove PID file: %s", str(ex))
 
         g_logger.info("Exiting SMSShell")
 
@@ -267,26 +472,30 @@ class SMSShell(object):
         gid = self.cp.getGid()
         if gid is not None:
             if os.getgid() == gid:
-                g_logger.debug("ignore setgid option because current group is already to expected one %d", gid)
+                g_logger.debug(("ignore setgid option because current "
+                                "group is already set to expected one %d"), gid)
             else:
                 g_logger.debug("setting processus group to gid %d", gid)
                 try:
                     os.setgid(gid)
                 except PermissionError:
                     g_logger.fatal('Insufficient permissions to set process GID to %d', gid)
-                    raise SMSShellException('Insufficient permissions to downgrade processus privileges')
+                    raise SMSShellException('Insufficient permissions to ' +
+                                            'downgrade processus privileges')
 
         uid = self.cp.getUid()
         if uid is not None:
             if os.getuid() == uid:
-                g_logger.debug("ignore setuid option because current user is already to expected one %d", uid)
+                g_logger.debug(("ignore setuid option because current user "
+                                "is already set to expected one %d"), uid)
             else:
                 g_logger.debug("setting processus user to uid %d", uid)
                 try:
                     os.setuid(uid)
                 except PermissionError:
                     g_logger.fatal('Insufficient permissions to set process UID to %d')
-                    raise SMSShellException('Insufficient permissions to downgrade processus privileges')
+                    raise SMSShellException('Insufficient permissions to ' +
+                                            'downgrade processus privileges')
 
     @staticmethod
     def __daemonize():
@@ -303,8 +512,8 @@ class SMSShell(object):
             # and inherits the parent's process group ID.  This step is required
             # to insure that the next call to os.setsid is successful.
             pid = os.fork()
-        except OSError as e:
-            return (e.errno, e.strerror)
+        except OSError as ex:
+            return (ex.errno, ex.strerror)
 
         if pid == 0:  # The first child.
             # To become the session leader of this new session and the process group
@@ -351,8 +560,8 @@ class SMSShell(object):
                 # longer a session leader, preventing the daemon from ever acquiring
                 # a controlling terminal.
                 pid = os.fork()  # Fork a second child.
-            except OSError as e:
-                return (e.errno, e.strerror)
+            except OSError as ex:
+                return (ex.errno, ex.strerror)
 
             if pid == 0:  # The second child.
                 # Since the current working directory may be a mounted filesystem, we
@@ -414,7 +623,9 @@ class SMSShell(object):
         # set a format which is simpler for console use
         else:
             default_format = '%(asctime)s %(name)-30s[%(process)d]: %(levelname)-7s %(message)s'
-        formatter = logging.Formatter(self.cp.get(self.cp.MAIN_SECTION, 'log_format', fallback=default_format))
+        formatter = logging.Formatter(self.cp.get(self.cp.MAIN_SECTION,
+                                                  'log_format',
+                                                  fallback=default_format))
 
         if target == 'SYSLOG':
             facility = logging.handlers.SysLogHandler.LOG_DAEMON

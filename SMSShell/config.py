@@ -22,11 +22,14 @@
 
 # System imports
 import configparser
-import grp
 import logging
-import pwd
+import re
 
 # Project imports
+from .utils import userToUid, groupToGid
+from .exceptions import ShellInitException
+from . import validators
+from . import filters
 
 # Global project declarations
 g_logger = logging.getLogger('smsshell.config')
@@ -77,53 +80,68 @@ class MyConfigParser(configparser.ConfigParser):
         """
         return self.__is_config_loaded
 
-    def getPidPath(self, default='/var/run/smsshell.pid'):
-        """Return path to pid file option
+    def getLogLevel(self, section=MAIN_SECTION, item='log_level', default='INFO'):
+        """A log level option from configparser
 
-        @param default [str] : the default value to return if nothing is found
-        in the config file
-        @return [str] : the logtarget
+        Ensure the returned value is a valid log level acceptable by logging module
+
+        Args:
+            section: the section name from which to pick up the value
+                            Default to main section
+            item: the name of the item from which to pick up the value
+                            Default to 'log_level'
+            default: the fallback value to return if the item is not found
+                        or if the item value is not valid
+        Returns:
+            the validated log level as a string or the default's value
         """
-        return self.get(self.MAIN_SECTION, 'pid', fallback=default)
+        return self.__getValueInArray(section, item, self.LOGLEVEL_MAP, default)
 
-    def getLogLevel(self, default='INFO'):
-        """Return loglevel option from configuration file
+    def getUid(self, section=MAIN_SECTION, item='user', default=None):
+        """Return the uid corresponding to a value in configuration file
 
-        @param default [str] : the default value to return if nothing is found
-        in the config file
-        @return [str] : the loglevel
+        Args:
+            section: the section name from which to pick up the value
+                        Default to main section
+            item: the name of the item from which to pick up the value
+                        Default to 'user'
+            default: the fallback value to return if the item is not found
+                    or if the item value is not valid
+        Returns:
+            the uid as integer object or the default's value
         """
-        return self.__getValueInArray(self.MAIN_SECTION, 'log_level', self.LOGLEVEL_MAP, default)
-
-    def getUid(self):
-        """Return the uid (int) option from configfile
-
-        @return [int/None]: integer : the numeric value of
-            None: if group is not defined
-        """
-        user = self.get(self.MAIN_SECTION, 'user', fallback=None)
+        user = self.get(section, item, fallback=None)
         if not user:
-            return None
+            return default
         try:
-            return pwd.getpwnam(user).pw_uid
+            return userToUid(user)
         except KeyError:
-            g_logger.error("Incorrect username '%s' read in configuration file", user)
-        return None
+            g_logger.error(("Incorrect user name '%s' read in configuration"
+                            " file at section %s and key %s"), user, section, item)
+        return default
 
-    def getGid(self):
-        """Return the gid (int) option from configfile
+    def getGid(self, section=MAIN_SECTION, item='group', default=None):
+        """Return the gid corresponding to a value in configuration file
 
-        @return [int/None] : integer : the numeric value of group id
-        None: if group is not defined
+        Args:
+            section: the section name from which to pick up the value
+                        Default to main section
+            item: the name of the item from which to pick up the value
+                        Default to 'group'
+            default: the fallback value to return if the item is not found
+                    or if the item value is not valid
+        Returns:
+            the gid as integer object or the default's value
         """
-        group = self.get(self.MAIN_SECTION, 'group', fallback=None)
+        group = self.get(section, item, fallback=None)
         if not group:
-            return None
+            return default
         try:
-            return grp.getgrnam(group).gr_gid
+            return groupToGid(group)
         except KeyError:
-            g_logger.error("Incorrect groupname '%s' read in configuration file", group)
-        return None
+            g_logger.error(("Incorrect group name '%s' read in configuration"
+                            " file at section %s and key %s"), group, section, item)
+        return default
 
     def getMode(self):
         """Return the main mode of this application
@@ -151,6 +169,110 @@ class MyConfigParser(configparser.ConfigParser):
         if self.has_section(name):
             return dict(self.items(name))
         return dict()
+
+    def getValidatorsFromConfig(self, key):
+        """Return the hash of validators loaded from config key
+
+        Args:
+            key : the key from current mode configuration
+        Returns:
+            the dict of validators per fields
+        """
+        return self.getClassesChainFromConfig(self.getMode().lower(),
+                                              key,
+                                              validators,
+                                              base_class=validators.AbstractValidator)
+
+    def getFiltersFromConfig(self, key):
+        """Return the hash of filters loaded from config key
+
+        Args:
+            key : the key from current mode configuration
+        Returns:
+            the dict of validators per fields
+        """
+        return self.getClassesChainFromConfig(self.getMode().lower(),
+                                              key,
+                                              filters,
+                                              base_class=filters.AbstractFilter)
+
+    def getClassesChainFromConfig(self, section, key, module, base_class=None):
+        """Extract classes instances from config key
+
+        Args:
+            key : the config parser key which contains the value
+            module : the name of the python module containing the classes
+                        objects
+            base_class : a OPTIONAL base class to test subclass of each
+                            generated instances
+        Returns:
+            the dict of validators per fields
+        """
+        classes_config = dict()
+        raw_config = self.get(section, key, fallback='')
+        fields_spec = filter(lambda x: x, raw_config.split('\n'))
+
+        # line separated spec
+        for spec in fields_spec:
+            try:
+                field, field_classes = spec.split('=', 1)
+            except ValueError as ex:
+                g_logger.error("The specification '%s' is invalid because of %s",
+                               spec, str(ex))
+                continue
+
+            # prevent duplicate declaration
+            if field in classes_config:
+                g_logger.error(("The config for field named '%s' was " +
+                                "already declared in configuration. " +
+                                "Ignoring the second one."),
+                               field)
+                continue
+
+            classes_config[field] = []
+            classes_parts_splitted = re.split('\\|(\\w+:)', field_classes)
+            classes_parts = []
+            i = 0
+            # merge splitted classes parts because of the re.split behaviour
+            while i < len(classes_parts_splitted):
+                if i == 0:
+                    classes_parts.append(classes_parts_splitted[i])
+                else:
+                    classes_parts.append(''.join(classes_parts_splitted[i:(i+2)]))
+                    i += 1
+                i += 1
+
+            # load each class instance
+            for field_classes_spec in classes_parts:
+                class_name, class_args_raw = field_classes_spec.split(':', 1)
+
+                real_class_name = class_name[0].upper() + class_name[1:]
+                if not hasattr(module, real_class_name):
+                    g_logger.error(("The filter name '%s' for field named '%s'" +
+                                    " does not refer to an existing filter"),
+                                   class_name, field)
+                    continue
+                class_args = filter(lambda x: x, class_args_raw.split(','))
+                _class = getattr(module, real_class_name)
+                try:
+                    _instance = _class(*class_args)
+                    if base_class and not isinstance(_instance, base_class):
+                        raise Exception(("Class {} is not a subclass of " +
+                                         "{}").format(real_class_name, base_class))
+                except Exception as ex:
+                    raise ShellInitException(("Error during instanciation of filter '{}'" +
+                                              " for field '{}' : {} : {}").format(
+                                                  _class.__name__.lower(),
+                                                  field,
+                                                  ex.__class__,
+                                                  str(ex)
+                                              ))
+
+                classes_config[field].append(_instance)
+            g_logger.debug("loaded %d classes for field %s",
+                           len(classes_config[field]),
+                           field)
+        return classes_config
 
     def __getValueInArray(self, section, key, array, default=None):
         """Test if a value is in an array
