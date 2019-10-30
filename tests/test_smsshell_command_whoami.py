@@ -1,24 +1,23 @@
 # -*- coding: utf8 -*-
 
-import configparser
 import logging
-import pytest
-
 import SMSShell
 import SMSShell.config
+import SMSShell.metrics.none
 import SMSShell.commands.whoami
 
 
 def test_init():
     """Test abstract init methods
     """
-    com = SMSShell.commands.whoami.Whoami(logging.getLogger(),
-                                          object(),
-                                          dict(),
-                                          object())
+    SMSShell.commands.whoami.Whoami(logging.getLogger(),
+                                    object(),
+                                    dict(),
+                                    SMSShell.metrics.none.MetricsHelper())
 
 def test_main():
     """Test abstract init methods
     """
-    shell = SMSShell.shell.Shell(SMSShell.config.MyConfigParser(), object())
+    shell = SMSShell.shell.Shell(SMSShell.config.MyConfigParser(),
+                                 SMSShell.metrics.none.MetricsHelper())
     assert isinstance(shell.exec('local', 'whoami'), str)
