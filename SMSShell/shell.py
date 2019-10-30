@@ -44,7 +44,7 @@ from .commands import (AbstractCommand,
 g_logger = logging.getLogger('smsshell.shell')
 
 
-class Shell(object):
+class Shell():
     """This class is the execution core of the shell
 
     It manage all available command, handle sessions, distribute
@@ -73,7 +73,7 @@ class Shell(object):
                              callback=lambda: len(self.__sessions),
                              description='Current number of session in sessions directory')
         self.__metrics.counter('commands.call.total',
-                               labels=['status','name'],
+                               labels=['status', 'name'],
                                description='Number of commands call per name and status')
 
     def exec(self, subject, cmdline, as_role=None):
@@ -103,14 +103,14 @@ class Shell(object):
         if as_role is not None:
             assert isinstance(as_role, SessionStates)
             sess = Session(subject, time_to_live=0)
-            sess.forceState(as_role)
+            sess.force_state(as_role)
             g_logger.info("Subject '%s' run command '%s' as forced role : %s",
                           subject, cmd, as_role.name)
         else:
-            sess = self.__getSessionForSubject(subject)
+            sess = self.__get_session_for_subject(subject)
         return self.__call(sess, cmd, argv[1:]).strip()
 
-    def flushCommandCache(self):
+    def flush_command_cache(self):
         """Perform a flush of all command instance in local cache
 
         This cause that all next call to each command will require the
@@ -118,7 +118,7 @@ class Shell(object):
         """
         self.__commands = dict()
 
-    def getCommand(self, session, name):
+    def get_command(self, session, name):
         """Return the command instance of the given command name as the session
 
         Args:
@@ -130,12 +130,12 @@ class Shell(object):
             CommandForbidden is the given session is not allowed to run
             the requested command
         """
-        com = self.__getCommand(name)
-        if not Shell.hasSessionAccessToCommand(session, com):
+        com = self.__get_command(name)
+        if not Shell.has_session_access_to_command(session, com):
             raise CommandForbidden('You are not allowed to call this command from here')
         return com
 
-    def __getCommand(self, name):
+    def __get_command(self, name):
         """Return the command instance of the given command name
 
         Args:
@@ -144,10 +144,10 @@ class Shell(object):
             commands.Command instance
         """
         if name not in self.__commands:
-            self.__loadCommand(name)
+            self.__load_command(name)
         return self.__commands[name]
 
-    def __loadCommand(self, name):
+    def __load_command(self, name):
         """Try to load the given command into the cache dir
 
         Args:
@@ -167,12 +167,12 @@ class Shell(object):
             raise CommandNotFoundException(("Command handler '{0}' cannot" +
                                             " be found in commands/ folder.").format(name))
 
-        cls_name = Shell.toCamelCase(name)
+        cls_name = Shell.to_camel_case(name)
         try: # instanciate
             class_obj = getattr(mod, cls_name)
             cmd = class_obj(g_logger.getChild('command.' + name),
-                            self.getSecureShell(),
-                            self.configparser.getSectionOrEmpty('command.' + name),
+                            self.get_secure_shell(),
+                            self.configparser.get_section_or_empty('command.' + name),
                             self.__metrics)
         except AttributeError as ex:
             self.__metrics.counter('commands.loaded.total', labels=dict(status='error'))
@@ -185,7 +185,7 @@ class Shell(object):
                                         "'{0}' must extend AbstractCommand class".format(name))
 
         # check configuration of the command
-        if not cmd.checkConfig():
+        if not cmd.check_config():
             self.__metrics.counter('commands.loaded.total', labels=dict(status='error'))
             raise CommandBadConfiguredException(("Command '{0}' is misconfigured. "
                                                  "Check the command doc to add missing "
@@ -196,26 +196,26 @@ class Shell(object):
         self.__commands[name] = cmd
         self.__metrics.counter('commands.loaded.total', labels=dict(status='ok'))
 
-    def getAvailableCommands(self, session):
+    def get_available_commands(self, session):
         """Return the list of available command for the given session
 
         @param models.Session the session to use as subject
         @return List<Str> the list of command name
         """
         all_commands = []
-        self.loadAllCommands()
+        self.load_all_commands()
         for key in self.__commands:
-            if Shell.hasSessionAccessToCommand(session, self.__commands[key]):
+            if Shell.has_session_access_to_command(session, self.__commands[key]):
                 all_commands.append(key)
         return all_commands
 
-    def loadAllCommands(self):
+    def load_all_commands(self):
         """Load all availables command into the cache dir
         """
         for com in os.listdir(os.path.dirname(__file__) + "/commands"):
             if not com.startswith('_') and com.endswith(".py"):
                 try:
-                    self.__getCommand(os.path.splitext(com)[0])
+                    self.__get_command(os.path.splitext(com)[0])
                     # intercept exception to prevent command execution stop
                 except CommandException as ex:
                     g_logger.error(str(ex))
@@ -230,17 +230,18 @@ class Shell(object):
         Returns:
             the command output
         """
-        com = self.__getCommand(cmd_name)
+        com = self.__get_command(cmd_name)
         # set the prefix to separate session's namespaces
-        session.setStoragePrefix(cmd_name)
+        session.set_storage_prefix(cmd_name)
         # check command aceptance conditions
-        if not Shell.hasSessionAccessToCommand(session, com):
-            self.__metrics.counter('commands.call.total', labels=dict(status='error', name=cmd_name))
+        if not Shell.has_session_access_to_command(session, com):
+            self.__metrics.counter('commands.call.total',
+                                   labels=dict(status='error', name=cmd_name))
             raise CommandForbidden('You are not allowed to call this command from here')
 
         # parse arguments
         args = [argv]
-        parser = com._argsParser()
+        parser = com._args_parser()
         if parser:
             try:
                 args.append(parser.parse_args(argv))
@@ -252,13 +253,14 @@ class Shell(object):
         # check command signature
         sig = inspect.signature(com.main)
         if len(sig.parameters) != len(args):
-            self.__metrics.counter('commands.call.total', labels=dict(status='error', name=cmd_name))
+            self.__metrics.counter('commands.call.total',
+                                   labels=dict(status='error', name=cmd_name))
             raise CommandBadImplemented(("main() function of command '{0}' "
                                          "must take {1} arguments").format(cmd_name, len(args)))
 
         # refresh session
         session.access()
-        com.session = session.getSecureSession()
+        com.session = session.get_secure_session()
         result = com.main(*args)
         com.session = None
 
@@ -270,7 +272,7 @@ class Shell(object):
         return result
 
     @staticmethod
-    def hasSessionAccessToCommand(session, command):
+    def has_session_access_to_command(session, command):
         """Check if the given session has access to the given command
 
         Args:
@@ -280,7 +282,7 @@ class Shell(object):
             True if the given session is allowed to run the given command,
             false otherwise
         """
-        states = command.inputStates()
+        states = command.input_states()
         if not isinstance(states, list):
             raise CommandBadImplemented(str(command.__class__) + ' inputStates function must return'
                                         " a list of session's states")
@@ -293,7 +295,7 @@ class Shell(object):
             return False
         return True
 
-    def __getSessionForSubject(self, key):
+    def __get_session_for_subject(self, key):
         """Retrieve the session associated with this user
 
         @param str the name of the subject
@@ -301,28 +303,27 @@ class Shell(object):
         """
         if key in self.__sessions:
             sess = self.__sessions[key]
-            if sess.isValid():
+            if sess.is_valid():
                 g_logger.debug('using existing session')
                 self.__metrics.counter('sessions.activity.total', labels=dict(status='reused'))
                 return sess
             self.__metrics.counter('sessions.activity.total', labels=dict(status='expired'))
 
         self.__sessions[key] = Session(key)
-        self.__sessions[key].ttl = self.configparser.getModeConfig('session_ttl', fallback=600)
+        self.__sessions[key].ttl = self.configparser.get_mode_config('session_ttl', fallback=600)
         g_logger.debug('creating a new session for subject : %s with ttl %d',
                        key,
                        self.__sessions[key].ttl)
         self.__metrics.counter('sessions.activity.total', labels=dict(status='created'))
         return self.__sessions[key]
 
-
-    def getSecureShell(self):
+    def get_secure_shell(self):
         """Return a secure wrapper of the shell
 
         Returns:
             instance of shell wrapper
         """
-        class ShellWrapper(object):
+        class ShellWrapper():
             """This class if a wrapper for Shell
 
             It prevent some shell attributes to be accessed directly
@@ -358,7 +359,7 @@ class Shell(object):
         return ShellWrapper(self)
 
     @classmethod
-    def toCamelCase(cls, string):
+    def to_camel_case(cls, string):
         """Convert a string into camelcase
         """
         words = ' '.join(cls.WORD_REGEX_PATTERN.split(string))

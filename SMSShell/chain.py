@@ -24,11 +24,12 @@
 from .exceptions import ShellInitException
 
 
-class Chain(object):
+class Chain():
     """This class validate an object using validators per field's name
     """
 
     ABSTRACT_CLASS = object
+    # class of exception to use on validation errors
     EXCEPTION = Exception
     ASSIGN_RETURN = False
 
@@ -37,7 +38,7 @@ class Chain(object):
         """
         self.__field_links = dict()
 
-    def addFieldLink(self, field, link):
+    def add_field_link(self, field, link):
         """Append a link object for specific field
 
         Args:
@@ -56,7 +57,7 @@ class Chain(object):
             self.__field_links[field] = []
         self.__field_links[field].append(link)
 
-    def addLinksFromDict(self, field_links_map):
+    def add_links_from_dict(self, field_links_map):
         """Initialize filters for this message
 
         Args:
@@ -64,10 +65,10 @@ class Chain(object):
                             given by config parser
         """
         for field, links in field_links_map.items():
-            for l in links:
-                self.addFieldLink(field, l)
+            for link in links:
+                self.add_field_link(field, link)
 
-    def callChainOnObject(self, obj):
+    def call_chain_on_object(self, obj):
         """Validate message using the defined validators
 
         Args:
@@ -81,8 +82,8 @@ class Chain(object):
             if not hasattr(obj, field):
                 raise self.__class__.EXCEPTION(("Field '{}' does not exist in " +
                                                 "message").format(field))
-            for l in links:
-                r = l(getattr(obj, field))
+            for link in links:
+                r = link(getattr(obj, field))
                 if self.__class__.ASSIGN_RETURN:
                     setattr(obj, field, r)
         return True

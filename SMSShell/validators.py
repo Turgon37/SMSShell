@@ -34,10 +34,10 @@ __all__ = [
 class ValidationException(Exception):
     """Base class for all exceptions relating to messages validation
     """
-    pass
 
 
-class AbstractValidator(object):
+class AbstractValidator():
+    # pylint: disable=R0903
     """Base class for fields validators
 
     All validators must inherit this class
@@ -58,6 +58,7 @@ class ValidatorChain(Chain):
 
 
 class Regexp(AbstractValidator):
+    # pylint: disable=R0903
     """Validates the field against a user provided regexp.
 
     Inspired by https://github.com/wtforms/wtforms

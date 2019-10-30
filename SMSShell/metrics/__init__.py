@@ -46,7 +46,7 @@ class AbstractMetricsHelper(AbstractModule):
         """
         raise NotImplementedError("You must implement the 'stop' method in metrics helper class")
 
-    def normalizeName(self, name):
+    def normalize_name(self, name):
         """Normalize the metric name for the current handler
 
         Args:
@@ -71,7 +71,7 @@ class AbstractMetricsHelper(AbstractModule):
         Returns:
             mixed (self)
         """
-        return self._counter(self.normalizeName(name), *args, **kwargs)
+        return self._counter(self.normalize_name(name), *args, **kwargs)
 
     def _counter(self, name, value=1, description=None, labels=None):
         """Abstract final function that must realize the metrics handling
@@ -91,7 +91,7 @@ class AbstractMetricsHelper(AbstractModule):
         Returns:
             mixed (self)
         """
-        return self._gauge(self.normalizeName(name), *args, **kwargs)
+        return self._gauge(self.normalize_name(name), *args, **kwargs)
 
     def _gauge(self, name, value=None, set_to=None, callback=None, description=None, labels=None):
         """Abstract final function that must realize the metrics handling

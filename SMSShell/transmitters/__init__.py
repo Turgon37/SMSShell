@@ -46,6 +46,7 @@ class AbstractTransmitter(AbstractModule):
         raise NotImplementedError("You must implement the 'stop' method in receiver class")
 
     def transmit(self, answer):
+        # pylint: disable=R0201
         """Forward the message to end user
 
         Args:

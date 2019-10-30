@@ -28,7 +28,7 @@ import pwd
 from .gammusmsdparser import GammuSMSParser
 
 
-def userToUid(user):
+def user_to_uid(user):
     """Convert an user name to it's uid if it exists
 
     If the user given is already an uid it is returned as is
@@ -47,7 +47,7 @@ def userToUid(user):
 
     return pwd.getpwnam(user).pw_uid
 
-def groupToGid(group):
+def group_to_gid(group):
     """Convert an group name to it's gid if it exists
 
     If the group given is already an gid it is returned as is

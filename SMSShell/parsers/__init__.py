@@ -30,7 +30,6 @@ class ParserException(SMSException):
 
     All sub exception types must inherit this type
     """
-    pass
 
 
 class DecodeException(ParserException):
@@ -39,7 +38,6 @@ class DecodeException(ParserException):
     A message is considered as not valid when at least one of his field does not
     not follow the requirement
     """
-    pass
 
 
 class BadMessageFormatException(ParserException):
@@ -48,7 +46,6 @@ class BadMessageFormatException(ParserException):
     A message is considered as not valid when at least one of his field does not
     not follow the requirement
     """
-    pass
 
 
 class AbstractParser(AbstractModule):

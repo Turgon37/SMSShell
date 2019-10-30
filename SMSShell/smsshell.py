@@ -50,7 +50,7 @@ from .exceptions import SMSShellException, SMSException, ShellException, ShellIn
 g_logger = logging.getLogger('smsshell')
 
 
-class SMSShell(object):
+class SMSShell():
     """SMSShell main class
     """
 
@@ -94,8 +94,8 @@ class SMSShell(object):
 
         status, msg = self.cp.load(config_file)
         if status:
-            self.setLogLevel(self.__log_level or self.cp.getLogLevel())
-            self.setLogTarget(self.cp.get(self.cp.MAIN_SECTION, 'log_target', fallback='STDOUT'))
+            self.set_log_level(self.__log_level or self.cp.get_log_level())
+            self.set_log_target(self.cp.get(self.cp.MAIN_SECTION, 'log_target', fallback='STDOUT'))
         return status, msg
 
     def start(self, pid_path=None):
@@ -109,14 +109,14 @@ class SMSShell(object):
         os.umask(0o0077)
 
         # Installing signal catching function
-        signal.signal(signal.SIGTERM, self.__sigTERM_handler)
-        signal.signal(signal.SIGINT, self.__sigTERM_handler)
+        signal.signal(signal.SIGTERM, self.__sigterm_handler)
+        signal.signal(signal.SIGINT, self.__sigterm_handler)
 
         # Load configuration
-        if not self.cp.isLoaded():
+        if not self.cp.is_loaded():
             return False
 
-        g_logger.info('Starting SMSShell version ' + __version__)
+        g_logger.info('Starting SMSShell version %s', __version__)
 
         # Turn in daemon mode
         if self.__daemon:
@@ -158,7 +158,7 @@ class SMSShell(object):
 
         # Init metrics handler
         try:
-            metrics = self.importAndLoadModule(
+            metrics = self.import_and_load_module(
                 '.metrics.' + self.cp.get('daemon', 'metrics_handler', fallback='none'),
                 'MetricsHelper', AbstractMetricsHelper, 'metrics'
             )
@@ -175,12 +175,12 @@ class SMSShell(object):
         self.__stop_callbacks.append(metrics.stop)
 
         # run the fonctionnal endpoint
-        if self.cp.getMode() == 'STANDALONE':
+        if self.cp.get_mode() == 'STANDALONE':
             # Init standalone mode
             self.stop()
             raise NotImplementedError('STANDALONE mode not yet implemented')
         else:
-            self.runDaemonMode()
+            self.run_daemon_mode()
 
         # Stop properly
         self.stop()
@@ -188,7 +188,7 @@ class SMSShell(object):
         return True
 
 
-    def importAndLoadModule(self, module_path, class_name, abstract_class=None, config_section=None):
+    def import_and_load_module(self, module_path, class_name, abstract_class=None, config_section=None):
         """Import a sub module, instanciate a class and check object's instance
 
         @param str module_path the path to the module in the file system
@@ -218,21 +218,22 @@ class SMSShell(object):
                                       "AbstractCommand class").format(module_path))
         return inst
 
-    def getTokensStoreFromConfig(self):
+    def get_tokens_store_from_config(self):
         """Build the authentication tokens store from config
 
         Returns:
 
         """
         tokens_store = dict()
-        raw_tokens = self.cp.getModeConfig('tokens')
+        raw_tokens = self.cp.get_mode_config('tokens')
         if not raw_tokens:
             return tokens_store
         for raw_token in raw_tokens.split(','):
             # parse token string
             try:
                 state, token = raw_token.split(':')
-            except ValueError as ex:
+            except ValueError:
+                # pylint: disable=W1201
                 g_logger.error('Invalid token format, ' +
                                'it must be in the form ROLE:SECRET, it is ignored')
                 continue
@@ -241,6 +242,7 @@ class SMSShell(object):
             try:
                 real_state = SessionStates[state]
             except KeyError:
+                # pylint: disable=W1201
                 g_logger.error('Invalid state value %s, ' +
                                'it must be one of the SessionStates available ones, ' +
                                'it is ignored',
@@ -259,7 +261,7 @@ class SMSShell(object):
         return tokens_store
 
     @staticmethod
-    def extractRoleFromMessageAndStore(tokens_store, message):
+    def extract_role_from_message_and_store(tokens_store, message):
         """
 
         Args:
@@ -289,6 +291,7 @@ class SMSShell(object):
         try:
             needed_state = SessionStates[auth_attr['role']]
         except KeyError:
+            # pylint: disable=W1201
             g_logger.error('Invalid state value %s, ' +
                            'it must be one of the SessionStates available ones, ' +
                            'it is ignored',
@@ -298,22 +301,22 @@ class SMSShell(object):
             return needed_state
         return None
 
-    def runDaemonMode(self):
+    def run_daemon_mode(self):
         """Entrypoint of daemon mode
         """
         shell = Shell(self.cp, self.__metrics)
 
         # Init daemon mode objects
         try:
-            parser = self.importAndLoadModule(
+            parser = self.import_and_load_module(
                 '.parsers.' + self.cp.get('daemon', 'message_parser', fallback="json"),
                 'Parser', AbstractParser, 'parser'
             )
-            recv = self.importAndLoadModule(
+            recv = self.import_and_load_module(
                 '.receivers.' + self.cp.get('daemon', 'receiver_type', fallback="fifo"),
                 'Receiver', AbstractReceiver, 'receiver'
             )
-            transm = self.importAndLoadModule(
+            transm = self.import_and_load_module(
                 '.transmitters.' + self.cp.get('daemon', 'transmitter_type', fallback="file"),
                 'Transmitter', AbstractTransmitter, 'transmitter'
             )
@@ -333,7 +336,7 @@ class SMSShell(object):
         self.__stop_callbacks.append(transm.stop)
 
         g_logger.debug('initialize authentication tokens store')
-        tokens_store = self.getTokensStoreFromConfig()
+        tokens_store = self.get_tokens_store_from_config()
         g_logger.info('loaded %d authentication tokens in store', len(tokens_store))
 
         # init counters
@@ -349,14 +352,15 @@ class SMSShell(object):
         try:
             g_logger.debug('initialize incoming messages validators')
             input_validators_chain = ValidatorChain()
-            input_validators_chain.addLinksFromDict(self.cp.getValidatorsFromConfig('input_validators'))
+            input_validators_chain.add_links_from_dict(self.cp.get_validators_from_config('input_validators'))
             input_filters_chain = FilterChain()
-            input_filters_chain.addLinksFromDict(self.cp.getFiltersFromConfig('input_filters'))
+            input_filters_chain.add_links_from_dict(self.cp.get_filters_from_config('input_filters'))
             g_logger.debug('initialize outgoing messages validators')
             output_validators_chain = ValidatorChain()
-            output_validators_chain.addLinksFromDict(self.cp.getValidatorsFromConfig('output_validators'))
+            output_validators_chain.add_links_from_dict(self.cp.get_validators_from_config('output_validators'))
         except ShellInitException as ex:
             raise ex
+            # TODO
             g_logger.fatal("Unable to load a classes : %s", str(ex))
             return False
 
@@ -366,7 +370,7 @@ class SMSShell(object):
                 # parse received content
                 try:
                     msg = parser.parse(client_context_data)
-                    client_context.appendTreatmentChain('parsed')
+                    client_context.append_treatment_chain('parsed')
                 except SMSException as ex:
                     self.__metrics.counter('messages.receive.total', labels=dict(status='error'))
                     g_logger.error('received a bad message, skipping because of %s', str(ex))
@@ -374,24 +378,25 @@ class SMSShell(object):
 
                 # validate received content
                 try:
-                    input_validators_chain.callChainOnObject(msg)
-                    input_filters_chain.callChainOnObject(msg)
+                    input_validators_chain.call_chain_on_object(msg)
+                    input_filters_chain.call_chain_on_object(msg)
                 except (ValidationException, FilterException) as ex:
                     self.__metrics.counter('messages.receive.total', labels=dict(status='error'))
+                    # pylint: disable=W1201
                     g_logger.error(('incoming message did not passed the' +
                                     ' validation step because of : %s'),
                                    str(ex))
                     continue
                 self.__metrics.counter('messages.receive.total', labels=dict(status='ok'))
-                client_context.appendTreatmentChain('input_validated')
+                client_context.append_treatment_chain('input_validated')
 
                 # extract optional overrided role
-                as_role = SMSShell.extractRoleFromMessageAndStore(tokens_store, msg)
+                as_role = SMSShell.extract_role_from_message_and_store(tokens_store, msg)
 
                 # run in shell
                 try:
-                    response_content = shell.exec(msg.number, msg.asString(), as_role=as_role)
-                    client_context.appendTreatmentChain('executed')
+                    response_content = shell.exec(msg.number, msg.as_string(), as_role=as_role)
+                    client_context.append_treatment_chain('executed')
                 except ShellException as ex:
                     g_logger.error('error during command execution : %s', ex.args[0])
                     if len(ex.args) > 1 and ex.args[1]:
@@ -403,20 +408,21 @@ class SMSShell(object):
                 # forge the answer
 
                 answer = Message(msg.number, response_content)
-                client_context.addResponseData(output=answer.asString())
+                client_context.add_response_data(output=answer.as_string())
 
                 if not msg.attribute('transmit', True):
-                    self.__metrics.counter('messages.transmit.total', labels=dict(status='discarded'))
+                    self.__metrics.counter('messages.transmit.total',
+                                           labels=dict(status='discarded'))
                     continue
 
                 # validate outgoing content
                 try:
-                    output_validators_chain.callChainOnObject(answer)
+                    output_validators_chain.call_chain_on_object(answer)
                 except ValidationException as ex:
                     self.__metrics.counter('messages.transmit.total', labels=dict(status='error'))
                     g_logger.error('outgoing message did not passed validation')
                     continue
-                client_context.appendTreatmentChain('output_validated')
+                client_context.append_treatment_chain('output_validated')
 
                 # transmit answer to client
                 try:
@@ -426,7 +432,7 @@ class SMSShell(object):
                     g_logger.error('error on emitting a message: %s', str(ex))
                     continue
                 self.__metrics.counter('messages.transmit.total', labels=dict(status='ok'))
-                client_context.appendTreatmentChain('transmitted')
+                client_context.append_treatment_chain('transmitted')
 
 
     def stop(self):
@@ -462,7 +468,8 @@ class SMSShell(object):
     # System running functions
     #
 
-    def __sigTERM_handler(self, signum, frame):
+    def __sigterm_handler(self, signum, frame):
+        # pylint: disable=W0613
         """Make the program terminate after receving system signal
 
         TODO : improve signal handling
@@ -473,7 +480,7 @@ class SMSShell(object):
     def __downgrade(self):
         """Downgrade daemon privilege to another uid/gid
         """
-        gid = self.cp.getGid()
+        gid = self.cp.get_gid()
         if gid is not None:
             if os.getgid() == gid:
                 g_logger.debug(("ignore setgid option because current "
@@ -487,7 +494,7 @@ class SMSShell(object):
                     raise SMSShellException('Insufficient permissions to ' +
                                             'downgrade processus privileges')
 
-        uid = self.cp.getUid()
+        uid = self.cp.get_uid()
         if uid is not None:
             if os.getuid() == uid:
                 g_logger.debug(("ignore setuid option because current user "
@@ -590,7 +597,7 @@ class SMSShell(object):
     # Logging functions
     #
     @staticmethod
-    def setLogLevel(value):
+    def set_log_level(value):
         """Set the logging level.
 
         @param value CONSTANT : the log level according to syslog
@@ -609,7 +616,7 @@ class SMSShell(object):
         except AttributeError:
             raise ValueError("Invalid log level")
 
-    def setLogTarget(self, target):
+    def set_log_target(self, target):
         """Sets the logging target
 
         target can be a file, SYSLOG, STDOUT or STDERR.

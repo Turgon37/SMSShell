@@ -37,5 +37,5 @@ class Flush(AbstractCommand):
         return 'Flush command cache directory'
 
     def main(self, argv):
-        self.shell.flushCommandCache()
+        self.shell.flush_command_cache()
         return 'ok'

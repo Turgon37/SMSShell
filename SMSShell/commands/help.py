@@ -44,10 +44,10 @@ class Help(AbstractCommand):
         # call usage function of the given command
         if argv:
             try:
-                return self.shell.getCommand(self.session, argv[0]).usage(argv[1:])
+                return self.shell.get_command(self.session, argv[0]).usage(argv[1:])
             except CommandException as ex:
                 self.log.error("error during command execution : " + str(ex))
                 return 'command not available'
         # return the list of availables commands
         else:
-            return ' '.join(self.shell.getAvailableCommands(self.session))
+            return ' '.join(self.shell.get_available_commands(self.session))

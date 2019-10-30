@@ -43,13 +43,13 @@ class Transmitter(AbstractTransmitter):
         self.__default_umask = 0o117
 
         # configuration
-        self.__config = self.getConfig('smsdrc_configuration', fallback='/etc/gammu-smsdrc')
+        self.__config = self.get_config('smsdrc_configuration', fallback='/etc/gammu-smsdrc')
 
         # config
-        self.__path = self.getConfig('path', fallback="/var/run/smsshell.sock")
+        self.__path = self.get_config('path', fallback="/var/run/smsshell.sock")
 
         # parse umask
-        umask = self.getConfig('umask', fallback='{:o}'.format(self.__default_umask))
+        umask = self.get_config('umask', fallback='{:o}'.format(self.__default_umask))
         try:
             self.__umask = int(umask, 8)
         except ValueError:
@@ -92,7 +92,7 @@ class Transmitter(AbstractTransmitter):
         assert self.__smsd
 
         message = {
-            'Text': answer.asString(),
+            'Text': answer.as_string(),
             'SMSC': {
                 'Location': 1
             },

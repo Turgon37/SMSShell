@@ -29,8 +29,8 @@ class Desc(AbstractCommand):
     """Command class, see module docstring for help
     """
 
-    def argsParser(self):
-        parser = self.createArgsParser()
+    def args_parser(self):
+        parser = self.create_args_parser()
         parser.add_argument("command", help="The command's name")
         parser.add_argument("command_argv", nargs='*', default=[],
                             help="optional argument to pass to desc")
@@ -44,8 +44,8 @@ class Desc(AbstractCommand):
 
     def main(self, argv, pargs):
         try:
-            return self.shell.getCommand(self.session,
-                                         pargs.command).description(pargs.command_argv)
+            return self.shell.get_command(self.session,
+                                          pargs.command).description(pargs.command_argv)
         except CommandException as ex:
             self.log.error("error during command execution : %s", str(ex))
             return 'command not available'

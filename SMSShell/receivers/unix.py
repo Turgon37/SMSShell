@@ -33,7 +33,7 @@ import stat
 
 # Project import
 from . import AbstractReceiver, AbstractClientRequest
-from ..utils import groupToGid
+from ..utils import group_to_gid
 
 # Global project declarations
 g_logger = logging.getLogger('smsshell.receivers.unix')
@@ -55,9 +55,9 @@ class ClientRequest(AbstractClientRequest):
         """Pop all answer data and send them to client
         """
         assert self.__client_socket
-        response_data = self.popResponseData()
-        response_data['chain'] = self.getTreatmentChain()
-        self.__receiver.writeToClient(self.__client_socket, json.dumps(response_data))
+        response_data = self.pop_response_data()
+        response_data['chain'] = self.get_treatment_chain()
+        self.__receiver.write_to_client(self.__client_socket, json.dumps(response_data))
 
 
 class Receiver(AbstractReceiver):
@@ -77,17 +77,17 @@ class Receiver(AbstractReceiver):
         self.__default_umask = 0o117
 
         # config
-        self.__path = self.getConfig('path', fallback="/var/run/smsshell.sock")
-        self.__umask = self.getConfig('umask', fallback='{:o}'.format(self.__default_umask))
-        self.__group = self.getConfig('group')
+        self.__path = self.get_config('path', fallback="/var/run/smsshell.sock")
+        self.__umask = self.get_config('umask', fallback='{:o}'.format(self.__default_umask))
+        self.__group = self.get_config('group')
         try:
-            self.__listen_queue = int(self.getConfig('listen_queue', fallback=10))
+            self.__listen_queue = int(self.get_config('listen_queue', fallback=10))
         except ValueError:
             self.__listen_queue = 10
             g_logger.error(("invalid integer parameter for option 'listen_queue',"
                             " fallback to default value 10"))
 
-    def writeToClient(self, client_socket, data):
+    def write_to_client(self, client_socket, data):
         """Write data to client
 
         Args:
@@ -103,9 +103,10 @@ class Receiver(AbstractReceiver):
             g_logger.warning('client connection with FD %s raise connection error : %s',
                              client_socket.fileno(),
                              str(ex))
-            self.__closeConnection(client_socket)
+            self.__close_connection(client_socket)
 
-    def __onAccept(self, server_socket, mask):
+    def __on_accept(self, server_socket, mask):
+        # pylint: disable=W0613
         """Call each time a new client connection occur
 
         Args:
@@ -113,6 +114,7 @@ class Receiver(AbstractReceiver):
                                     the socket to the new client
             mask : unused
         """
+        # pylint: disable=W0612
         client_socket, addr = server_socket.accept()
         # disable blocking on client socket
         client_socket.setblocking(0)
@@ -123,10 +125,11 @@ class Receiver(AbstractReceiver):
         # register socket into the selector
         self.__socket_selector.register(fileobj=client_socket,
                                         events=selectors.EVENT_READ,
-                                        data=self.__onRead)
+                                        data=self.__on_read)
         g_logger.info('accepted new client with FD %d on unix socket', client_socket.fileno())
 
-    def __onRead(self, client_socket, mask):
+    def __on_read(self, client_socket, mask):
+        # pylint: disable=W0613
         """Call each time a socket received an event
 
         Args:
@@ -138,12 +141,12 @@ class Receiver(AbstractReceiver):
             g_logger.warning('client connection with FD %s raise connection error : %s',
                              client_socket.fileno(),
                              str(ex))
-            self.__closeConnection(client_socket)
+            self.__close_connection(client_socket)
             return None
 
         # If there is no data, the socket must have been closed from client side
         if not request_data:
-            self.__closeConnection(client_socket)
+            self.__close_connection(client_socket)
             return None
 
         # if these is data, that mean client has send some bytes to read
@@ -168,12 +171,12 @@ class Receiver(AbstractReceiver):
         g_logger.debug('send ACK to FD %d for %d bytes of data',
                        client_socket.fileno(),
                        raw_request_data_length)
-        request.addResponseData(received_length=raw_request_data_length)
-        request.appendTreatmentChain('received')
+        request.add_response_data(received_length=raw_request_data_length)
+        request.append_treatment_chain('received')
 
         return request
 
-    def __closeConnection(self, client_socket):
+    def __close_connection(self, client_socket):
         """Call each time a socket is closed
 
         Flush and close properly client socket
@@ -214,6 +217,7 @@ class Receiver(AbstractReceiver):
                         g_logger.fatal('The unix socket path already exists and cannot be removed')
                         return False
             else:
+                # pylint: disable=W1201
                 g_logger.fatal('The unix socket path given is already a file' +
                                ' but not a unix socket. Please delete it manually')
                 return False
@@ -250,13 +254,14 @@ class Receiver(AbstractReceiver):
             try:
                 os.chown(self.__path,
                          -1,
-                         groupToGid(self.__group))
+                         group_to_gid(self.__group))
                 g_logger.info("Switched socket group owner to '%s'",
                               self.__group)
             except KeyError:
                 g_logger.error("Incorrect group name '%s' for receiver, ignoring group directive",
                                self.__group)
             except PermissionError:
+                # pylint: disable=W1201
                 g_logger.error("Cannot change group ownership, you are not member of " +
                                "group name '%s', ignoring group directive",
                                self.__group)
@@ -272,7 +277,7 @@ class Receiver(AbstractReceiver):
         ## Init sockets selector
         self.__socket_selector.register(fileobj=self.__server_socket,
                                         events=selectors.EVENT_READ,
-                                        data=self.__onAccept)
+                                        data=self.__on_accept)
         return True
 
     def stop(self):
@@ -316,5 +321,6 @@ class Receiver(AbstractReceiver):
                 socket_data = callback(key.fileobj, mask)
                 # yield only data read from client sockets
                 # compare the data object with the onread function
-                if callback == self.__onRead and socket_data is not None:
+                # pylint: disable=W0143
+                if callback == self.__on_read and socket_data is not None:
                     yield socket_data

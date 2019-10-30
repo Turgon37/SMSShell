@@ -56,7 +56,7 @@ class Receiver(AbstractReceiver):
     def init(self):
         """Init
         """
-        self.__path = self.getConfig('path', fallback="/var/run/smsshell.fifo")
+        self.__path = self.get_config('path', fallback="/var/run/smsshell.fifo")
 
     def start(self):
         """Start the socket (FIFO) runner

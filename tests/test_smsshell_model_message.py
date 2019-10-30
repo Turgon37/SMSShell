@@ -12,7 +12,7 @@ def test_message():
     m = SMSShell.models.message.Message('sender', 'content')
     assert m.number == 'sender'
     assert m.content == 'content'
-    assert isinstance(m.asString(), str)
+    assert isinstance(m.as_string(), str)
     assert 'content' in str(m)
     assert 'sender' in repr(m)
 

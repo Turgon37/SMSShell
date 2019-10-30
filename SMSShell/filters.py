@@ -21,7 +21,6 @@
 """
 
 # System imports
-import re
 
 # Project imports
 from .exceptions import ShellInitException
@@ -35,10 +34,10 @@ __all__ = [
 class FilterException(Exception):
     """Base class for all exceptions relating to messages filtering
     """
-    pass
 
 
-class AbstractFilter(object):
+class AbstractFilter():
+    # pylint: disable=R0903
     """Base class for fields filters
 
     All filters must inherit this class
@@ -60,6 +59,7 @@ class FilterChain(Chain):
 
 
 class LowerCase(AbstractFilter):
+    # pylint: disable=R0903
     """Make the left part of the message lowercase
 
     Args:

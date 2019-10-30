@@ -33,7 +33,7 @@ def test_loading_all_commands():
     shell = SMSShell.shell.Shell(conf, metrics)
     session = SMSShell.models.session.Session('sender')
 
-    assert shell.getAvailableCommands(session)
+    assert shell.get_available_commands(session)
     shell.flushCommandCache()
 
 def test_exec_command_help():
@@ -109,7 +109,7 @@ def test_secure_wrapper():
     metrics = SMSShell.metrics.none.MetricsHelper()
 
     shell = SMSShell.shell.Shell(conf, metrics)
-    sw = shell.getSecureShell()
+    sw = shell.get_secure_shell()
     sw.flushCommandCache()
 
 def test_secure_wrapper_isolation():
@@ -122,7 +122,7 @@ def test_secure_wrapper_isolation():
     metrics = SMSShell.metrics.none.MetricsHelper()
 
     shell = SMSShell.shell.Shell(conf, metrics)
-    sw = shell.getSecureShell()
+    sw = shell.get_secure_shell()
 
     with pytest.raises(SMSShell.exceptions.ShellException):
         sw.exec('user1', 'help')

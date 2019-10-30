@@ -43,7 +43,6 @@ class SessionException(ShellException):
 class BadStateTransitionException(SessionException):
     """Raise when someone try to follow a state transition that is not allowed
     """
-    pass
 
 
 @unique
@@ -56,7 +55,7 @@ class SessionStates(IntEnum):
     STATE_ADMIN = 9
 
 
-class Session(object):
+class Session():
     """An user session with all user's meta data
     """
 
@@ -97,7 +96,7 @@ class Session(object):
         # init attributes with values
         self.subject = subject
         self.ttl = time_to_live
-        self.forceState(SessionStates.STATE_GUEST)
+        self.force_state(SessionStates.STATE_GUEST)
         self.access()
 
 
@@ -150,8 +149,11 @@ class Session(object):
 
         self.__state = new_state
 
-    def forceState(self, new_state):
-        """
+    def force_state(self, new_state):
+        """Assign a state to this session without any check
+
+        Args:
+            new_state : the state to assign
         """
         if not isinstance(new_state, SessionStates):
             raise BadStateTransitionException("The given new state " +
@@ -205,7 +207,7 @@ class Session(object):
         self.__access_at = datetime.datetime.today()
         return self
 
-    def isValid(self):
+    def is_valid(self):
         """Check if this session is valid
 
         Returns:
@@ -216,7 +218,7 @@ class Session(object):
             return False
         return True
 
-    def setStoragePrefix(self, prefix):
+    def set_storage_prefix(self, prefix):
         """Define the prefix to use for key-value store
 
         This allow to separate each command storage by namespace in the session
@@ -253,14 +255,14 @@ class Session(object):
         self.__storage[fullkey] = value
         return self
 
-    def getSecureSession(self):
+    def get_secure_session(self):
         """Return a secure wrapper of the session
 
         Returns:
             a new session wrapper for this session
         """
 
-        class SessionWrapper(object):
+        class SessionWrapper():
             """Simple session wrapper to restrict usage of some
             attribute into commands
             """

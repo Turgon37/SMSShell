@@ -73,7 +73,7 @@ class AbstractCommand():
     class ArgParser(argparse.ArgumentParser):
         """Customized argparser class
 
-        This class should be instanciated using the createArgsParser() method
+        This class should be instanciated using the create_args_parser() method
         """
 
         def __init__(self, *args, **kwargs):
@@ -152,7 +152,7 @@ class AbstractCommand():
     # PUBLIC METHODS
     #
 
-    def argsParser(self):
+    def args_parser(self):
         # pylint: disable=R0201
         """Return the argparser that the command will use to validate it's arguments
 
@@ -161,12 +161,12 @@ class AbstractCommand():
 
         Returns:
             must return an instance of AbstractCommand.ArgParser,
-            use createArgsParser() to create a new and customize it before
+            use create_args_parser() to create a new and customize it before
             return it
         """
         return None
 
-    def checkConfig(self):
+    def check_config(self):
         """Validates the configuration required by the command
 
         Returns:
@@ -176,7 +176,7 @@ class AbstractCommand():
         assert self
         return True
 
-    def createArgsParser(self):
+    def create_args_parser(self):
         """Build helper for new arguments parser
 
         Returns:
@@ -198,7 +198,7 @@ class AbstractCommand():
         raise CommandBadImplemented(str(self.__class__) +
                                     " must implement the description function")
 
-    def inputStates(self):
+    def input_states(self):
         # pylint: disable=R0201
         """This function must return the list of session's state(s) from which
          the command can be reacheable
@@ -233,7 +233,7 @@ class AbstractCommand():
         Returns:
             the usage help as a String
         """
-        parser = self._argsParser()
+        parser = self._args_parser()
         if parser:
             parser.parse_known_args(argv)
             return parser.format_usage()
@@ -243,14 +243,14 @@ class AbstractCommand():
     # PRIVATE PROPERTIES
     #
 
-    def _argsParser(self):
+    def _args_parser(self):
         """Private entry point for Shell
 
         Returns:
             The argparser formatted and validated for Shell usage
         """
         try:
-            parser = self.argsParser()
+            parser = self.args_parser()
         except BaseException as ex:
             raise CommandBadImplemented(str(self.__class__) +
                                         " argsParser function encounter an error {}".format(ex))

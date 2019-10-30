@@ -26,7 +26,7 @@ import logging
 import re
 
 # Project imports
-from .utils import userToUid, groupToGid
+from .utils import user_to_uid, group_to_gid
 from .exceptions import ShellInitException
 from . import validators
 from . import filters
@@ -72,7 +72,7 @@ class MyConfigParser(configparser.ConfigParser):
             msg = 'Unable to load the configuration file because of error : {}'.format(str(ex))
         return self.__is_config_loaded, msg
 
-    def isLoaded(self):
+    def is_loaded(self):
         """Return the load state of this config parser
 
         @return [boolean] : the boolean that indicates if the config
@@ -80,7 +80,7 @@ class MyConfigParser(configparser.ConfigParser):
         """
         return self.__is_config_loaded
 
-    def getLogLevel(self, section=MAIN_SECTION, item='log_level', default='INFO'):
+    def get_log_level(self, section=MAIN_SECTION, item='log_level', default='INFO'):
         """A log level option from configparser
 
         Ensure the returned value is a valid log level acceptable by logging module
@@ -95,9 +95,9 @@ class MyConfigParser(configparser.ConfigParser):
         Returns:
             the validated log level as a string or the default's value
         """
-        return self.__getValueInArray(section, item, self.LOGLEVEL_MAP, default)
+        return self.__get_value_in_array(section, item, self.LOGLEVEL_MAP, default)
 
-    def getUid(self, section=MAIN_SECTION, item='user', default=None):
+    def get_uid(self, section=MAIN_SECTION, item='user', default=None):
         """Return the uid corresponding to a value in configuration file
 
         Args:
@@ -114,13 +114,13 @@ class MyConfigParser(configparser.ConfigParser):
         if not user:
             return default
         try:
-            return userToUid(user)
+            return user_to_uid(user)
         except KeyError:
             g_logger.error(("Incorrect user name '%s' read in configuration"
                             " file at section %s and key %s"), user, section, item)
         return default
 
-    def getGid(self, section=MAIN_SECTION, item='group', default=None):
+    def get_gid(self, section=MAIN_SECTION, item='group', default=None):
         """Return the gid corresponding to a value in configuration file
 
         Args:
@@ -137,30 +137,30 @@ class MyConfigParser(configparser.ConfigParser):
         if not group:
             return default
         try:
-            return groupToGid(group)
+            return group_to_gid(group)
         except KeyError:
             g_logger.error(("Incorrect group name '%s' read in configuration"
                             " file at section %s and key %s"), group, section, item)
         return default
 
-    def getMode(self):
+    def get_mode(self):
         """Return the main mode of this application
 
         @return str : the current mode if it belong to the availables values
                         an empty string otherwise
         """
-        return self.__getValueInArray(self.MAIN_SECTION, 'mode', self.MODE_MAP, 'DAEMON')
+        return self.__get_value_in_array(self.MAIN_SECTION, 'mode', self.MODE_MAP, 'DAEMON')
 
-    def getModeConfig(self, key, fallback=None):
+    def get_mode_config(self, key, fallback=None):
         """Return a configuration option of the current mode
 
         @param str key the name of the configuration
         @param fallback the default value to return
         @return mixed
         """
-        return self.get(self.getMode().lower(), key, fallback=fallback)
+        return self.get(self.get_mode().lower(), key, fallback=fallback)
 
-    def getSectionOrEmpty(self, name):
+    def get_section_or_empty(self, name):
         """Return all options in a section if exists or empty dict if not
 
         @param str the name the section
@@ -170,7 +170,7 @@ class MyConfigParser(configparser.ConfigParser):
             return dict(self.items(name))
         return dict()
 
-    def getValidatorsFromConfig(self, key):
+    def get_validators_from_config(self, key):
         """Return the hash of validators loaded from config key
 
         Args:
@@ -178,12 +178,12 @@ class MyConfigParser(configparser.ConfigParser):
         Returns:
             the dict of validators per fields
         """
-        return self.getClassesChainFromConfig(self.getMode().lower(),
-                                              key,
-                                              validators,
-                                              base_class=validators.AbstractValidator)
+        return self.get_classes_chain_from_config(self.get_mode().lower(),
+                                                  key,
+                                                  validators,
+                                                  base_class=validators.AbstractValidator)
 
-    def getFiltersFromConfig(self, key):
+    def get_filters_from_config(self, key):
         """Return the hash of filters loaded from config key
 
         Args:
@@ -191,12 +191,12 @@ class MyConfigParser(configparser.ConfigParser):
         Returns:
             the dict of validators per fields
         """
-        return self.getClassesChainFromConfig(self.getMode().lower(),
-                                              key,
-                                              filters,
-                                              base_class=filters.AbstractFilter)
+        return self.get_classes_chain_from_config(self.get_mode().lower(),
+                                                  key,
+                                                  filters,
+                                                  base_class=filters.AbstractFilter)
 
-    def getClassesChainFromConfig(self, section, key, module, base_class=None):
+    def get_classes_chain_from_config(self, section, key, module, base_class=None):
         """Extract classes instances from config key
 
         Args:
@@ -223,6 +223,7 @@ class MyConfigParser(configparser.ConfigParser):
 
             # prevent duplicate declaration
             if field in classes_config:
+                # pylint: disable=W1201
                 g_logger.error(("The config for field named '%s' was " +
                                 "already declared in configuration. " +
                                 "Ignoring the second one."),
@@ -248,6 +249,7 @@ class MyConfigParser(configparser.ConfigParser):
 
                 real_class_name = class_name[0].upper() + class_name[1:]
                 if not hasattr(module, real_class_name):
+                    # pylint: disable=W1201
                     g_logger.error(("The filter name '%s' for field named '%s'" +
                                     " does not refer to an existing filter"),
                                    class_name, field)
@@ -274,7 +276,7 @@ class MyConfigParser(configparser.ConfigParser):
                            field)
         return classes_config
 
-    def __getValueInArray(self, section, key, array, default=None):
+    def __get_value_in_array(self, section, key, array, default=None):
         """Test if a value is in an array
 
         @param str section the name of the sections

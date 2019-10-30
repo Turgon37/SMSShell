@@ -42,12 +42,12 @@ class MetricsHelper(AbstractMetricsHelper):
         """Init function
         """
         try:
-            self.__port = int(self.getConfig('listen_port', fallback=8000))
+            self.__port = int(self.get_config('listen_port', fallback=8000))
         except ValueError:
             self.__port = 8000
             g_logger.error(("invalid integer parameter for option 'listen_port'"
                             ", fallback to default value 8000"))
-        self.__address = self.getConfig('listen_address', fallback='')
+        self.__address = self.get_config('listen_address', fallback='')
         # initialized counters
         self.__counters = dict()
         self.__gauges = dict()

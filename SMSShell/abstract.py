@@ -21,7 +21,7 @@
 """
 
 
-class AbstractModule(object):
+class AbstractModule():
     """This abstract class is used to defined common base feature for modules
     """
 
@@ -38,7 +38,7 @@ class AbstractModule(object):
         self.metrics = metrics
         self.init()
 
-    def getConfig(self, key, fallback=None):
+    def get_config(self, key, fallback=None):
         """Return a configuration value or a default value if not found
 
         @param str key the name of the configuration value
@@ -52,4 +52,3 @@ class AbstractModule(object):
     def init(self):
         """Put here some specific initialisations features
         """
-        pass

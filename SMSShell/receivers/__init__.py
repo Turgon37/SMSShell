@@ -57,7 +57,7 @@ class AbstractReceiver(AbstractModule):
         raise NotImplementedError("You must implement the 'read' method in receiver class")
 
 
-class AbstractClientRequest(object):
+class AbstractClientRequest():
     """This class is a wrapper to client request handling
 
     Any received must define class thaht inherit this one with enter and exit
@@ -80,7 +80,7 @@ class AbstractClientRequest(object):
     # PUBLIC METHODS
     #
 
-    def appendTreatmentChain(self, state_name):
+    def append_treatment_chain(self, state_name):
         """Append a state to the treatment chain
 
         This chain can be used to get a timeline of the request treatment to
@@ -91,7 +91,7 @@ class AbstractClientRequest(object):
         """
         self.__treatment_chain.append((state_name, time.time()))
 
-    def getTreatmentChain(self):
+    def get_treatment_chain(self):
         """Get the list of treatment steps
 
         Returns:
@@ -99,7 +99,7 @@ class AbstractClientRequest(object):
         """
         return self.__treatment_chain
 
-    def addResponseData(self, **kwargs):
+    def add_response_data(self, **kwargs):
         """Append data to optional answer
 
         Args:
@@ -107,7 +107,7 @@ class AbstractClientRequest(object):
         """
         self.__response_data.update(kwargs)
 
-    def popResponseData(self):
+    def pop_response_data(self):
         """Pop all response datas and reset data bucket
 
         Returns:
@@ -117,7 +117,7 @@ class AbstractClientRequest(object):
         self.__response_data = dict()
         return final
 
-    def getRequestData(self):
+    def get_request_data(self):
         """Return the initial client request data
 
         Only available in client contexte to ensure a proper answer to client
@@ -148,7 +148,7 @@ class AbstractClientRequest(object):
     def __enter__(self):
         self.__is_in_context = True
         self.enter()
-        return self.getRequestData()
+        return self.get_request_data()
 
     def __exit__(self, _type, value, traceback):
         self.__is_in_context = False

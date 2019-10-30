@@ -23,14 +23,14 @@
 class SMSShellException(Exception):
     """Exception related to the global service
     """
-    pass
+
 
 class ShellInitException(SMSShellException):
     """Base exception for shell initialization procedures
 
     Must be raise by parsers,transmitters,receivers on start() error
     """
-    pass
+
 
 #
 # MESSAGES RELATED EXCEPTIONS
@@ -41,7 +41,7 @@ class SMSException(Exception):
 
     It is currently used by parsers
     """
-    pass
+
 
 #
 # SHELL RELATED EXCEPTIONS

@@ -59,16 +59,16 @@ def test_session_storage_isolation():
     """Test session storage for isolation
     """
     s = SMSShell.models.session.Session('sender')
-    s.setStoragePrefix('user1')
+    s.set_storage_prefix('user1')
     s.set('key', 'sample1')
-    s.setStoragePrefix('user2')
+    s.set_storage_prefix('user2')
     s.set('key', 'sample2')
-    s.setStoragePrefix('')
+    s.set_storage_prefix('')
 
     assert s.get('key') is None
-    s.setStoragePrefix('user1')
+    s.set_storage_prefix('user1')
     assert s.get('key') == 'sample1'
-    s.setStoragePrefix('user2')
+    s.set_storage_prefix('user2')
     assert s.get('key') == 'sample2'
 
 def test_session_secure_wrapper():
@@ -87,7 +87,7 @@ def test_session_secure_wrapper_isolation():
     sw = s.getSecureSession()
 
     with pytest.raises(AttributeError):
-        sw.setStoragePrefix('user1')
+        sw.set_storage_prefix('user1')
 
     with pytest.raises(AttributeError):
         sw.forceState(SessionStates.STATE_LOGININPROGRESS)

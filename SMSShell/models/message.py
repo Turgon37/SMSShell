@@ -30,7 +30,7 @@ import logging
 g_logger = logging.getLogger('smsshell.message')
 
 
-class Message(object):
+class Message():
     """This class represent a message with sender id and content
     """
 
@@ -131,7 +131,7 @@ class Message(object):
         """
         self.__attributes.update(keys)
 
-    def asString(self):
+    def as_string(self):
         """Return the message content and ensure it is a string
 
         Returns:
