@@ -50,6 +50,7 @@ class MetricsHelper(AbstractMetricsHelper):
         self.__address = self.getConfig('listen_address', fallback='')
         # initialized counters
         self.__counters = dict()
+        self.__gauges = dict()
 
     def start(self):
         """Prepare the receiver/init connections
@@ -122,3 +123,50 @@ class MetricsHelper(AbstractMetricsHelper):
             except ValueError as ex:
                 g_logger.error("invalid metrics counter : %s", str(ex))
         return self
+
+    def _gauge(self, name, value=None, set=None, callback=None, description=None, labels=None):
+        """
+        """
+        if len(list(filter(lambda x: x, [value, set, callback]))) > 1:
+            g_logger.error("invalid gauge parameter for %s, you cannot use multiple value method", name)
+            return self
+
+        if name not in self.__gauges:
+            # ensure description
+            if not description:
+                g_logger.error(("First usage of gauge metric '%s' require a description,"
+                                " metric is discarded"), name)
+                return self
+            # check labels format
+            if isinstance(labels, dict):
+                _labels = labels.keys()
+            elif isinstance(labels, list):
+                _labels = labels
+            else:
+                _labels = None
+            # create counter
+            if _labels:
+                g = prometheus_client.Gauge(name, description, _labels)
+            else:
+                g = prometheus_client.Gauge(name, description)
+            self.__gauges[name] = g
+            if callback:
+                g.set_function(callback)
+
+            if isinstance(labels, list):
+                # only declare counter, do not initialize it
+                return
+        gauge = self.__gauges[name]
+        assert gauge
+
+        if value:
+            if value > 0:
+                gauge.inc(value)
+            elif value < 0:
+                gauge.dec(value)
+        elif set:
+            gauge.set(value)
+        elif callback:
+            pass
+        else:
+            g_logger.error("invalid gauge parameter for %s, you muse use a value method", name)
