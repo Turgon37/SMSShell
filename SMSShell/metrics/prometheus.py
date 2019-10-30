@@ -121,14 +121,13 @@ class MetricsHelper(AbstractMetricsHelper):
                 else:
                     counter.inc(value)
             except ValueError as ex:
-                g_logger.error("invalid metrics counter : %s", str(ex))
+                g_logger.error('invalid metrics counter "%s": %s', name, str(ex))
         return self
 
-    def _gauge(self, name, value=None, set=None, callback=None, description=None, labels=None):
-        """
-        """
-        if len(list(filter(lambda x: x, [value, set, callback]))) > 1:
-            g_logger.error("invalid gauge parameter for %s, you cannot use multiple value method", name)
+    def _gauge(self, name, value=None, set_to=None, callback=None, description=None, labels=None):
+        if len(list(filter(lambda x: x, [value, set_to, callback]))) > 1:
+            g_logger.error('invalid gauge parameter for %s, you cannot use multiple value method',
+                           name)
             return self
 
         if name not in self.__gauges:
@@ -146,12 +145,12 @@ class MetricsHelper(AbstractMetricsHelper):
                 _labels = None
             # create counter
             if _labels:
-                g = prometheus_client.Gauge(name, description, _labels)
+                gauge = prometheus_client.Gauge(name, description, _labels)
             else:
-                g = prometheus_client.Gauge(name, description)
-            self.__gauges[name] = g
+                gauge = prometheus_client.Gauge(name, description)
+            self.__gauges[name] = gauge
             if callback:
-                g.set_function(callback)
+                gauge.set_function(callback)
 
             if isinstance(labels, list):
                 # only declare counter, do not initialize it
@@ -164,7 +163,7 @@ class MetricsHelper(AbstractMetricsHelper):
                 gauge.inc(value)
             elif value < 0:
                 gauge.dec(value)
-        elif set:
+        elif set_to:
             gauge.set(value)
         elif callback:
             pass

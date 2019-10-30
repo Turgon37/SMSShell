@@ -292,7 +292,7 @@ class SMSShell(object):
             g_logger.error('Invalid state value %s, ' +
                            'it must be one of the SessionStates available ones, ' +
                            'it is ignored',
-                           str(auth_attr['role']))
+                           auth_attr['role'])
             return None
         if needed_state in reachable_states:
             return needed_state

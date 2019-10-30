@@ -66,7 +66,7 @@ class CommandBadConfiguredException(CommandException):
         super().__init__(message, short)
 
 
-class AbstractCommand(object):
+class AbstractCommand():
     """This is a abstract command, all user defined comand must inherit this class
     """
 
@@ -153,6 +153,7 @@ class AbstractCommand(object):
     #
 
     def argsParser(self):
+        # pylint: disable=R0201
         """Return the argparser that the command will use to validate it's arguments
 
         The usage of an arg parser is optionnal. It allow the user's command
@@ -198,6 +199,7 @@ class AbstractCommand(object):
                                     " must implement the description function")
 
     def inputStates(self):
+        # pylint: disable=R0201
         """This function must return the list of session's state(s) from which
          the command can be reacheable
 

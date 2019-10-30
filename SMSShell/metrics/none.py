@@ -63,7 +63,7 @@ class MetricsHelper(AbstractMetricsHelper):
         """
         return self
 
-    def _gauge(self, name, value=None, set=None, callback=None, description=None, labels=None):
+    def _gauge(self, name, value=None, set_to=None, callback=None, description=None, labels=None):
         """Do nothing
 
         Returns:

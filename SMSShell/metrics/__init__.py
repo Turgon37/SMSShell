@@ -74,7 +74,7 @@ class AbstractMetricsHelper(AbstractModule):
         return self._counter(self.normalizeName(name), *args, **kwargs)
 
     def _counter(self, name, value=1, description=None, labels=None):
-        """
+        """Abstract final function that must realize the metrics handling
         """
         raise NotImplementedError("You must implement the '_counter' method in metrics helper class")
 
@@ -93,7 +93,7 @@ class AbstractMetricsHelper(AbstractModule):
         """
         return self._gauge(self.normalizeName(name), *args, **kwargs)
 
-    def _gauge(self, name, value=None, set=None, callback=None, description=None, labels=None):
-        """
+    def _gauge(self, name, value=None, set_to=None, callback=None, description=None, labels=None):
+        """Abstract final function that must realize the metrics handling
         """
         raise NotImplementedError("You must implement the '_gauge' method in metrics helper class")
