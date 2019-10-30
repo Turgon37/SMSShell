@@ -62,6 +62,19 @@ class Shell(object):
         self.__metrics = metrics
         self.__sessions = dict()
         self.__commands = dict()
+        # declare metrics
+        self.__metrics.counter('commands.loaded.total',
+                               labels=['status'],
+                               description='Number of loaded commands per status')
+        self.__metrics.counter('sessions.activity.total',
+                               labels=['status'],
+                               description='Total used session per state')
+        self.__metrics.gauge('sessions.objects.count',
+                             callback=lambda: len(self.__sessions),
+                             description='Current number of session in sessions directory')
+        self.__metrics.counter('commands.call.total',
+                               labels=['status'],
+                               description='Number of commands call per name and status')
 
     def exec(self, subject, cmdline, as_role=None):
         """Run the given arguments for the given subject
@@ -150,6 +163,7 @@ class Shell(object):
             if importlib.util.find_spec('.commands.' + name, package='SMSShell') is not None:
                 importlib.reload(mod)
         except ImportError:
+            self.__metrics.counter('commands.loaded.total', labels=dict(status='error'))
             raise CommandNotFoundException(("Command handler '{0}' cannot" +
                                             " be found in commands/ folder.").format(name))
 
@@ -161,15 +175,18 @@ class Shell(object):
                             self.configparser.getSectionOrEmpty('command.' + name),
                             self.__metrics)
         except AttributeError as ex:
+            self.__metrics.counter('commands.loaded.total', labels=dict(status='error'))
             raise CommandBadImplemented("Error in command '{0}' : {1}.".format(name, str(ex)))
 
         # handler class checking
         if not isinstance(cmd, AbstractCommand):
+            self.__metrics.counter('commands.loaded.total', labels=dict(status='error'))
             raise CommandBadImplemented("Command " +
                                         "'{0}' must extend AbstractCommand class".format(name))
 
         # check configuration of the command
         if not cmd.checkConfig():
+            self.__metrics.counter('commands.loaded.total', labels=dict(status='error'))
             raise CommandBadConfiguredException(("Command '{0}' is misconfigured. "
                                                  "Check the command doc to add missing "
                                                  "'command.{0}' section").format(name))
@@ -177,6 +194,7 @@ class Shell(object):
 
         # register command into cache
         self.__commands[name] = cmd
+        self.__metrics.counter('commands.loaded.total', labels=dict(status='ok'))
 
     def getAvailableCommands(self, session):
         """Return the list of available command for the given session
@@ -217,6 +235,7 @@ class Shell(object):
         session.setStoragePrefix(cmd_name)
         # check command aceptance conditions
         if not Shell.hasSessionAccessToCommand(session, com):
+            self.__metrics.counter('commands.call.total', labels=dict(status='error', name=cmd_name))
             raise CommandForbidden('You are not allowed to call this command from here')
 
         # parse arguments
@@ -226,11 +245,14 @@ class Shell(object):
             try:
                 args.append(parser.parse_args(argv))
             except argparse.ArgumentError as ex:
+                self.__metrics.counter('commands.call.total',
+                                       labels=dict(status='error', name=cmd_name))
                 raise BadCommandCall('Error with command arguments: {}'.format(str(ex)))
 
         # check command signature
         sig = inspect.signature(com.main)
         if len(sig.parameters) != len(args):
+            self.__metrics.counter('commands.call.total', labels=dict(status='error', name=cmd_name))
             raise CommandBadImplemented(("main() function of command '{0}' "
                                          "must take {1} arguments").format(cmd_name, len(args)))
 
@@ -244,6 +266,7 @@ class Shell(object):
         if not isinstance(result, str):
             raise CommandBadImplemented(("Command '{0}' 's return object "
                                          "must be a str").format(cmd_name))
+        self.__metrics.counter('commands.call.total', labels=dict(status='ok', name=cmd_name))
         return result
 
     @staticmethod
@@ -272,13 +295,16 @@ class Shell(object):
             sess = self.__sessions[key]
             if sess.isValid():
                 g_logger.debug('using existing session')
+                self.__metrics.counter('sessions.activity.total', labels=dict(status='reused'))
                 return sess
+            self.__metrics.counter('sessions.activity.total', labels=dict(status='expired'))
 
         self.__sessions[key] = Session(key)
         self.__sessions[key].ttl = self.configparser.getModeConfig('session_ttl', fallback=600)
         g_logger.debug('creating a new session for subject : %s with ttl %d',
                        key,
                        self.__sessions[key].ttl)
+        self.__metrics.counter('sessions.activity.total', labels=dict(status='created'))
         return self.__sessions[key]
 
 
