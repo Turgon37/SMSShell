@@ -280,8 +280,16 @@ class Shell(object):
             True if the given session is allowed to run the given command,
             false otherwise
         """
-        states = command._inputStates()
-        if states and session.state not in command._inputStates():
+        states = command.inputStates()
+        if not isinstance(states, list):
+            raise CommandBadImplemented(str(command.__class__) + ' inputStates function must return'
+                                        " a list of session's states")
+        for state in states:
+            if not isinstance(state, SessionStates):
+                raise CommandBadImplemented(str(command.__class__) + ' inputStates function must'
+                                            ' return a list of valid SessionStates objects')
+
+        if states and session.state not in states:
             return False
         return True
 

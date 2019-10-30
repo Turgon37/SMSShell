@@ -243,22 +243,6 @@ class AbstractCommand():
     # PRIVATE PROPERTIES
     #
 
-    def _inputStates(self):
-        """Private entry point for Shell
-
-        Returns:
-            the list of input states formatted and validated for shell usage
-        """
-        states = self.inputStates()
-        if not isinstance(states, list):
-            raise CommandBadImplemented(str(self.__class__) + ' inputStates function must return'
-                                        " a list of session's states")
-        for state in states:
-            if not isinstance(state, SessionStates):
-                raise CommandBadImplemented(str(self.__class__) + ' inputStates function must'
-                                            ' return a list of valid SessionStates objects')
-        return states
-
     def _argsParser(self):
         """Private entry point for Shell
 
