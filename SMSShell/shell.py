@@ -91,7 +91,8 @@ class Shell(object):
             assert isinstance(as_role, SessionStates)
             sess = Session(subject, time_to_live=0)
             sess.forceState(as_role)
-            g_logger.info("Subject '%s' run command '%s' as forced role : %s", subject, cmd, as_role.name)
+            g_logger.info("Subject '%s' run command '%s' as forced role : %s",
+                          subject, cmd, as_role.name)
         else:
             sess = self.__getSessionForSubject(subject)
         return self.__call(sess, cmd, argv[1:]).strip()
@@ -172,8 +173,7 @@ class Shell(object):
             raise CommandBadConfiguredException(("Command '{0}' is misconfigured. "
                                                  "Check the command doc to add missing "
                                                  "'command.{0}' section").format(name))
-        else:
-            g_logger.debug("command '%s' config ok", name)
+        g_logger.debug("command '%s' config ok", name)
 
         # register command into cache
         self.__commands[name] = cmd
@@ -319,7 +319,7 @@ class Shell(object):
                 """
                 if name in ShellWrapper.ALLOWED_ATTRIBUTES:
                     return getattr(self.__shell, name)
-                raise ShellException("attribute {} is not reachable using shell wrapper".format(name))
+                raise ShellException('attribute {} is not reachable using shell wrapper'.format(name))
 
         return ShellWrapper(self)
 

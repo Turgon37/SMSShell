@@ -50,7 +50,6 @@ class CommandNotFoundException(CommandException):
 class CommandBadImplemented(CommandException):
     """Exception raised when a command class does not implement the required methods
     """
-    pass
 
 
 class CommandForbidden(CommandException):
