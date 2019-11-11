@@ -41,7 +41,7 @@ from .commands import (AbstractCommand,
                        CommandException)
 
 # Global project declarations
-g_logger = logging.getLogger('smsshell.shell')
+G_LOGGER = logging.getLogger('smsshell.shell')
 
 
 class Shell():
@@ -99,12 +99,12 @@ class Shell():
         if not subject:
             raise ShellException('The passed subject is empty')
 
-        g_logger.info("Subject '%s' run command '%s' with args : %s", subject, cmd, str(argv[1:]))
+        G_LOGGER.info("Subject '%s' run command '%s' with args : %s", subject, cmd, str(argv[1:]))
         if as_role is not None:
             assert isinstance(as_role, SessionStates)
             sess = Session(subject, time_to_live=0)
             sess.force_state(as_role)
-            g_logger.info("Subject '%s' run command '%s' as forced role : %s",
+            G_LOGGER.info("Subject '%s' run command '%s' as forced role : %s",
                           subject, cmd, as_role.name)
         else:
             sess = self.__get_session_for_subject(subject)
@@ -157,7 +157,7 @@ class Shell():
         Raises:
             CommandNotFoundException if the command do not exists
         """
-        g_logger.debug("loading command handler with name '%s'", name)
+        G_LOGGER.debug("loading command handler with name '%s'", name)
         try:
             mod = importlib.import_module('.commands.' + name, package='SMSShell')
             if importlib.util.find_spec('.commands.' + name, package='SMSShell') is not None:
@@ -170,7 +170,7 @@ class Shell():
         cls_name = Shell.to_camel_case(name)
         try: # instanciate
             class_obj = getattr(mod, cls_name)
-            cmd = class_obj(g_logger.getChild('command.' + name),
+            cmd = class_obj(G_LOGGER.getChild('command.' + name),
                             self.get_secure_shell(),
                             self.configparser.get_section_or_empty('command.' + name),
                             self.__metrics)
@@ -190,7 +190,7 @@ class Shell():
             raise CommandBadConfiguredException(("Command '{0}' is misconfigured. "
                                                  "Check the command doc to add missing "
                                                  "'command.{0}' section").format(name))
-        g_logger.debug("command '%s' config ok", name)
+        G_LOGGER.debug("command '%s' config ok", name)
 
         # register command into cache
         self.__commands[name] = cmd
@@ -218,7 +218,7 @@ class Shell():
                     self.__get_command(os.path.splitext(com)[0])
                     # intercept exception to prevent command execution stop
                 except CommandException as ex:
-                    g_logger.error(str(ex))
+                    G_LOGGER.error(str(ex))
 
     def __call(self, session, cmd_name, argv):
         """Execute the command with the given name
@@ -304,14 +304,14 @@ class Shell():
         if key in self.__sessions:
             sess = self.__sessions[key]
             if sess.is_valid():
-                g_logger.debug('using existing session')
+                G_LOGGER.debug('using existing session')
                 self.__metrics.counter('sessions.activity.total', labels=dict(status='reused'))
                 return sess
             self.__metrics.counter('sessions.activity.total', labels=dict(status='expired'))
 
         self.__sessions[key] = Session(key)
         self.__sessions[key].ttl = self.configparser.get_mode_config('session_ttl', fallback=600)
-        g_logger.debug('creating a new session for subject : %s with ttl %d',
+        G_LOGGER.debug('creating a new session for subject : %s with ttl %d',
                        key,
                        self.__sessions[key].ttl)
         self.__metrics.counter('sessions.activity.total', labels=dict(status='created'))

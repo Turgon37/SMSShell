@@ -47,7 +47,7 @@ from .shell import Shell
 from .exceptions import SMSShellException, SMSException, ShellException, ShellInitException
 
 # Global project declarations
-g_logger = logging.getLogger('smsshell')
+G_LOGGER = logging.getLogger('smsshell')
 
 
 class SMSShell():
@@ -116,15 +116,15 @@ class SMSShell():
         if not self.cp.is_loaded():
             return False
 
-        g_logger.info('Starting SMSShell version %s', __version__)
+        G_LOGGER.info('Starting SMSShell version %s', __version__)
 
         # Turn in daemon mode
         if self.__daemon:
-            g_logger.debug('Starting in daemon mode')
+            G_LOGGER.debug('Starting in daemon mode')
             if self.__daemonize():
-                g_logger.info('Daemon started')
+                G_LOGGER.info('Daemon started')
             else:
-                g_logger.fatal('Could not create daemon')
+                G_LOGGER.fatal('Could not create daemon')
                 raise Exception('Could not create daemon')
 
         # Check pidfile
@@ -147,11 +147,11 @@ class SMSShell():
 
         # Create the pid file
         try:
-            g_logger.debug("Creating PID file '%s'", self.__pid_path)
+            G_LOGGER.debug("Creating PID file '%s'", self.__pid_path)
             with open(self.__pid_path, 'w') as pid_file:
                 pid_file.write(str(os.getpid()))
         except IOError:
-            g_logger.error("Unable to create PID file: %s", self.__pid_path)
+            G_LOGGER.error("Unable to create PID file: %s", self.__pid_path)
 
         # loose users privileges if needed
         self.__downgrade()
@@ -163,12 +163,12 @@ class SMSShell():
                 'MetricsHelper', AbstractMetricsHelper, 'metrics'
             )
         except ShellInitException as ex:
-            g_logger.fatal("Unable to load metrics handler module : %s", str(ex))
+            G_LOGGER.fatal("Unable to load metrics handler module : %s", str(ex))
             self.stop()
             return False
 
         if not metrics.start():
-            g_logger.fatal('Unable to open metrics handler')
+            G_LOGGER.fatal('Unable to open metrics handler')
             self.stop()
             return False
         self.__metrics = metrics
@@ -234,7 +234,7 @@ class SMSShell():
                 state, token = raw_token.split(':')
             except ValueError:
                 # pylint: disable=W1201
-                g_logger.error('Invalid token format, ' +
+                G_LOGGER.error('Invalid token format, ' +
                                'it must be in the form ROLE:SECRET, it is ignored')
                 continue
 
@@ -243,18 +243,18 @@ class SMSShell():
                 real_state = SessionStates[state]
             except KeyError:
                 # pylint: disable=W1201
-                g_logger.error('Invalid state value %s, ' +
+                G_LOGGER.error('Invalid state value %s, ' +
                                'it must be one of the SessionStates available ones, ' +
                                'it is ignored',
                                str(state))
                 continue
-            g_logger.debug('loaded token length %d for state %s',
+            G_LOGGER.debug('loaded token length %d for state %s',
                            len(token),
                            str(real_state))
             if token not in tokens_store:
                 tokens_store[token] = []
             if real_state in tokens_store[token]:
-                g_logger.warning('duplicate authentication token for state %s',
+                G_LOGGER.warning('duplicate authentication token for state %s',
                                  str(real_state))
             else:
                 tokens_store[token].append(real_state)
@@ -279,11 +279,11 @@ class SMSShell():
 
         assert isinstance(auth_attr, dict)
         if 'token' not in auth_attr or 'role' not in auth_attr:
-            g_logger.warning("'auth' attribute in message require a token and a role")
+            G_LOGGER.warning("'auth' attribute in message require a token and a role")
             return None
 
         if auth_attr['token'] not in tokens_store:
-            g_logger.error('The given token (length %d) is not registered in token store',
+            G_LOGGER.error('The given token (length %d) is not registered in token store',
                            len(auth_attr['token']))
             return None
 
@@ -292,7 +292,7 @@ class SMSShell():
             needed_state = SessionStates[auth_attr['role']]
         except KeyError:
             # pylint: disable=W1201
-            g_logger.error('Invalid state value %s, ' +
+            G_LOGGER.error('Invalid state value %s, ' +
                            'it must be one of the SessionStates available ones, ' +
                            'it is ignored',
                            auth_attr['role'])
@@ -321,26 +321,26 @@ class SMSShell():
                 'Transmitter', AbstractTransmitter, 'transmitter'
             )
         except ShellInitException as ex:
-            g_logger.fatal("Unable to load an internal module : %s", str(ex))
+            G_LOGGER.fatal("Unable to load an internal module : %s", str(ex))
             return False
 
         if not recv.start():
-            g_logger.fatal('Unable to open receiver')
+            G_LOGGER.fatal('Unable to open receiver')
             return False
         # register the receiver close callback to properly close opened file descriptors
         self.__stop_callbacks.append(recv.stop)
 
         if not transm.start():
-            g_logger.fatal('Unable to open transmitter')
+            G_LOGGER.fatal('Unable to open transmitter')
             return False
         self.__stop_callbacks.append(transm.stop)
 
-        g_logger.debug('initialize authentication tokens store')
+        G_LOGGER.debug('initialize authentication tokens store')
         tokens_store = self.get_tokens_store_from_config()
-        g_logger.info('loaded %d authentication tokens in store', len(tokens_store))
+        G_LOGGER.info('loaded %d authentication tokens in store', len(tokens_store))
 
         # init counters
-        g_logger.debug('initialize metrics counters')
+        G_LOGGER.debug('initialize metrics counters')
         self.__metrics.counter('messages.receive.total',
                                labels=['status'],
                                description='Number of received messages per status')
@@ -350,18 +350,18 @@ class SMSShell():
 
         # init messages filters
         try:
-            g_logger.debug('initialize incoming messages validators')
+            G_LOGGER.debug('initialize incoming messages validators')
             input_validators_chain = ValidatorChain()
             input_validators_chain.add_links_from_dict(self.cp.get_validators_from_config('input_validators'))
             input_filters_chain = FilterChain()
             input_filters_chain.add_links_from_dict(self.cp.get_filters_from_config('input_filters'))
-            g_logger.debug('initialize outgoing messages validators')
+            G_LOGGER.debug('initialize outgoing messages validators')
             output_validators_chain = ValidatorChain()
             output_validators_chain.add_links_from_dict(self.cp.get_validators_from_config('output_validators'))
         except ShellInitException as ex:
             raise ex
             # TODO
-            g_logger.fatal("Unable to load a classes : %s", str(ex))
+            G_LOGGER.fatal("Unable to load a classes : %s", str(ex))
             return False
 
         # read and parse each message from receiver
@@ -373,7 +373,7 @@ class SMSShell():
                     client_context.append_treatment_chain('parsed')
                 except SMSException as ex:
                     self.__metrics.counter('messages.receive.total', labels=dict(status='error'))
-                    g_logger.error('received a bad message, skipping because of %s', str(ex))
+                    G_LOGGER.error('received a bad message, skipping because of %s', str(ex))
                     continue
 
                 # validate received content
@@ -383,7 +383,7 @@ class SMSShell():
                 except (ValidationException, FilterException) as ex:
                     self.__metrics.counter('messages.receive.total', labels=dict(status='error'))
                     # pylint: disable=W1201
-                    g_logger.error(('incoming message did not passed the' +
+                    G_LOGGER.error(('incoming message did not passed the' +
                                     ' validation step because of : %s'),
                                    str(ex))
                     continue
@@ -398,7 +398,7 @@ class SMSShell():
                     response_content = shell.exec(msg.number, msg.as_string(), as_role=as_role)
                     client_context.append_treatment_chain('executed')
                 except ShellException as ex:
-                    g_logger.error('error during command execution : %s', ex.args[0])
+                    G_LOGGER.error('error during command execution : %s', ex.args[0])
                     if len(ex.args) > 1 and ex.args[1]:
                         ex_message = ex.args[1]
                     else:
@@ -420,7 +420,7 @@ class SMSShell():
                     output_validators_chain.call_chain_on_object(answer)
                 except ValidationException as ex:
                     self.__metrics.counter('messages.transmit.total', labels=dict(status='error'))
-                    g_logger.error('outgoing message did not passed validation')
+                    G_LOGGER.error('outgoing message did not passed validation')
                     continue
                 client_context.append_treatment_chain('output_validated')
 
@@ -429,7 +429,7 @@ class SMSShell():
                     transm.transmit(answer)
                 except SMSException as ex:
                     self.__metrics.counter('messages.transmit.total', labels=dict(status='error'))
-                    g_logger.error('error on emitting a message: %s', str(ex))
+                    G_LOGGER.error('error on emitting a message: %s', str(ex))
                     continue
                 self.__metrics.counter('messages.transmit.total', labels=dict(status='ok'))
                 client_context.append_treatment_chain('transmitted')
@@ -447,17 +447,17 @@ class SMSShell():
             try:
                 cb_stop()
             except NotImplementedError as ex:
-                g_logger.warning("Unable to close object of %s because of : %s",
+                G_LOGGER.warning("Unable to close object of %s because of : %s",
                                  cb_stop.__self__.__class__,
                                  str(ex))
         # Remove the pid file
         try:
-            g_logger.debug("Remove PID file %s", self.__pid_path)
+            G_LOGGER.debug("Remove PID file %s", self.__pid_path)
             os.remove(self.__pid_path)
         except OSError as ex:
-            g_logger.error("Unable to remove PID file: %s", str(ex))
+            G_LOGGER.error("Unable to remove PID file: %s", str(ex))
 
-        g_logger.info("Exiting SMSShell")
+        G_LOGGER.info("Exiting SMSShell")
 
         # Close log
         logging.shutdown()
@@ -474,7 +474,7 @@ class SMSShell():
 
         TODO : improve signal handling
         """
-        g_logger.debug("Caught system signal %d", signum)
+        G_LOGGER.debug("Caught system signal %d", signum)
         sys.exit(self.stop())
 
     def __downgrade(self):
@@ -483,28 +483,28 @@ class SMSShell():
         gid = self.cp.get_gid()
         if gid is not None:
             if os.getgid() == gid:
-                g_logger.debug(("ignore setgid option because current "
+                G_LOGGER.debug(("ignore setgid option because current "
                                 "group is already set to expected one %d"), gid)
             else:
-                g_logger.debug("setting processus group to gid %d", gid)
+                G_LOGGER.debug("setting processus group to gid %d", gid)
                 try:
                     os.setgid(gid)
                 except PermissionError:
-                    g_logger.fatal('Insufficient permissions to set process GID to %d', gid)
+                    G_LOGGER.fatal('Insufficient permissions to set process GID to %d', gid)
                     raise SMSShellException('Insufficient permissions to ' +
                                             'downgrade processus privileges')
 
         uid = self.cp.get_uid()
         if uid is not None:
             if os.getuid() == uid:
-                g_logger.debug(("ignore setuid option because current user "
+                G_LOGGER.debug(("ignore setuid option because current user "
                                 "is already set to expected one %d"), uid)
             else:
-                g_logger.debug("setting processus user to uid %d", uid)
+                G_LOGGER.debug("setting processus user to uid %d", uid)
                 try:
                     os.setuid(uid)
                 except PermissionError:
-                    g_logger.fatal('Insufficient permissions to set process UID to %d')
+                    G_LOGGER.fatal('Insufficient permissions to set process UID to %d')
                     raise SMSShellException('Insufficient permissions to ' +
                                             'downgrade processus privileges')
 
@@ -610,8 +610,8 @@ class SMSShell():
         @return [bool] : True if set success
         """
         try:
-            g_logger.setLevel(value)
-            g_logger.info("Changed logging level to %s", value)
+            G_LOGGER.setLevel(value)
+            G_LOGGER.info("Changed logging level to %s", value)
             return True
         except AttributeError:
             raise ValueError("Invalid log level")
@@ -652,18 +652,18 @@ class SMSShell():
                     pass
                 hdlr = logging.handlers.RotatingFileHandler(target)
             except IOError:
-                g_logger.error("Unable to log to %s", target)
+                G_LOGGER.error("Unable to log to %s", target)
                 return False
 
         # Remove all previous handlers
-        for handler in g_logger.handlers:
+        for handler in G_LOGGER.handlers:
             try:
-                g_logger.removeHandler(handler)
+                G_LOGGER.removeHandler(handler)
             except (ValueError, KeyError):
-                g_logger.error("Unable to remove handler %s", str(type(handler)))
+                G_LOGGER.error("Unable to remove handler %s", str(type(handler)))
 
         hdlr.setFormatter(formatter)
-        g_logger.addHandler(hdlr)
+        G_LOGGER.addHandler(hdlr)
         # Sets the logging target.
-        g_logger.info("Changed logging target to %s", target)
+        G_LOGGER.info("Changed logging target to %s", target)
         return True

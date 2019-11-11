@@ -27,7 +27,7 @@ content that will be analysed
 import logging
 
 # Global project declarations
-g_logger = logging.getLogger('smsshell.message')
+G_LOGGER = logging.getLogger('smsshell.message')
 
 
 class Message():

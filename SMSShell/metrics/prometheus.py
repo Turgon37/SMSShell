@@ -28,7 +28,7 @@ import prometheus_client
 from . import AbstractMetricsHelper
 
 # Global project declarations
-g_logger = logging.getLogger('smsshell.metrics.prometheus')
+G_LOGGER = logging.getLogger('smsshell.metrics.prometheus')
 
 
 class MetricsHelper(AbstractMetricsHelper):
@@ -45,7 +45,7 @@ class MetricsHelper(AbstractMetricsHelper):
             self.__port = int(self.get_config('listen_port', fallback=8000))
         except ValueError:
             self.__port = 8000
-            g_logger.error(("invalid integer parameter for option 'listen_port'"
+            G_LOGGER.error(("invalid integer parameter for option 'listen_port'"
                             ", fallback to default value 8000"))
         self.__address = self.get_config('listen_address', fallback='')
         # initialized counters
@@ -58,7 +58,7 @@ class MetricsHelper(AbstractMetricsHelper):
         Returns:
             True if init has success, otherwise False
         """
-        g_logger.info('Prometheus metrics exporter started on %s:%d',
+        G_LOGGER.info('Prometheus metrics exporter started on %s:%d',
                       self.__address,
                       self.__port)
         prometheus_client.start_http_server(self.__port, self.__address)
@@ -89,7 +89,7 @@ class MetricsHelper(AbstractMetricsHelper):
         if name not in self.__counters:
             # ensure description
             if not description:
-                g_logger.error(("First usage of count metric '%s' require a description,"
+                G_LOGGER.error(("First usage of count metric '%s' require a description,"
                                 " metric is discarded"), name)
                 return self
             # check labels format
@@ -98,7 +98,7 @@ class MetricsHelper(AbstractMetricsHelper):
             elif isinstance(labels, list):
                 _labels = labels
             else:
-                g_logger.error(("First usage of counter metric '%s' require labels to be a list,"
+                G_LOGGER.error(("First usage of counter metric '%s' require labels to be a list,"
                                 " metric is discarded"), name)
                 return self
             # create counter
@@ -110,7 +110,7 @@ class MetricsHelper(AbstractMetricsHelper):
         assert counter
 
         if not isinstance(labels, dict):
-            g_logger.error(("Subsequents metrics usage required labels to be a dict with"
+            G_LOGGER.error(("Subsequents metrics usage required labels to be a dict with"
                             " values, value discarded for metric named '%s'"), name)
             return self
 
@@ -121,19 +121,19 @@ class MetricsHelper(AbstractMetricsHelper):
                 else:
                     counter.inc(value)
             except ValueError as ex:
-                g_logger.error('invalid metrics counter "%s": %s', name, str(ex))
+                G_LOGGER.error('invalid metrics counter "%s": %s', name, str(ex))
         return self
 
     def _gauge(self, name, value=None, set_to=None, callback=None, description=None, labels=None):
         if len(list(filter(lambda x: x, [value, set_to, callback]))) > 1:
-            g_logger.error('invalid gauge parameter for %s, you cannot use multiple value method',
+            G_LOGGER.error('invalid gauge parameter for %s, you cannot use multiple value method',
                            name)
             return self
 
         if name not in self.__gauges:
             # ensure description
             if not description:
-                g_logger.error(("First usage of gauge metric '%s' require a description,"
+                G_LOGGER.error(("First usage of gauge metric '%s' require a description,"
                                 " metric is discarded"), name)
                 return self
             # check labels format
@@ -168,4 +168,4 @@ class MetricsHelper(AbstractMetricsHelper):
         elif callback:
             pass
         else:
-            g_logger.error("invalid gauge parameter for %s, you muse use a value method", name)
+            G_LOGGER.error("invalid gauge parameter for %s, you muse use a value method", name)

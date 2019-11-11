@@ -61,12 +61,12 @@ except ImportError:
 import SMSShell.utils
 
 # Global project declarations
-g_logger = logging.getLogger('smsshell-client')
+G_LOGGER = logging.getLogger('smsshell-client')
 
 _formatter = logging.Formatter("%(asctime)s %(name)-30s[%(process)d]: %(levelname)-7s %(message)s")
 _hdlr = logging.StreamHandler(sys.stdout)
 _hdlr.setFormatter(_formatter)
-g_logger.addHandler(_hdlr)
+G_LOGGER.addHandler(_hdlr)
 
 
 def getMessageFromInput(method, *args, **kwargs):
@@ -85,18 +85,18 @@ def getMessageFromInput(method, *args, **kwargs):
         sys.exit() on error
     """
     if method == 'env':
-        g_logger.debug('read message from environment variables')
+        G_LOGGER.debug('read message from environment variables')
         func = SMSShell.utils.GammuSMSParser.decode_from_env
     elif method == 'file':
-        g_logger.debug('read message from backup file')
+        G_LOGGER.debug('read message from backup file')
         func = SMSShell.utils.GammuSMSParser.decode_from_backup_file_path
     elif method == 'stdin':
-        g_logger.debug('read message from stdin')
+        G_LOGGER.debug('read message from stdin')
         def readFromStdin():
             return dict(sms_number='+localhost', sms_text=input())
         func = readFromStdin
     else:
-        g_logger.critical('You must choose a valid input method')
+        G_LOGGER.critical('You must choose a valid input method')
         sys.exit(1)
 
     try:
@@ -104,9 +104,9 @@ def getMessageFromInput(method, *args, **kwargs):
     except TypeError as ex:
         if 'required positional argument' not in str(ex):
             raise ex
-        g_logger.critical('The input function failed maybe because it missing an input argument,'
+        G_LOGGER.critical('The input function failed maybe because it missing an input argument,'
                           ' see details below and refer to (-ia)')
-        g_logger.critical('error : %s', str(ex))
+        G_LOGGER.critical('error : %s', str(ex))
     sys.exit(1)
 
 def encodeMessage(method, message):
@@ -125,10 +125,10 @@ def encodeMessage(method, message):
         sys.exit() on error
     """
     if method == 'json':
-        g_logger.debug('encode message in JSON')
+        G_LOGGER.debug('encode message in JSON')
         return json.dumps(message)
 
-    g_logger.critical('You must choose a valid encoding method')
+    G_LOGGER.critical('You must choose a valid encoding method')
     sys.exit(1)
 
 def sendMessageToOutput(method, message, *args, **kwargs):
@@ -148,21 +148,21 @@ def sendMessageToOutput(method, message, *args, **kwargs):
         sys.exit() on error
     """
     if method == 'unix':
-        g_logger.debug('send message using the unix socket')
+        G_LOGGER.debug('send message using the unix socket')
         func = sendMessageToOutputUnix
     elif method == 'fifo':
-        g_logger.debug('send message using the fifo')
+        G_LOGGER.debug('send message using the fifo')
         func = sendMessageToOutputFifo
     else:
-        g_logger.critical('You must choose a valid output method')
+        G_LOGGER.critical('You must choose a valid output method')
         sys.exit(1)
 
     try:
         return func(message, *args, **kwargs)
     except TypeError as ex:
-        g_logger.critical('The output function failed maybe because it missing an output argument,'
+        G_LOGGER.critical('The output function failed maybe because it missing an output argument,'
                           'see details below and refer to (-oa)')
-        g_logger.critical('error : %s', str(ex))
+        G_LOGGER.critical('error : %s', str(ex))
     sys.exit(1)
 
 def sendMessageToOutputUnix(message, socket_path):
@@ -187,7 +187,7 @@ def sendMessageToOutputUnix(message, socket_path):
 
     # Create a UDS socket
     client_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    g_logger.debug('connecting to Unix socket at %s', socket_path)
+    G_LOGGER.debug('connecting to Unix socket at %s', socket_path)
     try:
         client_socket.connect(socket_path)
         client_socket.settimeout(2)
@@ -195,30 +195,30 @@ def sendMessageToOutputUnix(message, socket_path):
         ack_data = client_socket.recv(1024)
         client_socket.close()
     except socket.timeout as ex:
-        g_logger.critical("Timeout reached by waiting server answer")
+        G_LOGGER.critical("Timeout reached by waiting server answer")
         sys.exit(1)
     except socket.error as ex:
-        g_logger.critical("Unable to connect to unix server socket '%s' because : %s",
+        G_LOGGER.critical("Unable to connect to unix server socket '%s' because : %s",
                           socket_path,
                           str(ex))
         sys.exit(1)
 
-    g_logger.debug('get data from server %s',
+    G_LOGGER.debug('get data from server %s',
                    ack_data)
     if not isinstance(ack_data, str):
         ack_data = ack_data.decode()
     try:
         ack = json.loads(ack_data)
     except json.JSONDecodeError:
-        g_logger.error('Received bad JSON in ACK,'
+        G_LOGGER.error('Received bad JSON in ACK,'
                        ' the smsshell server may have not received correctly the message')
         return False
     if ack['received_length'] != message_data_size:
-        g_logger.error('Size of sent data differ from '
+        G_LOGGER.error('Size of sent data differ from '
                        'size of received data given in acknowledgment')
         return False
 
-    g_logger.info('Successfully written message to SMSShell using unix socket')
+    G_LOGGER.info('Successfully written message to SMSShell using unix socket')
     if 'output' in ack:
         print(ack['output'])
     return True
@@ -238,9 +238,9 @@ def sendMessageToOutputFifo(message, fifo_path):
         with open(fifo_path, 'w') as fifo:
             fifo.write(message)
     except IOError as ex:
-        g_logger.critical("Unable to write to fifo file '%s' because : %s", fifo_path, str(ex))
+        G_LOGGER.critical("Unable to write to fifo file '%s' because : %s", fifo_path, str(ex))
         return False
-    g_logger.info('Successfully written message to SMSShell using fifo')
+    G_LOGGER.info('Successfully written message to SMSShell using fifo')
     return True
 
 
@@ -291,13 +291,13 @@ if __name__ == '__main__':
     if not hasattr(pargs, 'output'):
         parser.error('output type is required, use --help')
 
-    g_logger.setLevel(pargs.log_level)
+    G_LOGGER.setLevel(pargs.log_level)
     if pargs.quiet:
-        g_logger.setLevel(logging.CRITICAL+1)
-    g_logger.debug('launch with args %s', str(vars(pargs)))
+        G_LOGGER.setLevel(logging.CRITICAL+1)
+    G_LOGGER.debug('launch with args %s', str(vars(pargs)))
 
     msg = getMessageFromInput(pargs.input, *pargs.input_arg)
-    g_logger.debug('get message %s', str(msg))
+    G_LOGGER.debug('get message %s', str(msg))
 
     if hasattr(pargs, 'auth_token'):
         msg['auth'] = dict(token=pargs.auth_token, role=pargs.auth_role)
@@ -305,7 +305,7 @@ if __name__ == '__main__':
         msg['transmit'] = pargs.transmit
 
     msg = encodeMessage(pargs.encoding, msg)
-    g_logger.debug('encoded message to %s', str(msg))
+    G_LOGGER.debug('encoded message to %s', str(msg))
 
     if not sendMessageToOutput(pargs.output, msg, *pargs.output_arg):
         sys.exit(1)

@@ -30,7 +30,7 @@ import logging
 from ..exceptions import ShellException
 
 # Global project declarations
-g_logger = logging.getLogger('smsshell.models.session')
+G_LOGGER = logging.getLogger('smsshell.models.session')
 
 
 class SessionException(ShellException):
@@ -214,7 +214,7 @@ class Session():
             true if the session is still valid, false otherwise
         """
         if (datetime.datetime.today() - self.access_at).seconds >= self.ttl:
-            g_logger.debug('session for %s is expired', self.subject)
+            G_LOGGER.debug('session for %s is expired', self.subject)
             return False
         return True
 

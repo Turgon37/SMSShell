@@ -32,7 +32,7 @@ import stat
 from . import AbstractReceiver, AbstractClientRequest
 
 # Global project declarations
-g_logger = logging.getLogger('smsshell.receivers.fifo')
+G_LOGGER = logging.getLogger('smsshell.receivers.fifo')
 
 
 class ClientRequest(AbstractClientRequest):
@@ -69,21 +69,21 @@ class Receiver(AbstractReceiver):
         directory = os.path.dirname(self.__path)
         # check permissions
         if not (os.path.isdir(directory) and os.access(directory, os.X_OK)):
-            g_logger.fatal('Unsufficients permissions into socket directory')
+            G_LOGGER.fatal('Unsufficients permissions into socket directory')
             return False
         # check socket
         if os.path.exists(self.__path):
             if not stat.S_ISFIFO(os.stat(self.__path).st_mode):
-                g_logger.fatal('The path given is already a file but not a fifo')
+                G_LOGGER.fatal('The path given is already a file but not a fifo')
                 return False
-            g_logger.debug('using existing fifo')
+            G_LOGGER.debug('using existing fifo')
         elif not os.path.exists(self.__path):
             # check directory write rights
             if not os.access(directory, os.X_OK|os.W_OK):
-                g_logger.fatal('Unsufficients permissions into the directory %s to create the fifo',
+                G_LOGGER.fatal('Unsufficients permissions into the directory %s to create the fifo',
                                self.__path)
                 return False
-            g_logger.debug('creating new fifo at %s', self.__path)
+            G_LOGGER.debug('creating new fifo at %s', self.__path)
             os.mkfifo(self.__path, mode=0o620)
         return self
 
@@ -96,7 +96,7 @@ class Receiver(AbstractReceiver):
         try:
             os.unlink(self.__path)
         except OSError:
-            g_logger.error('unable to delete fifo')
+            G_LOGGER.error('unable to delete fifo')
             return False
         return True
 
@@ -106,7 +106,7 @@ class Receiver(AbstractReceiver):
         Return:
             Iterable
         """
-        g_logger.info('Reading from fifo %s', self.__path)
+        G_LOGGER.info('Reading from fifo %s', self.__path)
         while True:
             with open(self.__path) as fifo:
                 yield ClientRequest(request_data=fifo.read())

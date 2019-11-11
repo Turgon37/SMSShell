@@ -30,7 +30,7 @@ from ..models import Message
 from . import AbstractParser
 
 # Global project declarations
-g_logger = logging.getLogger('smsshell.parsers.json')
+G_LOGGER = logging.getLogger('smsshell.parsers.json')
 
 
 class Parser(AbstractParser):
@@ -46,10 +46,10 @@ class Parser(AbstractParser):
         try:
             obj = json.loads(raw)
         except ValueError as ex:
-            g_logger.debug('bad JSON %s', str(ex))
+            G_LOGGER.debug('bad JSON %s', str(ex))
             raise DecodeException('the received message was not a valid JSON object')
         except TypeError as ex:
-            g_logger.debug('bad object type %s', str(ex))
+            G_LOGGER.debug('bad object type %s', str(ex))
             raise DecodeException('the received message was not a valid JSON object')
 
         if 'sms_number' not in obj:

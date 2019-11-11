@@ -29,7 +29,7 @@ from . import AbstractTransmitter
 from ..models import Message
 
 # Global project declarations
-g_logger = logging.getLogger('smsshell.transmitters.stdout')
+G_LOGGER = logging.getLogger('smsshell.transmitters.stdout')
 
 
 class Transmitter(AbstractTransmitter):

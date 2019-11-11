@@ -36,7 +36,7 @@ from . import AbstractReceiver, AbstractClientRequest
 from ..utils import group_to_gid
 
 # Global project declarations
-g_logger = logging.getLogger('smsshell.receivers.unix')
+G_LOGGER = logging.getLogger('smsshell.receivers.unix')
 
 
 class ClientRequest(AbstractClientRequest):
@@ -84,7 +84,7 @@ class Receiver(AbstractReceiver):
             self.__listen_queue = int(self.get_config('listen_queue', fallback=10))
         except ValueError:
             self.__listen_queue = 10
-            g_logger.error(("invalid integer parameter for option 'listen_queue',"
+            G_LOGGER.error(("invalid integer parameter for option 'listen_queue',"
                             " fallback to default value 10"))
 
     def write_to_client(self, client_socket, data):
@@ -100,7 +100,7 @@ class Receiver(AbstractReceiver):
         try:
             client_socket.send(data)
         except ConnectionError as ex:
-            g_logger.warning('client connection with FD %s raise connection error : %s',
+            G_LOGGER.warning('client connection with FD %s raise connection error : %s',
                              client_socket.fileno(),
                              str(ex))
             self.__close_connection(client_socket)
@@ -126,7 +126,7 @@ class Receiver(AbstractReceiver):
         self.__socket_selector.register(fileobj=client_socket,
                                         events=selectors.EVENT_READ,
                                         data=self.__on_read)
-        g_logger.info('accepted new client with FD %d on unix socket', client_socket.fileno())
+        G_LOGGER.info('accepted new client with FD %d on unix socket', client_socket.fileno())
 
     def __on_read(self, client_socket, mask):
         # pylint: disable=W0613
@@ -138,7 +138,7 @@ class Receiver(AbstractReceiver):
         try:
             request_data = client_socket.recv(1000)
         except ConnectionError as ex:
-            g_logger.warning('client connection with FD %s raise connection error : %s',
+            G_LOGGER.warning('client connection with FD %s raise connection error : %s',
                              client_socket.fileno(),
                              str(ex))
             self.__close_connection(client_socket)
@@ -151,10 +151,10 @@ class Receiver(AbstractReceiver):
 
         # if these is data, that mean client has send some bytes to read
         # receive the data
-        g_logger.info('get %d bytes of data from client socket with FD %d',
+        G_LOGGER.info('get %d bytes of data from client socket with FD %d',
                       len(request_data),
                       client_socket.fileno())
-        g_logger.debug('get data from FD %d: %s',
+        G_LOGGER.debug('get data from FD %d: %s',
                        client_socket.fileno(),
                        request_data)
         # decode data
@@ -168,7 +168,7 @@ class Receiver(AbstractReceiver):
                                 request_data=request_data)
         # append a simple ACK to client next datas
         # to confirm all is OK
-        g_logger.debug('send ACK to FD %d for %d bytes of data',
+        G_LOGGER.debug('send ACK to FD %d for %d bytes of data',
                        client_socket.fileno(),
                        raw_request_data_length)
         request.add_response_data(received_length=raw_request_data_length)
@@ -189,7 +189,7 @@ class Receiver(AbstractReceiver):
         # fds to peer names - our socket fd is still open.
         del self.__current_peers[client_socket.fileno()]
         self.__socket_selector.unregister(client_socket)
-        g_logger.info('closed client connection with FD %d', client_socket.fileno())
+        G_LOGGER.info('closed client connection with FD %d', client_socket.fileno())
         client_socket.close()
 
     def start(self):
@@ -203,46 +203,46 @@ class Receiver(AbstractReceiver):
         directory = os.path.dirname(self.__path)
         # check permissions
         if not (os.path.isdir(directory) and os.access(directory, os.X_OK)):
-            g_logger.fatal('Unsufficients permissions into socket directory')
+            G_LOGGER.fatal('Unsufficients permissions into socket directory')
             return False
         # Make sure the socket does not already exist
         if os.path.exists(self.__path):
             # if the path correspond to a socket, try to remove it silently
             if stat.S_ISSOCK(os.stat(self.__path).st_mode):
-                g_logger.debug('overwrite existing unix socket file')
+                G_LOGGER.debug('overwrite existing unix socket file')
                 try:
                     os.unlink(self.__path)
                 except OSError:
                     if os.path.exists(self.__path):
-                        g_logger.fatal('The unix socket path already exists and cannot be removed')
+                        G_LOGGER.fatal('The unix socket path already exists and cannot be removed')
                         return False
             else:
                 # pylint: disable=W1201
-                g_logger.fatal('The unix socket path given is already a file' +
+                G_LOGGER.fatal('The unix socket path given is already a file' +
                                ' but not a unix socket. Please delete it manually')
                 return False
 
         # check directory write rights
         if not os.access(directory, os.X_OK|os.W_OK):
-            g_logger.fatal('Unsufficients permissions into the directory %s to create the socket',
+            G_LOGGER.fatal('Unsufficients permissions into the directory %s to create the socket',
                            self.__path)
             return False
-        g_logger.debug('creating new server socket')
+        G_LOGGER.debug('creating new server socket')
 
         # Create a TCP unix socket
         self.__server_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        g_logger.debug('configure new server socket to unblocking')
+        G_LOGGER.debug('configure new server socket to unblocking')
         self.__server_socket.setblocking(0)
 
         # Bind the socket to the port
         try:
             umask = int(self.__umask, 8)
         except ValueError:
-            g_logger.error("Invalid UMASK format '%s', fallback to default umask %s",
+            G_LOGGER.error("Invalid UMASK format '%s', fallback to default umask %s",
                            self.__umask,
                            self.__default_umask)
             umask = self.__default_umask
-        g_logger.debug('bind socket to path %s with umask %s', self.__path, oct(umask))
+        G_LOGGER.debug('bind socket to path %s with umask %s', self.__path, oct(umask))
 
         # create socket file
         old_umask = os.umask(umask)
@@ -255,22 +255,22 @@ class Receiver(AbstractReceiver):
                 os.chown(self.__path,
                          -1,
                          group_to_gid(self.__group))
-                g_logger.info("Switched socket group owner to '%s'",
+                G_LOGGER.info("Switched socket group owner to '%s'",
                               self.__group)
             except KeyError:
-                g_logger.error("Incorrect group name '%s' for receiver, ignoring group directive",
+                G_LOGGER.error("Incorrect group name '%s' for receiver, ignoring group directive",
                                self.__group)
             except PermissionError:
                 # pylint: disable=W1201
-                g_logger.error("Cannot change group ownership, you are not member of " +
+                G_LOGGER.error("Cannot change group ownership, you are not member of " +
                                "group name '%s', ignoring group directive",
                                self.__group)
 
         # Listen for incoming connections
-        g_logger.debug('set socket to listening mode with listen queue size %d',
+        G_LOGGER.debug('set socket to listening mode with listen queue size %d',
                        self.__listen_queue)
         self.__server_socket.listen(self.__listen_queue)
-        g_logger.info('Unix receiver ready to listen on %s FD %d',
+        G_LOGGER.info('Unix receiver ready to listen on %s FD %d',
                       self.__path,
                       self.__server_socket.fileno())
 
@@ -286,18 +286,18 @@ class Receiver(AbstractReceiver):
         Returns:
             a boolean that indicates the successful of the stop operation
         """
-        g_logger.info('Closing unix receiver')
-        g_logger.debug('closing all unix sockets')
+        G_LOGGER.info('Closing unix receiver')
+        G_LOGGER.debug('closing all unix sockets')
         for peer in self.__current_peers.values():
             peer['sock'].close()
-        g_logger.debug('closing server socket')
+        G_LOGGER.debug('closing server socket')
         self.__server_socket.close()
         self.__socket_selector.close()
-        g_logger.debug('remove server socket')
+        G_LOGGER.debug('remove server socket')
         try:
             os.unlink(self.__path)
         except OSError:
-            g_logger.error('unable to delete socket')
+            G_LOGGER.error('unable to delete socket')
             return False
         return True
 
@@ -307,7 +307,7 @@ class Receiver(AbstractReceiver):
         Returns:
             Iterable
         """
-        g_logger.info('Reading from unix socket %s', self.__path)
+        G_LOGGER.info('Reading from unix socket %s', self.__path)
         while True:
             # Wait until some registered socket becomes ready.
             events = self.__socket_selector.select()

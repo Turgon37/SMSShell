@@ -29,7 +29,7 @@ from . import AbstractTransmitter
 from ..models import Message
 
 # Global project declarations
-g_logger = logging.getLogger('smsshell.transmitters.python_gammu')
+G_LOGGER = logging.getLogger('smsshell.transmitters.python_gammu')
 
 
 class Transmitter(AbstractTransmitter):
@@ -53,7 +53,7 @@ class Transmitter(AbstractTransmitter):
         try:
             self.__umask = int(umask, 8)
         except ValueError:
-            g_logger.error("Invalid UMASK format '%s', fallback to default umask %s",
+            G_LOGGER.error("Invalid UMASK format '%s', fallback to default umask %s",
                            umask,
                            self.__default_umask)
             self.__umask = self.__default_umask
@@ -62,24 +62,24 @@ class Transmitter(AbstractTransmitter):
         try:
             import gammu.smsd
         except ImportError as ex:
-            g_logger.critical("Cannot import module 'gammu' because : %s", str(ex))
+            G_LOGGER.critical("Cannot import module 'gammu' because : %s", str(ex))
             return False
 
         # fetch configuration file
         if not os.path.isfile(self.__config):
-            g_logger.critical("The gammu-smsd configuration does not exist at '%s'", self.__config)
+            G_LOGGER.critical("The gammu-smsd configuration does not exist at '%s'", self.__config)
             return False
         elif not os.access(self.__config, os.R_OK):
-            g_logger.critical("The gammu-smsd configuration is not readable at '%s'", self.__config)
+            G_LOGGER.critical("The gammu-smsd configuration is not readable at '%s'", self.__config)
             return False
 
-        g_logger.debug('creating gammu smsd client instance')
+        G_LOGGER.debug('creating gammu smsd client instance')
         try:
             self.__smsd = gammu.smsd.SMSD(self.__config)
         except gammu.GSMError as ex:
-            g_logger.critical("Cannot create smsd client instance: %s", str(ex))
+            G_LOGGER.critical("Cannot create smsd client instance: %s", str(ex))
             return False
-        g_logger.info('Gammu SMSD client instance seems to be ready to transmit')
+        G_LOGGER.info('Gammu SMSD client instance seems to be ready to transmit')
 
         return True
 

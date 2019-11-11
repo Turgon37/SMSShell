@@ -27,7 +27,7 @@ import logging
 from . import AbstractMetricsHelper
 
 # Global project declarations
-g_logger = logging.getLogger('smsshell.metrics.none')
+G_LOGGER = logging.getLogger('smsshell.metrics.none')
 
 
 class MetricsHelper(AbstractMetricsHelper):
@@ -37,7 +37,7 @@ class MetricsHelper(AbstractMetricsHelper):
     def init(self):
         """Init function
         """
-        g_logger.info('Using dummy metrics helper')
+        G_LOGGER.info('Using dummy metrics helper')
 
     def start(self):
         """Do nothing

@@ -32,7 +32,7 @@ from . import validators
 from . import filters
 
 # Global project declarations
-g_logger = logging.getLogger('smsshell.config')
+G_LOGGER = logging.getLogger('smsshell.config')
 
 
 class MyConfigParser(configparser.ConfigParser):
@@ -116,7 +116,7 @@ class MyConfigParser(configparser.ConfigParser):
         try:
             return user_to_uid(user)
         except KeyError:
-            g_logger.error(("Incorrect user name '%s' read in configuration"
+            G_LOGGER.error(("Incorrect user name '%s' read in configuration"
                             " file at section %s and key %s"), user, section, item)
         return default
 
@@ -139,7 +139,7 @@ class MyConfigParser(configparser.ConfigParser):
         try:
             return group_to_gid(group)
         except KeyError:
-            g_logger.error(("Incorrect group name '%s' read in configuration"
+            G_LOGGER.error(("Incorrect group name '%s' read in configuration"
                             " file at section %s and key %s"), group, section, item)
         return default
 
@@ -217,14 +217,14 @@ class MyConfigParser(configparser.ConfigParser):
             try:
                 field, field_classes = spec.split('=', 1)
             except ValueError as ex:
-                g_logger.error("The specification '%s' is invalid because of %s",
+                G_LOGGER.error("The specification '%s' is invalid because of %s",
                                spec, str(ex))
                 continue
 
             # prevent duplicate declaration
             if field in classes_config:
                 # pylint: disable=W1201
-                g_logger.error(("The config for field named '%s' was " +
+                G_LOGGER.error(("The config for field named '%s' was " +
                                 "already declared in configuration. " +
                                 "Ignoring the second one."),
                                field)
@@ -250,7 +250,7 @@ class MyConfigParser(configparser.ConfigParser):
                 real_class_name = class_name[0].upper() + class_name[1:]
                 if not hasattr(module, real_class_name):
                     # pylint: disable=W1201
-                    g_logger.error(("The filter name '%s' for field named '%s'" +
+                    G_LOGGER.error(("The filter name '%s' for field named '%s'" +
                                     " does not refer to an existing filter"),
                                    class_name, field)
                     continue
@@ -271,7 +271,7 @@ class MyConfigParser(configparser.ConfigParser):
                                               ))
 
                 classes_config[field].append(_instance)
-            g_logger.debug("loaded %d classes for field %s",
+            G_LOGGER.debug("loaded %d classes for field %s",
                            len(classes_config[field]),
                            field)
         return classes_config
@@ -287,6 +287,6 @@ class MyConfigParser(configparser.ConfigParser):
         """
         val = self.get(section, key, fallback=default)
         if val not in array:
-            g_logger.error("Incorrect %s : '%s' must be in %s", key, val, array)
+            G_LOGGER.error("Incorrect %s : '%s' must be in %s", key, val, array)
             return default
         return val
