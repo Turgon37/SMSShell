@@ -26,11 +26,18 @@ from .exceptions import ShellInitException
 
 class Chain():
     """This class validate an object using validators per field's name
+
+    This class store a list of filter per field name
+    When call_chain_on_object is called on an object, each of its fields
+    will be put througth the filters chain.
+    According to the static settings of this class the fields will be validated/filtered
     """
 
     ABSTRACT_CLASS = object
     # class of exception to use on validation errors
     EXCEPTION = Exception
+    # Each filter in chain will assign it's return to the object value
+    # usefull to filter (edit) a field on a object
     ASSIGN_RETURN = False
 
     def __init__(self):
