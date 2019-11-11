@@ -124,7 +124,7 @@ class GammuSMSParser():
         """
         message = cls.create_empty_message()
         # Decode SMS messages
-        sms_parts = int(os.getenv('SMS_MESSAGES', 0))
+        sms_parts = int(os.getenv('SMS_MESSAGES', '0'))
         sms_text = ''
         if sms_parts > 0:
             message['type'] = 'SMS'
@@ -142,7 +142,7 @@ class GammuSMSParser():
                     cls.set_unique_value_in_message(message, 'sms_number', sms_number)
 
         # Decoded SMS parts
-        decoded_parts = int(os.getenv('DECODED_PARTS', 0))
+        decoded_parts = int(os.getenv('DECODED_PARTS', '0'))
         decoded_text = ''
         if decoded_parts > 0:
             for i in range(0, decoded_parts):
@@ -175,7 +175,11 @@ class GammuSMSParser():
 
     @classmethod
     def decode_from_backup_file_path(cls, backup_file_path):
-        """
+        # pylint: disable=R0914,R0912,R1702
+        """Extract gammu message from a backup file
+
+        Args:
+            backup_file_path : the path to the backup file
         """
         message = cls.create_empty_message()
 
