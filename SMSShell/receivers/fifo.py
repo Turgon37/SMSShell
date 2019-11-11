@@ -53,9 +53,10 @@ class Receiver(AbstractReceiver):
     """Receiver class, see module docstring for help
     """
 
-    def init(self):
-        """Init
+    def __init__(self, *argv, **kwargs):
+        """Init function
         """
+        super().__init__(*argv, **kwargs)
         self.__path = self.get_config('path', fallback="/var/run/smsshell.fifo")
 
     def start(self):

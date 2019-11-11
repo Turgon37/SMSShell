@@ -61,12 +61,14 @@ class ClientRequest(AbstractClientRequest):
 
 
 class Receiver(AbstractReceiver):
+    # pylint: disable=R0902
     """Receiver class, see module docstring for help
     """
 
-    def init(self):
+    def __init__(self, *argv, **kwargs):
         """Init function
         """
+        super().__init__(*argv, **kwargs)
         # Keeps track of the peers currently connected. Maps socket fd to
         # peer name.
         self.__current_peers = dict()
