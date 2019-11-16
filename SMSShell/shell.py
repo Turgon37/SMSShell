@@ -22,6 +22,7 @@
 
 # System imports
 import argparse
+import glob
 import importlib
 import importlib.util
 import inspect
@@ -31,7 +32,9 @@ import os
 import shlex
 
 # Project imports
-from .exceptions import ShellException, BadCommandCall
+from .exceptions import (ShellException,
+                         BadCommandCall,
+                         ShellImmediateAnswerException)
 from .models import Session, SessionStates
 from .commands import (AbstractCommand,
                        CommandForbidden,
@@ -50,13 +53,21 @@ class Shell():
     It manage all available command, handle sessions, distribute
     command execution over commands instance
     """
+    # regex use to split a sentence in word
     WORD_REGEX_PATTERN = re.compile("[^A-Za-z]+")
+    # regex use to validate command name
+    NAME_REGEX_PATTERN = re.compile("^[a-z]+")
+    # list of folder where to search for commands
+    COMMANDS_PACKAGES = ['SMSShell']
+    # prefix to apply on command module name
+    COMMANDS_MODULE_PREFIX = '.commands'
 
     def __init__(self, configparser, metrics):
         """Constructor: Build a new shell object
 
         Args:
             configparser: the program configparser
+            metrics : The general metrics handler
         """
         self.configparser = configparser
         self.__metrics = metrics
@@ -108,7 +119,11 @@ class Shell():
                           subject, cmd, as_role.name)
         else:
             sess = self.__get_session_for_subject(subject)
-        return self.__call(sess, cmd, argv[1:]).strip()
+
+        try:
+            return self.__call(sess, cmd, argv[1:]).strip()
+        except ShellImmediateAnswerException as ex:
+            return str(ex)
 
     def flush_command_cache(self):
         """Perform a flush of all command instance in local cache
@@ -143,11 +158,60 @@ class Shell():
         Returns:
             commands.Command instance
         """
+        if not self.NAME_REGEX_PATTERN.match(name):
+            raise ShellException(("Command name '{0}' is invalid" +
+                                  " be found in any package").format(name))
+
+        load_package = None
+        for pack in self.COMMANDS_PACKAGES:
+            pack_spec = importlib.util.find_spec(pack)
+            if pack_spec is None:
+                G_LOGGER.debug("ignore non existent import package '%s'", pack)
+                continue
+
+            if not pack_spec.has_location:
+                G_LOGGER.debug("ignore import package '%s' without location", pack)
+                continue
+
+            for pack_path in pack_spec.submodule_search_locations:
+                test_basedir = os.path.realpath(
+                    os.path.join(
+                        pack_path,
+                        self.COMMANDS_MODULE_PREFIX.replace('.', os.path.sep).lstrip('/'),
+                    )
+                )
+
+                # first pass with absolute command name
+                test_fullpath = os.path.join(test_basedir, name + '.py')
+                if os.path.isfile(test_fullpath):
+                    load_package = pack
+                else:
+                    test_globpath = os.path.join(test_basedir, name + '*.py')
+                    match_globpath = glob.glob(test_globpath)
+                    if len(match_globpath) == 1:
+                        name, _ = os.path.splitext(os.path.basename(match_globpath[0]))
+                        load_package = pack
+                    elif len(match_globpath) > 1:
+                        proposals = list(
+                            map(
+                                lambda x: os.path.splitext(os.path.basename(x))[0],
+                                match_globpath
+                            )
+                        )
+                        raise ShellImmediateAnswerException(
+                            '#Tip: commands matches : {}'.format(' '.join(proposals))
+                        )
+
+        if not load_package:
+            self.__metrics.counter('commands.loaded.total', labels=dict(status='error'))
+            raise CommandNotFoundException(("Command handler '{0}' cannot" +
+                                            " be found in any package").format(name))
+
         if name not in self.__commands:
-            self.__load_command(name)
+            self.__load_command(name, load_package)
         return self.__commands[name]
 
-    def __load_command(self, name):
+    def __load_command(self, name, load_package):
         """Try to load the given command into the cache dir
 
         Args:
@@ -158,14 +222,17 @@ class Shell():
             CommandNotFoundException if the command do not exists
         """
         G_LOGGER.debug("loading command handler with name '%s'", name)
+
         try:
-            mod = importlib.import_module('.commands.' + name, package='SMSShell')
-            if importlib.util.find_spec('.commands.' + name, package='SMSShell') is not None:
+            module_name = self.COMMANDS_MODULE_PREFIX + '.' + name
+            mod = importlib.import_module(module_name, package=load_package)
+            # if final class was already imported, recompile it
+            if importlib.util.find_spec(module_name, package=load_package) is not None:
                 importlib.reload(mod)
         except ImportError:
             self.__metrics.counter('commands.loaded.total', labels=dict(status='error'))
-            raise CommandNotFoundException(("Command handler '{0}' cannot" +
-                                            " be found in commands/ folder.").format(name))
+            raise CommandNotFoundException(("Command handler '{}' cannot" +
+                                            " be found in '{}' package").format(name, load_package))
 
         cls_name = Shell.to_camel_case(name)
         try: # instanciate

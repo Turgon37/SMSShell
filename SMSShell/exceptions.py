@@ -63,3 +63,10 @@ class BadCommandCall(ShellException):
     """
     def __init__(self, message, short='bad call, use help'):
         super().__init__(message, short)
+
+class ShellImmediateAnswerException(Exception):
+    """Raised when the shell must force the return content
+
+    It occur when the shell encounter a final status before to run
+    the real command
+    """
