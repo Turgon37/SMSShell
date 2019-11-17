@@ -70,9 +70,14 @@ class Shell():
             metrics : The general metrics handler
         """
         self.configparser = configparser
+        # functional objects
         self.__metrics = metrics
         self.__sessions = dict()
         self.__commands = dict()
+        # configurations
+        self.__globbing_enabled = self.configparser.get_mode_config('command_globbing',
+                                                                    expect_type=bool,
+                                                                    fallback=False)
         # declare metrics
         self.__metrics.counter('commands.loaded.total',
                                labels=['status'],
@@ -185,7 +190,7 @@ class Shell():
                 test_fullpath = os.path.join(test_basedir, name + '.py')
                 if os.path.isfile(test_fullpath):
                     load_package = pack
-                else:
+                elif self.__globbing_enabled:
                     test_globpath = os.path.join(test_basedir, name + '*.py')
                     match_globpath = glob.glob(test_globpath)
                     if len(match_globpath) == 1:

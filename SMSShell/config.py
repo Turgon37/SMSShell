@@ -151,14 +151,16 @@ class MyConfigParser(configparser.ConfigParser):
         """
         return self.__get_value_in_array(self.MAIN_SECTION, 'mode', self.MODE_MAP, 'DAEMON')
 
-    def get_mode_config(self, key, fallback=None):
+    def get_mode_config(self, key, expect_type=None, **kwargs):
         """Return a configuration option of the current mode
 
         @param str key the name of the configuration
         @param fallback the default value to return
         @return mixed
         """
-        return self.get(self.get_mode().lower(), key, fallback=fallback)
+        if expect_type == bool:
+            return self.getboolean(self.get_mode().lower(), key, **kwargs)
+        return self.get(self.get_mode().lower(), key, **kwargs)
 
     def get_section_or_empty(self, name):
         """Return all options in a section if exists or empty dict if not
