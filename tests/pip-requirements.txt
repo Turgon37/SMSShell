@@ -1,5 +1,5 @@
 codecov==2.0.15
 mypy
 pylint==2.3.1
-pytest==4.3.1
+pytest==9.0.3
 pytest-cov==2.6.1
